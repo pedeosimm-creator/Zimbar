@@ -1,0 +1,172 @@
+<Window x:Class="Zimbar.NotesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
+        Title="ZimNotes"
+        Icon="assets/ZimNotes.png"
+        Width="980" Height="640"
+        MinWidth="760" MinHeight="460"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True" ResizeMode="NoResize">
+
+    <Grid Margin="20">
+        <Border Style="{StaticResource Zimbar.Border.CosmicCard}">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="30" ShadowDepth="0" Opacity="0.5" Color="#7B5CFF"/>
+            </Border.Effect>
+
+            <Grid Margin="18,14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Margin="0,0,0,12" MouseLeftButtonDown="Header_MouseDown">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button Style="{StaticResource Chip}" Click="New_Click" Content="+ nova nota"/>
+                        <Button Style="{StaticResource Chip}" Click="CloseWin_Click" Content="x" Margin="0" Padding="10,7"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="ZimNotes" FontSize="17" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextMain}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="CountText" Text="" FontSize="12"
+                                   Foreground="{DynamicResource TextDim}"
+                                   VerticalAlignment="Center" Margin="12,2,0,0"/>
+                        <TextBlock x:Name="StatusText" Text="" FontSize="12"
+                                   Foreground="{DynamicResource AccentSoft}"
+                                   VerticalAlignment="Center" Margin="12,2,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="282"/>
+                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0"
+                            Background="#151E2830"
+                            BorderBrush="#22FFFFFF"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBox x:Name="SearchBox"
+                                     Grid.Row="0"
+                                     Style="{StaticResource InlineAdd}"
+                                     TextChanged="SearchBox_TextChanged"
+                                     FontSize="12.5"
+                                     Margin="0,0,0,10"
+                                     ToolTip="buscar notas"/>
+
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                <StackPanel x:Name="NotesListPanel"/>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Column="2"
+                            Background="#10171F2B"
+                            BorderBrush="#1FFFFFFF"
+                            BorderThickness="1"
+                            CornerRadius="14"
+                            Padding="16">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBox x:Name="EdTitle"
+                                     Grid.Row="0"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Foreground="{DynamicResource TextMain}"
+                                     CaretBrush="{DynamicResource Accent}"
+                                     FontSize="22"
+                                     FontWeight="SemiBold"
+                                     Padding="0,0,0,8"
+                                     TextChanged="EditorTextChanged"/>
+
+                            <WrapPanel Grid.Row="1" Margin="0,0,0,10">
+                                <Button Style="{StaticResource Chip}" Click="Bold_Click" Content="B" FontWeight="Bold" ToolTip="negrito"/>
+                                <Button Style="{StaticResource Chip}" Click="Bullet_Click" Content="• lista" ToolTip="lista com bolinhas"/>
+                                <Button Style="{StaticResource Chip}" Click="Check_Click" Content="☐ check" ToolTip="checklist"/>
+                                <Button Style="{StaticResource Chip}" Click="Heading_Click" Content="H1" ToolTip="titulo no corpo"/>
+                                <Button Style="{StaticResource Chip}" Click="Smaller_Click" Content="A-" ToolTip="diminuir fonte"/>
+                                <Button Style="{StaticResource Chip}" Click="Bigger_Click" Content="A+" ToolTip="aumentar fonte"/>
+                            </WrapPanel>
+
+                            <TextBox x:Name="EdBody"
+                                     Grid.Row="2"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Foreground="{DynamicResource TextMain}"
+                                     CaretBrush="{DynamicResource Accent}"
+                                     FontSize="14.5"
+                                     TextWrapping="Wrap"
+                                     AcceptsReturn="True"
+                                     AcceptsTab="True"
+                                     VerticalScrollBarVisibility="Auto"
+                                     TextChanged="EditorTextChanged"/>
+
+                            <DockPanel Grid.Row="3" Margin="0,12,0,0">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <Button Style="{StaticResource Chip}" Click="EditorDelete_Click" x:Name="EdDelete" Content="excluir"/>
+                                    <Button Style="{StaticResource Chip}" Click="EditorSave_Click" Content="salvar" Margin="0"/>
+                                </StackPanel>
+                                <StackPanel x:Name="ColorRow" Orientation="Horizontal" VerticalAlignment="Center"/>
+                            </DockPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <primitives:Thumb x:Name="ResizeThumb"
+                          Width="26" Height="26"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Bottom"
+                          Margin="0,0,6,6"
+                          Cursor="SizeNWSE"
+                          DragDelta="ResizeThumb_DragDelta">
+            <primitives:Thumb.Template>
+                <ControlTemplate TargetType="{x:Type primitives:Thumb}">
+                    <Grid Opacity="0.62">
+                        <Border Width="24" Height="24"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                Background="Transparent"/>
+                        <Rectangle Width="12" Height="2" RadiusX="1" RadiusY="1"
+                                   Fill="{DynamicResource AccentSoft}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                   Margin="0,0,2,7"
+                                   RenderTransformOrigin="0.5,0.5">
+                            <Rectangle.RenderTransform>
+                                <RotateTransform Angle="-45"/>
+                            </Rectangle.RenderTransform>
+                        </Rectangle>
+                        <Rectangle Width="8" Height="2" RadiusX="1" RadiusY="1"
+                                   Fill="{DynamicResource AccentSoft}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                   Margin="0,0,2,3"
+                                   RenderTransformOrigin="0.5,0.5">
+                            <Rectangle.RenderTransform>
+                                <RotateTransform Angle="-45"/>
+                            </Rectangle.RenderTransform>
+                        </Rectangle>
+                    </Grid>
+                </ControlTemplate>
+            </primitives:Thumb.Template>
+        </primitives:Thumb>
+    </Grid>
+</Window>

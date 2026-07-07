@@ -1,0 +1,17 @@
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build output
+publish/
+*.nupkg
+
+# Local/editor noise
+Thumbs.db
+Desktop.ini
+*.log

@@ -1,0 +1,277 @@
+<Application x:Class="Zimbar.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+
+        <!-- Fontes: corpo moderno (Variable Text), display fino e elegante,
+             mono estilo HUD pros rótulos futuristas -->
+        <FontFamily x:Key="Body">Segoe UI Variable Text, Segoe UI</FontFamily>
+        <FontFamily x:Key="Display">Segoe UI Variable Display Semilight, Segoe UI Semilight, Segoe UI</FontFamily>
+        <FontFamily x:Key="Mono">Cascadia Mono, Cascadia Code, Consolas, Segoe UI</FontFamily>
+
+        <!-- Valores iniciais; o ThemeManager troca em runtime -->
+        <SolidColorBrush x:Key="Accent" Color="#C9A6FF"/>
+        <SolidColorBrush x:Key="AccentSoft" Color="#9A7FE8"/>
+        <SolidColorBrush x:Key="Ink" Color="#0C0A12"/>
+        <SolidColorBrush x:Key="TextInk" Color="#120A22"/>
+        <SolidColorBrush x:Key="TextMain" Color="#F1ECFF"/>
+        <SolidColorBrush x:Key="TextDim" Color="#B4ADD4"/>
+        <SolidColorBrush x:Key="TextDone" Color="#7F78A2"/>
+        <SolidColorBrush x:Key="Surface" Color="#14FFFFFF"/>
+        <SolidColorBrush x:Key="SurfaceHi" Color="#22FFFFFF"/>
+        <SolidColorBrush x:Key="ChipBg" Color="#18FFFFFF"/>
+        <SolidColorBrush x:Key="ChipBgHover" Color="#33FFFFFF"/>
+        <SolidColorBrush x:Key="CardBg" Color="#1E1636"/>
+        <SolidColorBrush x:Key="BlockYellow" Color="#FFD98A"/>
+        <SolidColorBrush x:Key="BlockLime" Color="#9BE8B8"/>
+        <SolidColorBrush x:Key="BlockPink" Color="#FF9FD4"/>
+        <SolidColorBrush x:Key="BlockPurple" Color="#C4A6FF"/>
+        <SolidColorBrush x:Key="BlockBlue" Color="#8FD0FF"/>
+        <SolidColorBrush x:Key="BlockCoral" Color="#FF9E86"/>
+        <SolidColorBrush x:Key="Dificil" Color="#FF8C6B"/>
+        <SolidColorBrush x:Key="DificilBg" Color="#33FF6B4A"/>
+        <SolidColorBrush x:Key="Media" Color="#FFD98A"/>
+        <SolidColorBrush x:Key="MediaBg" Color="#33FFC46B"/>
+        <SolidColorBrush x:Key="Facil" Color="#8FF0C4"/>
+        <SolidColorBrush x:Key="FacilBg" Color="#3334E89C"/>
+        <RotateTransform x:Key="RotateRailText" Angle="-90"/>
+
+        <!-- Design System aliases: novos componentes devem preferir Zimbar.*.
+             As chaves curtas continuam por compatibilidade com telas existentes. -->
+        <FontFamily x:Key="Zimbar.Font.Body">Segoe UI Variable Text, Segoe UI</FontFamily>
+        <FontFamily x:Key="Zimbar.Font.Display">Segoe UI Variable Display Semilight, Segoe UI Semilight, Segoe UI</FontFamily>
+        <FontFamily x:Key="Zimbar.Font.Mono">Cascadia Mono, Cascadia Code, Consolas, Segoe UI</FontFamily>
+        <SolidColorBrush x:Key="Zimbar.Brush.Accent" Color="#C9A6FF"/>
+        <SolidColorBrush x:Key="Zimbar.Brush.AccentSoft" Color="#9A7FE8"/>
+        <SolidColorBrush x:Key="Zimbar.Brush.Text.OnAccent" Color="#120A22"/>
+        <SolidColorBrush x:Key="Zimbar.Brush.Text.Primary" Color="#F1ECFF"/>
+        <SolidColorBrush x:Key="Zimbar.Brush.Text.Secondary" Color="#B4ADD4"/>
+        <SolidColorBrush x:Key="Zimbar.Brush.Text.Muted" Color="#7F78A2"/>
+        <SolidColorBrush x:Key="Zimbar.Brush.Surface.Glass" Color="#14FFFFFF"/>
+        <SolidColorBrush x:Key="Zimbar.Brush.Surface.GlassStrong" Color="#22FFFFFF"/>
+        <SolidColorBrush x:Key="Zimbar.Brush.Surface.CardFlat" Color="#1E1636"/>
+        <Color x:Key="Zimbar.Color.Accent">#C9A6FF</Color>
+        <Color x:Key="Zimbar.Color.Glow">#8B5CFF</Color>
+
+        <!-- ══ Chip: vidro translúcido, hover ilumina ══ -->
+        <Style x:Key="Chip" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource ChipBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMain}"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="0,0,7,0"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Body}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="#22FFFFFF" BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ChipBgHover}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentSoft}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ══ Botão primário: accent luminoso com glow ══ -->
+        <Style x:Key="PrimaryBtn" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextInk}"/>
+            <Setter Property="Padding" Value="15,7"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Body}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="11"
+                                Padding="{TemplateBinding Padding}">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="16" ShadowDepth="0" Opacity="0.6" Color="#8B5CFF"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentSoft}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="NeoBtn" TargetType="Button" BasedOn="{StaticResource PrimaryBtn}"/>
+        <Style x:Key="Zimbar.Button.Primary" TargetType="Button" BasedOn="{StaticResource PrimaryBtn}"/>
+
+        <!-- ══ Aba de navegação: pílula translúcida; ativa vira accent (via código) ══ -->
+        <Style x:Key="NavBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="Margin" Value="0,0,3,0"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Body}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ChipBg}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextMain}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="Zimbar.Button.Chip" TargetType="Button" BasedOn="{StaticResource Chip}"/>
+        <Style x:Key="Zimbar.Button.Nav" TargetType="Button" BasedOn="{StaticResource NavBtn}"/>
+
+        <!-- ══ Linha de lista clicável ══ -->
+        <Style x:Key="GhostItem" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMain}"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Margin" Value="0,1,0,1"/>
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Body}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                CornerRadius="9" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#14FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="Zimbar.Button.Ghost" TargetType="Button" BasedOn="{StaticResource GhostItem}"/>
+
+        <!-- ══ Campo de texto discreto (vidro + hairline accent) ══ -->
+        <Style x:Key="InlineAdd" TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource Surface}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMain}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource Accent}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Body}"/>
+            <Setter Property="Padding" Value="11,7"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="10"
+                                BorderBrush="#2EFFFFFF" BorderThickness="1">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="Zimbar.TextBox.InlineAdd" TargetType="TextBox" BasedOn="{StaticResource InlineAdd}"/>
+
+        <!-- ══ Scrollbar fina e luminosa ══ -->
+        <Style x:Key="NeoScroll" TargetType="ScrollBar">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="Transparent">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border x:Name="th" CornerRadius="4" Margin="2,2"
+                                                        Background="#40FFFFFF"/>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="th" Property="Background" Value="{DynamicResource Accent}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False"/>
+                                </Track.DecreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ScrollBar" BasedOn="{StaticResource NeoScroll}"/>
+        <Style x:Key="Zimbar.ScrollBar.Neo" TargetType="ScrollBar" BasedOn="{StaticResource NeoScroll}"/>
+
+        <Style x:Key="Zimbar.Border.GlassPanel" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Surface}"/>
+            <Setter Property="BorderBrush" Value="#1EFFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Padding" Value="15,12"/>
+        </Style>
+        <Style x:Key="Zimbar.Border.CosmicCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="CornerRadius" Value="22"/>
+            <Setter Property="Effect" Value="{DynamicResource CardGlow}"/>
+        </Style>
+        <Style x:Key="Zimbar.Border.PopupCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="14"/>
+        </Style>
+
+    </Application.Resources>
+</Application>

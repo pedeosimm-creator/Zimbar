@@ -1,0 +1,325 @@
+<Window x:Class="Zimbar.BarWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Zimbar"
+        Icon="assets/Zimbar.png"
+        Width="1160" SizeToContent="Height"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize"
+        ShowActivated="True"
+        FontFamily="{DynamicResource Body}">
+
+    <Grid Margin="30">
+        <Border x:Name="Card"
+                Style="{StaticResource Zimbar.Border.CosmicCard}"
+                MouseLeftButtonDown="Card_MouseLeftButtonDown"
+                RenderTransformOrigin="0.5,0.5">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="CardSlide" Y="0"/>
+            </Border.RenderTransform>
+
+            <Grid x:Name="ShellGrid">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="RailColumn" Width="0"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border x:Name="ShellRail" Grid.Column="0" Visibility="Collapsed"
+                        Background="{DynamicResource Surface}"
+                        BorderBrush="{DynamicResource CardBorderBrush}"
+                        BorderThickness="0,0,1,0"
+                        Padding="10,16"
+                        MouseLeftButtonDown="DragZone_MouseDown">
+                    <Grid>
+                        <StackPanel>
+                            <TextBlock x:Name="RailMark" Text="Z" FontSize="24"
+                                       FontFamily="{DynamicResource Display}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Accent}"
+                                       Effect="{DynamicResource AccentGlow}"
+                                       HorizontalAlignment="Center"/>
+                            <Rectangle Height="1" Margin="8,14,8,14" Opacity="0.7"
+                                       Fill="{DynamicResource Accent}"/>
+                            <TextBlock x:Name="RailTitle" Text="HUD" FontSize="10"
+                                       FontFamily="{DynamicResource Mono}"
+                                       Foreground="{DynamicResource TextDim}"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="RailMode" Text="CAPTURE" FontSize="9"
+                                   FontFamily="{DynamicResource Mono}"
+                                   Foreground="{DynamicResource TextDone}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Bottom"
+                                   LayoutTransform="{StaticResource RotateRailText}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Decoracao de shell: cada redesign ajusta opacidade, geometria e peso. -->
+                <Canvas x:Name="DecorLayer" Grid.ColumnSpan="2" IsHitTestVisible="False" ClipToBounds="True">
+                    <Ellipse Canvas.Left="80"  Canvas.Top="16" Width="2"   Height="2"   Fill="#E4DBFF" Opacity="0.55"/>
+                    <Ellipse Canvas.Left="230" Canvas.Top="34" Width="1.5" Height="1.5" Fill="#FFFFFF" Opacity="0.3"/>
+                    <Ellipse Canvas.Left="380" Canvas.Top="12" Width="2.5" Height="2.5" Fill="#C9A6FF" Opacity="0.6"/>
+                    <Ellipse Canvas.Left="540" Canvas.Top="26" Width="1.5" Height="1.5" Fill="#FFFFFF" Opacity="0.28"/>
+                    <Ellipse Canvas.Left="700" Canvas.Top="14" Width="2"   Height="2"   Fill="#E4DBFF" Opacity="0.5"/>
+                    <Ellipse Canvas.Left="860" Canvas.Top="30" Width="1.5" Height="1.5" Fill="#C9A6FF" Opacity="0.4"/>
+                    <Ellipse Canvas.Left="1000" Canvas.Top="18" Width="2.5" Height="2.5" Fill="#FFFFFF" Opacity="0.4"/>
+                    <Ellipse Canvas.Left="160" Canvas.Top="56" Width="1.5" Height="1.5" Fill="#FFFFFF" Opacity="0.2"/>
+                    <Ellipse Canvas.Left="620" Canvas.Top="52" Width="1.5" Height="1.5" Fill="#E4DBFF" Opacity="0.24"/>
+                    <Ellipse Canvas.Left="940" Canvas.Top="48" Width="1.5" Height="1.5" Fill="#C9A6FF" Opacity="0.26"/>
+                    <Rectangle x:Name="DecorScanline" Canvas.Left="28" Canvas.Top="82" Width="1060" Height="1"
+                               Fill="{DynamicResource Accent}" Opacity="0"/>
+                    <Ellipse x:Name="DecorOrbit" Canvas.Left="880" Canvas.Top="-92" Width="260" Height="260"
+                             Stroke="{DynamicResource Accent}" StrokeThickness="1" Opacity="0"/>
+                </Canvas>
+
+                <StackPanel x:Name="ShellStack" Grid.Column="1" Margin="20,17,20,12">
+                    <!-- Linha da entrada: arrasto · ícone · campo · modos -->
+                    <Border x:Name="CommandSurface" Background="Transparent" Padding="0" CornerRadius="0">
+                    <DockPanel x:Name="CommandDock" Background="Transparent">
+                        <TextBlock x:Name="DragGlyph" DockPanel.Dock="Left" Text="⠿"
+                                   FontSize="14" Margin="0,0,12,0" Padding="2,4"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextDone}"
+                                   Cursor="SizeAll" ToolTip="arrasta pra mover a barra"
+                                   MouseLeftButtonDown="DragZone_MouseDown"/>
+                        <TextBlock x:Name="ModeIcon" DockPanel.Dock="Left" Text="✦"
+                                   FontSize="19" Margin="0,0,13,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Accent}"
+                                   Effect="{DynamicResource AccentGlow}"/>
+                        <StackPanel x:Name="ModeRow" DockPanel.Dock="Right" Orientation="Horizontal"
+                                    VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        <!-- Player minimalista, colado à captura -->
+                        <Border x:Name="PlayerBar" DockPanel.Dock="Right" Visibility="Collapsed"
+                                Background="Transparent" Margin="12,0,0,0"
+                                VerticalAlignment="Center">
+                            <StackPanel x:Name="PlayerContent" Orientation="Horizontal"/>
+                        </Border>
+                        <!-- Clicador sutil no fim da barra: dia (evento) / pasta (referência) -->
+                        <Button x:Name="ModePicker" DockPanel.Dock="Right" Visibility="Collapsed"
+                                Style="{StaticResource Chip}" Click="ModePicker_Click"
+                                FontSize="11.5" Padding="11,5" Margin="10,0,0,0"
+                                VerticalAlignment="Center"/>
+                        <Grid>
+                            <TextBox x:Name="Input"
+                                     Background="Transparent" BorderThickness="0"
+                                     Foreground="{DynamicResource TextMain}"
+                                     CaretBrush="{DynamicResource Accent}"
+                                     FontSize="17.5" FontFamily="{DynamicResource Display}"
+                                     VerticalAlignment="Center"
+                                     TextChanged="Input_TextChanged"
+                                     KeyDown="Input_KeyDown"/>
+                            <TextBlock x:Name="Hint"
+                                       Text="esvazia a cabeça — Enter joga na captura, você decide depois…"
+                                       FontSize="17.5" FontFamily="{DynamicResource Display}"
+                                       Foreground="{DynamicResource TextDim}"
+                                       VerticalAlignment="Center"
+                                       IsHitTestVisible="False"/>
+                        </Grid>
+                    </DockPanel>
+                    </Border>
+
+                    <TextBlock x:Name="StatusText" Visibility="Collapsed"
+                               FontSize="12" Margin="32,5,0,0"
+                               FontFamily="{DynamicResource Mono}"
+                               Foreground="{DynamicResource Accent}"/>
+
+                    <!-- Linha ÚNICA de abas + player + funções -->
+                    <DockPanel x:Name="NavDock" Margin="0,11,0,0" Background="Transparent">
+                        <StackPanel x:Name="ActionItems" DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="NavNotas" Style="{StaticResource NavBtn}" Click="Notas_Click" Content="📝" FontSize="15" ToolTip="ZimNotes"/>
+                            <Button Style="{StaticResource NavBtn}" Click="Pomo_Click" Content="🍅" FontSize="15" ToolTip="Pomodoro flutuante"/>
+                            <Button Style="{StaticResource NavBtn}" Click="Print_Click" Content="📸" FontSize="15" ToolTip="Print (Relâmpago)"/>
+                            <Button Style="{StaticResource NavBtn}" Click="Record_Click" Content="🎥" FontSize="15" ToolTip="Gravar tela (Relâmpago)"/>
+                            <Button Style="{StaticResource NavBtn}" Click="Theme_Click" Content="🎨" FontSize="15" ToolTip="Cores" Margin="0"/>
+                        </StackPanel>
+                        <StackPanel x:Name="NavItems" Orientation="Horizontal">
+                            <Button x:Name="NavPainel" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Painel" Content="◈ Painel"/>
+                            <Button x:Name="NavHoje"   Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Hoje"   Content="☀ Hoje"/>
+                            <Button x:Name="NavKanban" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Kanban" Content="◱ Kanban"/>
+                            <Button x:Name="NavAgenda" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Agenda" Content="◷ Agenda"/>
+                            <Button x:Name="NavRefs"   Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Refs"   Content="◇ Referências"/>
+                            <Button x:Name="NavLinks"  Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Links"  Content="⌘ Links"/>
+                            <Button x:Name="NavListas" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Listas" Content="☰ Listas"/>
+                            <Button x:Name="NavNews"   Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="News"   Content="✷ Notícias"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <Rectangle x:Name="ShellSeparator" Height="1" Margin="2,12,2,2" Opacity="0.5">
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#00FFFFFF" Offset="0"/>
+                                <GradientStop Color="#5AA6A6FF" Offset="0.5"/>
+                                <GradientStop Color="#00FFFFFF" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+
+                    <!-- Miolo -->
+                    <Grid x:Name="ViewHost" MaxHeight="430">
+                        <ScrollViewer x:Name="PainelView" VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="PainelPanel" Margin="0,8,8,4"/>
+                        </ScrollViewer>
+                        <ScrollViewer x:Name="HojeView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                            <StackPanel x:Name="HojePanel" Margin="0,6,8,4"/>
+                        </ScrollViewer>
+                        <ScrollViewer x:Name="KanbanView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                            <StackPanel x:Name="KanbanPanel" Margin="0,6,8,4"/>
+                        </ScrollViewer>
+                        <ScrollViewer x:Name="AgendaView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                            <StackPanel x:Name="AgendaPanel" Margin="0,6,8,4"/>
+                        </ScrollViewer>
+                        <ScrollViewer x:Name="RefsView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                            <StackPanel x:Name="RefsPanel" Margin="0,6,8,4"/>
+                        </ScrollViewer>
+                        <ScrollViewer x:Name="LinksView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                            <StackPanel x:Name="LinksPanel" Margin="0,6,8,4"/>
+                        </ScrollViewer>
+                        <ScrollViewer x:Name="ListasView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                            <StackPanel x:Name="ListasPanel" Margin="0,6,8,4"/>
+                        </ScrollViewer>
+                        <ScrollViewer x:Name="NewsView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                            <StackPanel x:Name="NewsPanel" Margin="0,6,8,4"/>
+                        </ScrollViewer>
+                        <ScrollViewer x:Name="BuscaView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                            <StackPanel x:Name="BuscaPanel" Margin="0,6,8,4"/>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <!-- Rodapé + alça -->
+                    <DockPanel Margin="2,9,0,2" Background="Transparent">
+                        <TextBlock DockPanel.Dock="Right" Text="⤡"
+                                   FontSize="15" Padding="16,4,3,1"
+                                   Foreground="{DynamicResource TextDim}"
+                                   Cursor="SizeNWSE" ToolTip="arrasta pra redimensionar"
+                                   MouseLeftButtonDown="Grip_MouseDown"
+                                   MouseMove="Grip_MouseMove"
+                                   MouseLeftButtonUp="Grip_MouseUp"/>
+                        <TextBlock FontSize="10" FontFamily="{DynamicResource Mono}"
+                                   Foreground="{DynamicResource TextDone}"
+                                   TextTrimming="CharacterEllipsis">
+                            ZIMBAR DS · Ctrl+Alt+X abre/fecha · Ctrl+Alt+N ZimNotes · clique fora minimiza · Esc fecha · Ctrl+1–8 abas
+                        </TextBlock>
+                    </DockPanel>
+                </StackPanel>
+
+                <!-- Popup: pomodoro -->
+                <Popup x:Name="PomoPopup" StaysOpen="False" Placement="Mouse"
+                       AllowsTransparency="True" PopupAnimation="Fade">
+                    <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1" CornerRadius="14" Padding="6">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="26" ShadowDepth="0" Opacity="0.5" Color="#8B5CFF"/>
+                        </Border.Effect>
+                        <StackPanel>
+                            <Button Style="{StaticResource GhostItem}" Click="PomoStart_Click" Tag="25,5"  Content="🍅  Foco 25 + 5 de pausa"/>
+                            <Button Style="{StaticResource GhostItem}" Click="PomoStart_Click" Tag="50,10" Content="🍅  Foco 50 + 10 de pausa"/>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+
+                <!-- Popup do clicador (pastas / categorias) -->
+                <Popup x:Name="ModePickerPopup" StaysOpen="False" Placement="Bottom"
+                       PlacementTarget="{Binding ElementName=ModePicker}"
+                       AllowsTransparency="True" PopupAnimation="Fade">
+                    <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1" CornerRadius="12" Padding="7" MaxHeight="320">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="26" ShadowDepth="0" Opacity="0.5" Color="#8B5CFF"/>
+                        </Border.Effect>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="300">
+                            <StackPanel x:Name="ModePickerList" MinWidth="150"/>
+                        </ScrollViewer>
+                    </Border>
+                </Popup>
+
+                <!-- Seletor de data (mini-calendário caprichado) -->
+                <Popup x:Name="DatePopup" StaysOpen="False" Placement="Bottom"
+                       AllowsTransparency="True" PopupAnimation="Fade">
+                    <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1" CornerRadius="16" Padding="14" Width="290">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="34" ShadowDepth="0" Opacity="0.55" Color="#8B5CFF"/>
+                        </Border.Effect>
+                        <StackPanel x:Name="DateCalHost"/>
+                    </Border>
+                </Popup>
+
+                <!-- Popup: temas -->
+                <Popup x:Name="ThemePopup" StaysOpen="False" Placement="Mouse"
+                       AllowsTransparency="True" PopupAnimation="Fade">
+                    <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1" CornerRadius="14" Padding="8">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="26" ShadowDepth="0" Opacity="0.5" Color="#8B5CFF"/>
+                        </Border.Effect>
+                        <StackPanel x:Name="ThemeList"/>
+                    </Border>
+                </Popup>
+
+                <!-- Popup de edição (kanban / agenda) -->
+                <Popup x:Name="KbEditPopup" StaysOpen="False"
+                       Placement="Center" PlacementTarget="{Binding ElementName=Card}"
+                       AllowsTransparency="True" PopupAnimation="Fade">
+                    <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1.5" CornerRadius="18" Padding="22,18,22,18" Width="430">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="40" ShadowDepth="0" Opacity="0.6" Color="#8B5CFF"/>
+                        </Border.Effect>
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,14">
+                                <Button DockPanel.Dock="Right" Style="{StaticResource Chip}" Click="KbEdCancel_Click"
+                                        Content="✕" FontSize="10.5" Padding="8,4" Margin="0"
+                                        Background="Transparent"/>
+                                <TextBlock x:Name="KbEdHeader" Text="EDITAR" FontSize="13"
+                                           FontFamily="{DynamicResource Mono}"
+                                           Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
+                            </DockPanel>
+
+                            <TextBlock Text="TÍTULO" FontSize="9.5" FontFamily="{DynamicResource Mono}"
+                                       Foreground="{DynamicResource TextDim}" Margin="3,0,0,5"/>
+                            <TextBox x:Name="KbEdTitle" Style="{StaticResource InlineAdd}" FontSize="13"/>
+
+                            <Grid Margin="0,13,0,15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,14,0">
+                                    <TextBlock Text="DATA" FontSize="9.5" FontFamily="{DynamicResource Mono}"
+                                               Foreground="{DynamicResource TextDim}" Margin="3,0,0,5"/>
+                                    <DockPanel>
+                                        <Button x:Name="KbEdDateClear" DockPanel.Dock="Right" Style="{StaticResource Chip}"
+                                                Click="KbEdDateClear_Click" Content="✕" FontSize="10" Padding="6,4"
+                                                Margin="6,0,0,0" Background="Transparent" ToolTip="tirar da agenda"/>
+                                        <Button x:Name="KbEdDateBtn" Style="{StaticResource Chip}"
+                                                Click="KbEdDateBtn_Click" FontSize="12.5" Padding="11,7"
+                                                HorizontalContentAlignment="Left" Margin="0"/>
+                                    </DockPanel>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock x:Name="KbEdStatusLabel" Text="STATUS" FontSize="9.5" FontFamily="{DynamicResource Mono}"
+                                               Foreground="{DynamicResource TextDim}" Margin="3,0,0,5"/>
+                                    <StackPanel x:Name="KbEdStatusRow" Orientation="Horizontal"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Rectangle Height="1" Fill="#22FFFFFF" Margin="0,0,0,14"/>
+
+                            <DockPanel>
+                                <Button DockPanel.Dock="Left" Style="{StaticResource Chip}" Click="KbEdDelete_Click"
+                                        Content="🗑  excluir" Background="Transparent" Foreground="{DynamicResource Dificil}"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Style="{StaticResource Chip}" Click="KbEdCancel_Click" Content="cancelar"
+                                            Background="Transparent"/>
+                                    <Button Style="{StaticResource PrimaryBtn}" Click="KbEdSave_Click" Content="✓  salvar"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
