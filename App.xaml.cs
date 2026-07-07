@@ -10,7 +10,7 @@ namespace Zimbar;
 
 /// <summary>
 /// App roda na bandeja (sem janela principal). Registra o hotkey global
-/// Ctrl+Alt+X e alterna a barra flutuante experimental.
+/// Ctrl+Alt+Z e alterna a barra flutuante.
 /// </summary>
 public partial class App : Application
 {
@@ -35,29 +35,28 @@ public partial class App : Application
     private const uint MOD_CONTROL = 0x0002;
     private const uint MOD_NOREPEAT = 0x4000;
     private const int WM_HOTKEY = 0x0312;
-    private const uint VK_X = 0x58;
-    private const uint VK_N = 0x4E;
+    private const uint VK_Z = 0x5A;
+    private const uint VK_D = 0x44;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
-        _singleInstance = new Mutex(true, "Zimbar.DesignSystem.SingleInstance", out bool isNew);
+        _singleInstance = new Mutex(true, "Zimbar.SingleInstance", out bool isNew);
         if (!isNew)
         {
             Shutdown();
             return;
         }
 
-        SetCurrentProcessExplicitAppUserModelID("Zimbar.DesignSystem.Toolbelt");
+        SetCurrentProcessExplicitAppUserModelID("Zimbar.Toolbelt");
         Config.Load();
         ThemeManager.Apply(Config.Theme);
         SetupTray();
         SetupHotkey();
 
-        // A build experimental abre direto para ficar testável por duplo clique.
-        // Use --tray se quiser iniciar só na bandeja.
-        if (!Array.Exists(e.Args, a => a == "--tray"))
+        // Modo de teste: abre a barra direto na inicialização.
+        if (Array.Exists(e.Args, a => a == "--show"))
             ToggleBar();
     }
 
@@ -67,19 +66,19 @@ public partial class App : Application
         {
             Icon = CreateZIcon(),
             Visible = true,
-            Text = "Zimbar DS — Ctrl+Alt+X pra abrir"
+            Text = "Zimbar — Ctrl+Alt+Z pra abrir"
         };
 
         var menu = new WinForms.ContextMenuStrip();
-        menu.Items.Add("Abrir Zimbar DS  (Ctrl+Alt+X)", null, (_, _) => ToggleBar());
-        menu.Items.Add("Abrir ZimNotes DS  (Ctrl+Alt+N)", null, (_, _) => NotesWindow.Open());
+        menu.Items.Add("Abrir Zimbar  (Ctrl+Alt+Z)", null, (_, _) => ToggleBar());
+        menu.Items.Add("Abrir ZimNotes  (Ctrl+Alt+D)", null, (_, _) => NotesWindow.Open());
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add("Sair", null, (_, _) => Shutdown());
         _tray.ContextMenuStrip = menu;
         _tray.DoubleClick += (_, _) => ToggleBar();
 
-        _tray.BalloonTipTitle = "Zimbar DS ativa";
-        _tray.BalloonTipText = "Versão experimental do Design System.";
+        _tray.BalloonTipTitle = "Zimbar ativa";
+        _tray.BalloonTipText = "Ctrl+Alt+Z pra abrir o cinto de ferramentas.";
         _tray.ShowBalloonTip(3000);
     }
 
@@ -127,15 +126,15 @@ public partial class App : Application
         _hotkeySource = new HwndSource(p);
         _hotkeySource.AddHook(WndProc);
 
-        if (!RegisterHotKey(_hotkeySource.Handle, HOTKEY_TOGGLE, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_X))
+        if (!RegisterHotKey(_hotkeySource.Handle, HOTKEY_TOGGLE, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_Z))
         {
-            _tray?.ShowBalloonTip(4000, "Zimbar DS",
-                "Não consegui registrar Ctrl+Alt+X (outro app está usando?). Use o ícone da bandeja.",
+            _tray?.ShowBalloonTip(4000, "Zimbar",
+                "Não consegui registrar Ctrl+Alt+Z (outro app está usando?). Use o ícone da bandeja.",
                 WinForms.ToolTipIcon.Warning);
         }
 
-        // Ctrl+Alt+N abre direto o ZimNotes experimental.
-        RegisterHotKey(_hotkeySource.Handle, HOTKEY_NOTES, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_N);
+        // Ctrl+Alt+D abre direto o ZimNotes.
+        RegisterHotKey(_hotkeySource.Handle, HOTKEY_NOTES, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_D);
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)

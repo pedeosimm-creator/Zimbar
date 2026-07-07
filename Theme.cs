@@ -11,7 +11,7 @@ namespace Zimbar;
 public static class Config
 {
     private static readonly string PathFile = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ZimbarDesignSystem", "settings.json");
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Zimbar", "settings.json");
 
     public static double? BarLeft, BarTop, PomoLeft, PomoTop, BarWidth, ViewMax;
     public static double PomoScale = 1.0;

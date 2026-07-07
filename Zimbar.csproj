@@ -8,10 +8,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <AssemblyName>ZimbarDesignSystem</AssemblyName>
+    <AssemblyName>Zimbar</AssemblyName>
     <Version>0.5.0</Version>
-    <Product>Zimbar Design System</Product>
-    <Description>Versão experimental do Zimbar com Design System centralizado.</Description>
+    <Product>Zimbar</Product>
+    <Description>Cinto de ferramentas do Pedro — barra rápida com hotkey global.</Description>
     <ApplicationIcon>assets\Zimbar.ico</ApplicationIcon>
   </PropertyGroup>
 

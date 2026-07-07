@@ -199,7 +199,7 @@
                         <TextBlock FontSize="10" FontFamily="{DynamicResource Mono}"
                                    Foreground="{DynamicResource TextDone}"
                                    TextTrimming="CharacterEllipsis">
-                            ZIMBAR DS · Ctrl+Alt+X abre/fecha · Ctrl+Alt+N ZimNotes · clique fora minimiza · Esc fecha · Ctrl+1–8 abas
+                            ZIMBAR v0.9 · Ctrl+Alt+Z abre/fecha · Ctrl+Alt+D ZimNotes · clique fora minimiza · Esc fecha · Ctrl+1–8 abas
                         </TextBlock>
                     </DockPanel>
                 </StackPanel>
