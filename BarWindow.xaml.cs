@@ -354,7 +354,7 @@ public partial class BarWindow : Window
         RailMark.Text = "Z";
         RailTitle.Text = "HUD";
         RailMode.Text = "CAPTURE";
-        DragGlyph.Text = "::";
+        DragGlyph.Text = "⠿";
 
         if (theme == "Noir HUD")
         {
@@ -377,7 +377,7 @@ public partial class BarWindow : Window
             DecorOrbit.Opacity = 0;
             DecorScanline.Opacity = 0;
             ShellSeparator.Opacity = 0.16;
-            RailMark.Text = "+";
+            RailMark.Text = "✦";
             RailTitle.Text = "AURORA\nFLOW";
             RailMode.Text = "SOFT HUD";
         }
@@ -390,7 +390,7 @@ public partial class BarWindow : Window
             DecorScanline.Opacity = 0.28;
             ShellSeparator.Height = 2;
             ShellSeparator.Margin = new Thickness(0, 14, 0, 4);
-            RailMark.Text = "*";
+            RailMark.Text = "◉";
             RailTitle.Text = "ORBITAL\nCONSOLE";
             RailMode.Text = "VECTOR";
             SetNavLabels(full: false, orbital: true);
@@ -408,14 +408,14 @@ public partial class BarWindow : Window
     {
         (Button Btn, string Full, string Compact, string Orbital)[] items =
         {
-            (NavPainel, "Painel", "Painel", "01 PAN"),
-            (NavHoje, "Hoje", "Hoje", "02 HOJ"),
-            (NavKanban, "Kanban", "Kanban", "03 KBN"),
-            (NavAgenda, "Agenda", "Agenda", "04 AGD"),
-            (NavRefs, "Referências", "Refs", "05 REF"),
-            (NavLinks, "Links", "Links", "06 LNK"),
-            (NavListas, "Listas", "Listas", "07 LST"),
-            (NavNews, "Notícias", "News", "08 NEW"),
+            (NavPainel, "◈ Painel", "◈", "01 PAN"),
+            (NavHoje, "☀ Hoje", "☀", "02 HOJ"),
+            (NavKanban, "◱ Kanban", "◱", "03 KBN"),
+            (NavAgenda, "◷ Agenda", "◷", "04 AGD"),
+            (NavRefs, "◇ Referências", "◇", "05 REF"),
+            (NavLinks, "⌘ Links", "⌘", "06 LNK"),
+            (NavListas, "☰ Listas", "☰", "07 LST"),
+            (NavNews, "✷ Notícias", "✷", "08 NEW"),
         };
 
         foreach (var (btn, longText, compact, orb) in items)
@@ -442,11 +442,11 @@ public partial class BarWindow : Window
 
     private static readonly (string Mode, string Icon, string Label, string HintText)[] Modes =
     {
-        ("captura", "+", "captura", "esvazia a cabeça — Enter joga na captura, você decide depois…"),
-        ("busca", "buscar", "busca", "busca em tudo — tarefas, agenda, notas, referências, listas…"),
-        ("web", "web", "web", "pesquisa na internet — Enter abre no navegador…"),
-        ("evento", "data", "evento", "novo evento — ex: 12/08 gravação, ou “amanhã reunião”…"),
-        ("referencia", "ref", "referência", "guarda uma referência — #categoria no começo classifica…"),
+        ("captura", "✦", "captura", "esvazia a cabeça — Enter joga na captura, você decide depois…"),
+        ("busca", "🔎", "busca", "busca em tudo — tarefas, agenda, notas, referências, listas…"),
+        ("web", "🌐", "web", "pesquisa na internet — Enter abre no navegador…"),
+        ("evento", "📅", "evento", "novo evento — ex: 12/08 gravação, ou “amanhã reunião”…"),
+        ("referencia", "🔖", "referência", "guarda uma referência — #categoria no começo classifica…"),
     };
 
     private readonly Dictionary<string, Button> _modeBtns = new();
@@ -511,12 +511,12 @@ public partial class BarWindow : Window
         if (_inputMode == "evento")
         {
             ModePicker.Visibility = Visibility.Visible;
-            ModePicker.Content = "data " + DayLabel(_eventoDate);
+            ModePicker.Content = "📅  " + DayLabel(_eventoDate) + "  ⌄";
         }
         else if (_inputMode == "referencia")
         {
             ModePicker.Visibility = Visibility.Visible;
-            ModePicker.Content = "pasta " + (_refTargetCat.Length == 0 ? "sem categoria" : "#" + _refTargetCat);
+            ModePicker.Content = "📁  " + (_refTargetCat.Length == 0 ? "sem categoria" : "#" + _refTargetCat) + "  ⌄";
         }
         else ModePicker.Visibility = Visibility.Collapsed;
     }
@@ -658,7 +658,7 @@ public partial class BarWindow : Window
             Style = (Style)FindResource("GhostItem"),
             Content = new TextBlock
             {
-                Text = (on ? "* " : "  ") + label, FontSize = 12.5,
+                Text = (on ? "● " : "   ") + label, FontSize = 12.5,
                 Foreground = (Brush)FindResource(on ? "Accent" : "TextMain")
             },
             Padding = new Thickness(9, 5, 9, 5)
@@ -820,7 +820,7 @@ public partial class BarWindow : Window
         };
         DockPanel.SetDock(capCount, Dock.Right);
         capHead.Children.Add(capCount);
-        capHead.Children.Add(HudLabel("CAPTURA RÁPIDA"));
+        capHead.Children.Add(HudLabel("✦  CAPTURA RÁPIDA"));
         PainelPanel.Children.Add(capHead);
 
         if (inbox.Count == 0)
@@ -832,7 +832,7 @@ public partial class BarWindow : Window
                 Margin = new Thickness(0, 0, 0, 14),
                 Child = new TextBlock
                 {
-                    Text = "cabeça vazia — joga qualquer coisa na barra lá em cima, aperta Enter e decide o destino aqui.",
+                    Text = "cabeça vazia ✧   joga qualquer coisa na barra lá em cima — Enter — e decide o destino aqui.",
                     FontSize = 12.5, Foreground = (Brush)FindResource("TextDone"),
                     TextWrapping = TextWrapping.Wrap, LineHeight = 20
                 }
@@ -859,7 +859,7 @@ public partial class BarWindow : Window
         placar.Inlines.Add(new Run($"/{tot}") { FontSize = 11, Foreground = (Brush)FindResource("TextDim") });
         DockPanel.SetDock(placar, Dock.Right);
         hojeHead.Children.Add(placar);
-        hojeHead.Children.Add(HudLabel("HOJE"));
+        hojeHead.Children.Add(HudLabel("☀  HOJE"));
         hojeBody.Children.Add(hojeHead);
         hojeBody.Children.Add(ProgressBarZ(tot == 0 ? 0 : (double)feitas / tot, tall: true));
 
@@ -898,7 +898,7 @@ public partial class BarWindow : Window
 
         // ── PRÓXIMOS EVENTOS: eventos + recorrentes (cor diferente), mesmo formato ──
         var proxBody = new StackPanel();
-        proxBody.Children.Add(HudLabel("PRÓXIMOS EVENTOS"));
+        proxBody.Children.Add(HudLabel("◷  PRÓXIMOS EVENTOS"));
         var proxWrap = new StackPanel { Margin = new Thickness(0, 6, 0, 0) };
 
         var eventos = new List<(DateTime D, string Titulo, bool Recur, JsonObject? T)>();
@@ -1075,7 +1075,7 @@ public partial class BarWindow : Window
         var del = new Button
         {
             Style = (Style)FindResource("Chip"),
-            Content = "x",
+            Content = "✕",
             FontSize = compact ? 10.5 : 11,
             Padding = new Thickness(compact ? 6 : 8, 3, compact ? 6 : 8, 3),
             Margin = new Thickness(0),
@@ -1126,10 +1126,10 @@ public partial class BarWindow : Window
         string q = _buscaQuery.Trim();
         if (q.Length == 0)
         {
-            BuscaPanel.Children.Add(DimText("digita no campo lá em cima com o modo busca ligado"));
+            BuscaPanel.Children.Add(DimText("digita no campo lá em cima com o modo 🔎 ligado"));
             return;
         }
-        BuscaPanel.Children.Add(SectionLabel($"BUSCA — “{q}”"));
+        BuscaPanel.Children.Add(SectionLabel($"🔎  BUSCA — “{q}”"));
         var carregando = DimText("procurando…");
         BuscaPanel.Children.Add(carregando);
 
@@ -1163,14 +1163,14 @@ public partial class BarWindow : Window
                             doPlano.Add($"{o["text"]!.GetValue<string>()}  ({titulo.ToLower(new CultureInfo("pt-BR"))})");
             if (doPlano.Count > 0)
             {
-                BuscaPanel.Children.Add(SectionLabel("PLANO DE HOJE"));
-                foreach (var s in doPlano) { BuscaPanel.Children.Add(BuscaRow("[ ]", s, null, () => SwitchView("Hoje"))); achou++; }
+                BuscaPanel.Children.Add(SectionLabel("☀  PLANO DE HOJE"));
+                foreach (var s in doPlano) { BuscaPanel.Children.Add(BuscaRow("○", s, null, () => SwitchView("Hoje"))); achou++; }
             }
 
             // Kanban / agenda
             if (tarefasT.Result.Count > 0)
             {
-                BuscaPanel.Children.Add(SectionLabel("KANBAN / AGENDA"));
+                BuscaPanel.Children.Add(SectionLabel("📋  KANBAN / AGENDA"));
                 foreach (var node in tarefasT.Result)
                     if (node is JsonObject t)
                     {
@@ -1178,7 +1178,7 @@ public partial class BarWindow : Window
                         if (t["prazo"]?.GetValue<string>() is string p && DateTime.TryParse(p, out var d))
                             meta += "  ·  " + d.ToString("dd/MM");
                         var tt = t;
-                        BuscaPanel.Children.Add(BuscaRow("card", t["titulo"]?.GetValue<string>() ?? "", meta, () => OpenKbEdit(tt)));
+                        BuscaPanel.Children.Add(BuscaRow("▫", t["titulo"]?.GetValue<string>() ?? "", meta, () => OpenKbEdit(tt)));
                         achou++;
                     }
             }
@@ -1186,11 +1186,11 @@ public partial class BarWindow : Window
             // Notas
             if (notasT.Result.Count > 0)
             {
-                BuscaPanel.Children.Add(SectionLabel("NOTAS (abre o ZimNotes)"));
+                BuscaPanel.Children.Add(SectionLabel("📝  NOTAS (abre o ZimNotes)"));
                 foreach (var node in notasT.Result)
                     if (node is JsonObject n)
                     {
-                        BuscaPanel.Children.Add(BuscaRow("nota", n["titulo"]?.GetValue<string>() ?? "(sem título)", null,
+                        BuscaPanel.Children.Add(BuscaRow("📝", n["titulo"]?.GetValue<string>() ?? "(sem título)", null,
                             () => { HideBar(); NotesWindow.Open(); }));
                         achou++;
                     }
@@ -1223,9 +1223,9 @@ public partial class BarWindow : Window
                 }
             if (refsAchadas.Count > 0)
             {
-                BuscaPanel.Children.Add(SectionLabel("REFERÊNCIAS"));
+                BuscaPanel.Children.Add(SectionLabel("🔖  REFERÊNCIAS"));
                 foreach (var (texto, meta, acao) in refsAchadas)
-                { BuscaPanel.Children.Add(BuscaRow("link", texto, meta, acao)); achou++; }
+                { BuscaPanel.Children.Add(BuscaRow("🔗", texto, meta, acao)); achou++; }
             }
 
             // Listas (mural)
@@ -1235,8 +1235,8 @@ public partial class BarWindow : Window
                     deListas.Add($"{it["categoria"]?.GetValue<string>()}  ›  {it["texto"]!.GetValue<string>()}");
             if (deListas.Count > 0)
             {
-                BuscaPanel.Children.Add(SectionLabel("LISTAS"));
-                foreach (var s in deListas) { BuscaPanel.Children.Add(BuscaRow("[ ]", s, null, () => SwitchView("Listas"))); achou++; }
+                BuscaPanel.Children.Add(SectionLabel("☰  LISTAS"));
+                foreach (var s in deListas) { BuscaPanel.Children.Add(BuscaRow("○", s, null, () => SwitchView("Listas"))); achou++; }
             }
 
             // Captura
@@ -1245,8 +1245,8 @@ public partial class BarWindow : Window
                 .Select(o => o["text"]!.GetValue<string>()).ToList();
             if (daCaptura.Count > 0)
             {
-                BuscaPanel.Children.Add(SectionLabel("NA CAPTURA"));
-                foreach (var s in daCaptura) { BuscaPanel.Children.Add(BuscaRow("+", s, null, () => SwitchView("Painel"))); achou++; }
+                BuscaPanel.Children.Add(SectionLabel("✦  NA CAPTURA"));
+                foreach (var s in daCaptura) { BuscaPanel.Children.Add(BuscaRow("✦", s, null, () => SwitchView("Painel"))); achou++; }
             }
 
             if (achou == 0)
@@ -1296,12 +1296,10 @@ public partial class BarWindow : Window
             _hojeRenameId = null;
             var focoT = Supa.GetKv("me2_foco");
             var ritmoT = Supa.GetKv("me2_ritmo");
-            var tarefasT = Supa.Select("tarefas?select=id,titulo,status,prazo&order=created_at.desc");
-            await Task.WhenAll(focoT, ritmoT, tarefasT);
+            await Task.WhenAll(focoT, ritmoT);
             _foco = focoT.Result is null ? null : JsonNode.Parse(focoT.Result) as JsonObject;
             _foco = await RolloverFoco(_foco);
             _ritmo = ritmoT.Result is string rs ? JsonNode.Parse(rs) as JsonObject : null;
-            _tarefasCache = tarefasT.Result;
             RenderHoje();
         }
         catch
@@ -1468,7 +1466,7 @@ public partial class BarWindow : Window
             levelRow.Children.Add(dot);
         }
         addRow.Children.Add(levelRow);
-        addRow.Children.Add(RevealAdd("+ tarefa do dia", "escolhe o nível na cor ao lado e digita", async text =>
+        addRow.Children.Add(RevealAdd("＋ tarefa do dia", "escolhe o nível na cor ao lado e digita", async text =>
         {
             await AddHojeItem(_hojeTarget, text);
             await LoadHoje();
@@ -1481,7 +1479,7 @@ public partial class BarWindow : Window
             Height = 1, Margin = new Thickness(0, 12, 0, 10), Opacity = 0.35,
             Background = (Brush)FindResource("AccentSoft")
         });
-        HojePanel.Children.Add(SectionLabel("RITMO DE HOJE — toca pra marcar"));
+        HojePanel.Children.Add(SectionLabel("♻  RITMO DE HOJE — toca pra marcar"));
         var ritmoWrap = new WrapPanel { Margin = new Thickness(2, 2, 0, 0) };
         string hojeKey = Today();
         if (_ritmo?["items"] is JsonArray habitos && habitos.Count > 0)
@@ -1502,7 +1500,7 @@ public partial class BarWindow : Window
                         ToolTip = feito ? "feito hoje — clica pra desmarcar" : "clica quando fizer hoje",
                         Child = new TextBlock
                         {
-                            Text = (feito ? "[x] " : "[ ] ") + (hb["text"]?.GetValue<string>() ?? ""),
+                            Text = (feito ? "● " : "○ ") + (hb["text"]?.GetValue<string>() ?? ""),
                             FontSize = 12,
                             Foreground = (Brush)FindResource(feito ? "TextInk" : "TextMain")
                         }
@@ -1555,7 +1553,7 @@ public partial class BarWindow : Window
         var row = new StackPanel { Orientation = Orientation.Horizontal };
         row.Children.Add(new TextBlock
         {
-            Text = done ? "[x]  " : "[ ]  ",
+            Text = done ? "◉  " : "○  ",
             Foreground = (Brush)FindResource(corKey),
             FontSize = 13.5
         });
@@ -1607,7 +1605,7 @@ public partial class BarWindow : Window
 
         // Menu de contexto: renomear · mover · excluir
         var menu = new ContextMenu();
-        var mRen = new MenuItem { Header = "renomear" };
+        var mRen = new MenuItem { Header = "✎ renomear" };
         mRen.Click += (_, _) => { _hojeRenameId = id; RenderHoje(); };
         menu.Items.Add(mRen);
         var mMove = new MenuItem { Header = "mover para" };
@@ -1621,7 +1619,7 @@ public partial class BarWindow : Window
             }
         menu.Items.Add(mMove);
         menu.Items.Add(new Separator());
-        var mDel = new MenuItem { Header = "excluir" };
+        var mDel = new MenuItem { Header = "🗑 excluir" };
         mDel.Click += async (_, _) => await DeleteHoje(item, arr);
         menu.Items.Add(mDel);
         btn.ContextMenu = menu;
@@ -1641,18 +1639,7 @@ public partial class BarWindow : Window
             if (_foco[a] is JsonArray arr)
                 foreach (var x in arr.OfType<JsonObject>().ToList())
                     if (x["id"]?.GetValue<string>() == dragId) { dragged = (JsonObject)x.DeepClone()!; arr.Remove(x); }
-        if (dragged is null)
-        {
-            var task = _tarefasCache.OfType<JsonObject>().FirstOrDefault(t => t["id"]?.GetValue<string>() == dragId);
-            if (task is null) return;
-            dragged = new JsonObject
-            {
-                ["id"] = Supa.NewId(),
-                ["text"] = task["titulo"]?.GetValue<string>() ?? "",
-                ["done"] = false,
-                ["task_id"] = dragId
-            };
-        }
+        if (dragged is null) return;
 
         if (_foco[toArr] is not JsonArray) _foco[toArr] = new JsonArray();
         var dest = (JsonArray)_foco[toArr]!;
@@ -1664,35 +1651,6 @@ public partial class BarWindow : Window
         RenderHoje();
         try { await Supa.SetKv("me2_foco", _foco.ToJsonString()); }
         catch { ShowStatus("⚠ não sincronizou", error: true); }
-    }
-
-    private async Task AddKanbanToHoje(JsonObject task, string arr = "med")
-    {
-        string id = task["id"]?.GetValue<string>() ?? "";
-        string title = task["titulo"]?.GetValue<string>() ?? "";
-        if (title.Length == 0) return;
-
-        if (_foco is null || _foco["date"]?.GetValue<string>() != Today())
-        {
-            var raw = await Supa.GetKv("me2_foco");
-            _foco = await RolloverFoco(raw is null ? null : JsonNode.Parse(raw) as JsonObject);
-        }
-        if (_foco[arr] is not JsonArray) _foco[arr] = new JsonArray();
-        var target = (JsonArray)_foco[arr]!;
-        bool exists = target.OfType<JsonObject>().Any(o =>
-            o["task_id"]?.GetValue<string>() == id ||
-            string.Equals(o["text"]?.GetValue<string>(), title, StringComparison.OrdinalIgnoreCase));
-        if (!exists)
-            target.Add(new JsonObject
-            {
-                ["id"] = Supa.NewId(),
-                ["text"] = title,
-                ["done"] = false,
-                ["task_id"] = id
-            });
-
-        await Supa.SetKv("me2_foco", _foco.ToJsonString());
-        ShowStatus(exists ? "já estava no Hoje" : "enviado para Hoje");
     }
 
     private async Task MoveHoje(JsonObject item, string fromArr, string toArr)
@@ -1851,12 +1809,12 @@ public partial class BarWindow : Window
         var dayBtn = new Button
         {
             Style = (Style)FindResource("Chip"),
-            Content = "data " + DayLabel(_agendaAddDate),
+            Content = "📅  " + DayLabel(_agendaAddDate) + "  ⌄",
             FontSize = 11.5, Padding = new Thickness(11, 7, 11, 7),
             Margin = new Thickness(0, 0, 8, 0)
         };
         dayBtn.Click += (_, _) => OpenDatePicker(dayBtn, _agendaAddDate,
-            d => { _agendaAddDate = d; dayBtn.Content = "data " + DayLabel(d); });
+            d => { _agendaAddDate = d; dayBtn.Content = "📅  " + DayLabel(d) + "  ⌄"; });
         DockPanel.SetDock(dayBtn, Dock.Left);
         row.Children.Add(dayBtn);
 
@@ -2301,24 +2259,6 @@ public partial class BarWindow : Window
                 Foreground = (Brush)FindResource("TextDim"),
                 Margin = new Thickness(0, 5, 0, 0)
             });
-        var todayBtn = new Button
-        {
-            Style = (Style)FindResource("Chip"),
-            Content = "+ hoje",
-            FontSize = 10.5,
-            Padding = new Thickness(8, 3, 8, 3),
-            Margin = new Thickness(0, 8, 0, 0),
-            HorizontalAlignment = HorizontalAlignment.Left,
-            Background = Brushes.Transparent,
-            ToolTip = "mandar este card para as tarefas do dia"
-        };
-        todayBtn.Click += async (_, e) =>
-        {
-            e.Handled = true;
-            try { await AddKanbanToHoje(t); }
-            catch { ShowStatus("não sincronizou com Hoje", error: true); }
-        };
-        sp.Children.Add(todayBtn);
 
         var body = new Grid();
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) });
@@ -2417,7 +2357,7 @@ public partial class BarWindow : Window
 
     private void UpdateKbDateBtn()
     {
-        KbEdDateBtn.Content = "data " + (_kbEditDate is DateTime d ? d.ToString("dd/MM/yyyy") : "sem data");
+        KbEdDateBtn.Content = "📅  " + (_kbEditDate is DateTime d ? d.ToString("dd/MM/yyyy") : "sem data");
         KbEdDateClear.Visibility = _kbEditDate is null ? Visibility.Collapsed : Visibility.Visible;
     }
 
@@ -2516,9 +2456,9 @@ public partial class BarWindow : Window
             var ideias = await GetKvArray("me2_ideias");
             RefsPanel.Children.Clear();
 
-            // Cabeçalho: rótulo + botão "+ categoria" à direita
+            // Cabeçalho: rótulo + botão "＋ categoria" à direita
             var head = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };
-            var addCat = RevealAdd("+ categoria", "nome da categoria (ex: inspiração)", async text =>
+            var addCat = RevealAdd("＋ categoria", "nome da categoria (ex: inspiração)", async text =>
             {
                 var nome = text.TrimStart('#').Trim().ToLower(new CultureInfo("pt-BR"));
                 if (nome.Length == 0) return;
@@ -2563,9 +2503,9 @@ public partial class BarWindow : Window
             if (algo) RefsPanel.Children.Add(map);
 
             if (!algo)
-                RefsPanel.Children.Add(DimText("nada aqui ainda — use o modo referência lá em cima, ou o botão abaixo. crie categorias com + categoria."));
+                RefsPanel.Children.Add(DimText("nada aqui ainda — use o modo 🔖 referência lá em cima, ou o botão abaixo. crie categorias com ＋ categoria."));
 
-            RefsPanel.Children.Add(RevealAdd("+ referência", "#categoria no começo classifica (ex: #design https://...)", async text =>
+            RefsPanel.Children.Add(RevealAdd("＋ referência", "#categoria no começo classifica (ex: #design https://…)", async text =>
             {
                 var item = new JsonObject { ["id"] = Supa.NewId(), ["ts"] = Ms() };
                 var m = Regex.Match(text, @"^#([\wÀ-ÿ-]+)\s+(.+)$");
@@ -2623,8 +2563,8 @@ public partial class BarWindow : Window
                 catActs.Children.Add(b);
                 return b;
             }
-            CatBtn("ren", "renomear categoria").Click += (_, _) => _ = RenameCategoria(cat);
-            CatBtn("x", "excluir categoria (itens viram sem categoria)").Click += async (_, _) => await DeleteCategoria(cat);
+            CatBtn("✎", "renomear categoria").Click += (_, _) => _ = RenameCategoria(cat);
+            CatBtn("✕", "excluir categoria (itens viram sem categoria)").Click += async (_, _) => await DeleteCategoria(cat);
             head.Children.Add(catActs);
         }
 
@@ -2830,8 +2770,8 @@ public partial class BarWindow : Window
             acts.Children.Add(b);
             return b;
         }
-        MiniBtn("edit", "editar").Click += (_, _) => { _refRenameId = id; RenderRefsInPlace(); };
-        MiniBtn("x", "apagar").Click += async (_, _) =>
+        MiniBtn("✎", "editar").Click += (_, _) => { _refRenameId = id; RenderRefsInPlace(); };
+        MiniBtn("✕", "apagar").Click += async (_, _) =>
         {
             var arr = await GetKvArray("me2_ideias");
             var novo = new JsonArray();
@@ -2952,7 +2892,7 @@ public partial class BarWindow : Window
     private void RenderLinksRoot(JsonArray pastas)
     {
         LinksPanel.Children.Clear();
-        LinksPanel.Children.Add(HudLabel("LINKS — suas pastas"));
+        LinksPanel.Children.Add(HudLabel("📁  LINKS — suas pastas"));
 
         var wrap = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
         foreach (var node in pastas)
@@ -2963,7 +2903,7 @@ public partial class BarWindow : Window
 
                 var del = new Button
                 {
-                    Style = (Style)FindResource("NavBtn"), Content = "x", FontSize = 10.5,
+                    Style = (Style)FindResource("NavBtn"), Content = "✕", FontSize = 10.5,
                     Padding = new Thickness(5, 1, 5, 1), Margin = new Thickness(0),
                     HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
                     Foreground = (Brush)FindResource("TextDone"), Visibility = Visibility.Hidden,
@@ -2979,8 +2919,7 @@ public partial class BarWindow : Window
                         {
                             Children =
                             {
-                                new TextBlock { Text = "pasta", FontSize = 11, FontFamily = (FontFamily)FindResource("Mono"),
-                                    Foreground = (Brush)FindResource("TextDone") },
+                                new TextBlock { Text = "📁", FontSize = 22 },
                                 new TextBlock { Text = name, FontSize = 13.5, FontWeight = FontWeights.SemiBold,
                                     Foreground = (Brush)FindResource("TextMain"), Margin = new Thickness(0, 6, 0, 0),
                                     TextTrimming = TextTrimming.CharacterEllipsis }
@@ -3008,7 +2947,7 @@ public partial class BarWindow : Window
         if (pastas.Count == 0) wrap.Children.Add(DimText("nenhuma pasta ainda"));
         LinksPanel.Children.Add(wrap);
 
-        LinksPanel.Children.Add(RevealAdd("+ pasta", "nome da pasta primária (ex: Design)", async text =>
+        LinksPanel.Children.Add(RevealAdd("＋ pasta", "nome da pasta primária (ex: Design)", async text =>
         {
             await Supa.Insert("zimbar_folders", new JsonObject { ["name"] = text, ["parent_id"] = null });
             await LoadLinks();
@@ -3065,7 +3004,7 @@ public partial class BarWindow : Window
         back.Click += (_, _) => { _currentFolder = null; _ = LoadLinks(); };
         DockPanel.SetDock(back, Dock.Right);
         head.Children.Add(back);
-        head.Children.Add(HudLabel(_currentFolder.Value.Name));
+        head.Children.Add(HudLabel("📁  " + _currentFolder.Value.Name));
         LinksPanel.Children.Add(head);
 
         int ci = 0;
@@ -3084,7 +3023,7 @@ public partial class BarWindow : Window
         LinksPanel.Children.Add(LinkSection("sem categoria", fid, null, soltos, canDelete: false));
 
         // + categoria dentro da pasta
-        LinksPanel.Children.Add(RevealAdd("+ categoria", "nome da categoria dentro desta pasta", async text =>
+        LinksPanel.Children.Add(RevealAdd("＋ categoria", "nome da categoria dentro desta pasta", async text =>
         {
             await Supa.Insert("zimbar_folders", new JsonObject { ["name"] = text, ["parent_id"] = fid });
             await LoadLinks();
@@ -3109,7 +3048,7 @@ public partial class BarWindow : Window
         {
             var delCat = new Button
             {
-                Style = (Style)FindResource("NavBtn"), Content = "x", FontSize = 10.5,
+                Style = (Style)FindResource("NavBtn"), Content = "✕", FontSize = 10.5,
                 Padding = new Thickness(4, 1, 4, 1), Margin = new Thickness(0, 0, 8, 0),
                 Foreground = (Brush)FindResource("TextDone"), ToolTip = "excluir categoria (só vazia)"
             };
@@ -3136,7 +3075,7 @@ public partial class BarWindow : Window
 
         foreach (var r in links) sp.Children.Add(LinkRow(r));
 
-        sp.Children.Add(RevealAdd("+ link", "cola a URL (ou texto) pra esta categoria", async text =>
+        sp.Children.Add(RevealAdd("＋ link", "cola a URL (ou texto) pra esta categoria", async text =>
         {
             await Supa.Insert("zimbar_refs", new JsonObject
             {
@@ -3179,7 +3118,7 @@ public partial class BarWindow : Window
 
         var del = new Button
         {
-            Style = (Style)FindResource("NavBtn"), Content = "x", FontSize = 11,
+            Style = (Style)FindResource("NavBtn"), Content = "✕", FontSize = 11,
             Padding = new Thickness(5, 2, 5, 2), Foreground = (Brush)FindResource("TextDim"),
             Opacity = 0, ToolTip = "apagar"
         };
@@ -3196,7 +3135,7 @@ public partial class BarWindow : Window
             Foreground = (Brush)FindResource("TextMain"), FontSize = 12.5,
             TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center
         };
-        content2.Inlines.Add(new Run(ehLink ? "link  " : "-  ") { Foreground = (Brush)FindResource(ehLink ? "Accent" : "TextDone") });
+        content2.Inlines.Add(new Run(ehLink ? "🔗  " : "·  ") { Foreground = (Brush)FindResource(ehLink ? "Accent" : "TextDone") });
         content2.Inlines.Add(new Run(label));
         var main = new Button
         {
@@ -3296,7 +3235,7 @@ public partial class BarWindow : Window
             foreach (var it in grupos[cat])
                 col.Children.Add(MuralItemRow(it, bloco));
 
-            col.Children.Add(RevealAdd("+ item", "novo item nesta lista", async text =>
+            col.Children.Add(RevealAdd("＋ item", "novo item nesta lista", async text =>
             {
                 await Supa.Insert("mural_items", new JsonObject
                 { ["id"] = "m" + Ms(), ["categoria"] = cat, ["texto"] = text });
@@ -3319,7 +3258,7 @@ public partial class BarWindow : Window
         else
             ListasPanel.Children.Add(grid);
 
-        ListasPanel.Children.Add(RevealAdd("+ nova lista", "nome da nova lista (ex: presentes)", async text =>
+        ListasPanel.Children.Add(RevealAdd("＋ nova lista", "nome da nova lista (ex: presentes)", async text =>
         {
             var cat = text.Trim().ToLower(new CultureInfo("pt-BR"));
             if (cat.Length == 0) return;
@@ -3340,7 +3279,7 @@ public partial class BarWindow : Window
         var del = new Button
         {
             Style = (Style)FindResource("Chip"),
-            Content = "x",
+            Content = "✕",
             FontSize = 9.5,
             Padding = new Thickness(6, 2, 6, 2),
             Background = Brushes.Transparent,
@@ -3665,7 +3604,7 @@ public partial class BarWindow : Window
         => Zui.InlineAddBox(this, placeholder, onEnter, ShowStatus);
 
     /// <summary>
-    /// Adição discreta: mostra só um botão "+ label"; ao clicar, revela o campo,
+    /// Adição discreta: mostra só um botão “＋ label”; ao clicar, revela o campo,
     /// foca, e some de novo quando você confirma (Enter) ou desiste (Esc/vazio).
     /// Menos caixas de texto poluindo a tela.
     /// </summary>
