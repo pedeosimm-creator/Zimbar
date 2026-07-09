@@ -6,8 +6,8 @@
 
         <!-- Fontes: corpo moderno (Variable Text), display fino e elegante,
              mono estilo HUD pros rótulos futuristas -->
-        <FontFamily x:Key="Body">Segoe UI Variable Text, Segoe UI</FontFamily>
-        <FontFamily x:Key="Display">Segoe UI Variable Display Semilight, Segoe UI Semilight, Segoe UI</FontFamily>
+        <FontFamily x:Key="Body">Segoe UI</FontFamily>
+        <FontFamily x:Key="Display">Segoe UI Semilight, Segoe UI</FontFamily>
         <FontFamily x:Key="Mono">Cascadia Mono, Cascadia Code, Consolas, Segoe UI</FontFamily>
 
         <!-- Valores iniciais; o ThemeManager troca em runtime -->
@@ -39,8 +39,8 @@
 
         <!-- Design System aliases: novos componentes devem preferir Zimbar.*.
              As chaves curtas continuam por compatibilidade com telas existentes. -->
-        <FontFamily x:Key="Zimbar.Font.Body">Segoe UI Variable Text, Segoe UI</FontFamily>
-        <FontFamily x:Key="Zimbar.Font.Display">Segoe UI Variable Display Semilight, Segoe UI Semilight, Segoe UI</FontFamily>
+        <FontFamily x:Key="Zimbar.Font.Body">Segoe UI</FontFamily>
+        <FontFamily x:Key="Zimbar.Font.Display">Segoe UI Semilight, Segoe UI</FontFamily>
         <FontFamily x:Key="Zimbar.Font.Mono">Cascadia Mono, Cascadia Code, Consolas, Segoe UI</FontFamily>
         <SolidColorBrush x:Key="Zimbar.Brush.Accent" Color="#C9A6FF"/>
         <SolidColorBrush x:Key="Zimbar.Brush.AccentSoft" Color="#9A7FE8"/>
