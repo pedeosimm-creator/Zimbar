@@ -3786,24 +3786,6 @@ public partial class BarWindow : Window
         openPanel.Children.Add(HudLabel(EmailAccounts.FolderLabel(_emailFolder).ToUpperInvariant()));
         foreach (var account in visibleAccounts)
             openPanel.Children.Add(EmailAccountRow(account));
-        var mailList = openPanel;
-        /*
-        if (_emailLoading)
-        {
-            mailList.Children.Add(DimText("carregando e-mails..."));
-        }
-        else if (_emailItems.Count == 0)
-        {
-            mailList.Children.Add(DimText("nenhum e-mail encontrado nesta visao"));
-        }
-        else
-        {
-            foreach (var item in _emailItems)
-                mailList.Children.Add(EmailItemRow(item));
-        }
-
-        */
-
         EmailPanel.Children.Add(new Border
         {
             Background = (Brush)FindResource("Surface"),
@@ -3811,44 +3793,9 @@ public partial class BarWindow : Window
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(16),
             Padding = new Thickness(12, 10, 12, 12),
-            Child = mailList
+            Child = openPanel
         });
-
-        /*
-        var accountList = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
-        accountList.Children.Add(HudLabel("CONTAS"));
-        foreach (var account in visibleAccounts)
-            accountList.Children.Add(EmailAccountRow(account));
-        EmailPanel.Children.Add(accountList);
-        */
     }
-
-    /*
-    private async Task LoadEmailItems()
-    {
-        try
-        {
-            var visibleAccounts = _emailAccountId == "all"
-                ? _emailAccounts
-                : _emailAccounts.Where(a => a.Id == _emailAccountId).ToList();
-            var all = new List<EmailItem>();
-            foreach (var account in visibleAccounts)
-                all.AddRange(await EmailOAuth.FetchAsync(account, _emailFolder, 25));
-            _emailItems = all.OrderByDescending(i => i.When).Take(50).ToList();
-        }
-        catch (Exception ex)
-        {
-            _emailItems.Clear();
-            ShowStatus("email: " + ex.Message, error: true);
-        }
-        finally
-        {
-            _emailLoading = false;
-            if (_currentView == "Email") RenderEmail();
-        }
-    }
-
-    */
 
     private async Task LoadEmailItemsOAuth(string cacheKey, int gen)
     {
@@ -3893,83 +3840,6 @@ public partial class BarWindow : Window
         return Zui.GlassCard(this, body, padding: new Thickness(16, 14, 16, 14));
     }
 
-    /*
-    private UIElement EmailItemRow(EmailItem item)
-    {
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(92) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(72) });
-
-        var meta = new StackPanel();
-        meta.Children.Add(new TextBlock
-        {
-            Text = EmailAccounts.ProviderLabel(item.Provider),
-            FontSize = 10.5,
-            FontFamily = (FontFamily)FindResource("Mono"),
-            Foreground = (Brush)FindResource(item.Unread ? "Accent" : "TextDim")
-        });
-        meta.Children.Add(new TextBlock
-        {
-            Text = item.AccountName,
-            FontSize = 10.5,
-            Foreground = (Brush)FindResource("TextDone"),
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            Margin = new Thickness(0, 3, 0, 0)
-        });
-        grid.Children.Add(meta);
-
-        var body = new StackPanel { Margin = new Thickness(8, 0, 12, 0) };
-        body.Children.Add(new TextBlock
-        {
-            Text = item.Subject.Length == 0 ? "(sem assunto)" : item.Subject,
-            FontSize = 13.2,
-            FontWeight = item.Unread ? FontWeights.Bold : FontWeights.SemiBold,
-            Foreground = (Brush)FindResource("TextMain"),
-            TextTrimming = TextTrimming.CharacterEllipsis
-        });
-        body.Children.Add(new TextBlock
-        {
-            Text = item.From + (item.Snippet.Length > 0 ? "  -  " + item.Snippet : ""),
-            FontSize = 11.5,
-            Foreground = (Brush)FindResource("TextDim"),
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            Margin = new Thickness(0, 4, 0, 0)
-        });
-        Grid.SetColumn(body, 1);
-        grid.Children.Add(body);
-
-        var when = new TextBlock
-        {
-            Text = item.When.LocalDateTime.ToString(item.When.Date == DateTimeOffset.Now.Date ? "HH:mm" : "dd/MM"),
-            FontSize = 11.5,
-            Foreground = (Brush)FindResource("TextDone"),
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        Grid.SetColumn(when, 2);
-        grid.Children.Add(when);
-
-        var card = new Border
-        {
-            Background = item.Unread ? (Brush)FindResource("ChipBg") : Brushes.Transparent,
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x10, 0xFF, 0xFF, 0xFF)),
-            BorderThickness = new Thickness(0, 1, 0, 0),
-            Padding = new Thickness(8, 9, 8, 9),
-            Cursor = Cursors.Hand,
-            Child = grid
-        };
-        card.MouseEnter += (_, _) => card.Background = (Brush)FindResource("SurfaceHi");
-        card.MouseLeave += (_, _) => card.Background = item.Unread ? (Brush)FindResource("ChipBg") : Brushes.Transparent;
-        card.MouseLeftButtonUp += (_, _) =>
-        {
-            EmailAccounts.OpenMessage(item);
-            ShowStatus("abrindo e-mail");
-        };
-        return card;
-    }
-
-    */
 
     private UIElement EmailMessageRow(EmailItem item)
     {
@@ -4246,43 +4116,6 @@ public partial class BarWindow : Window
         }
     }
 
-    /*
-    private async Task AddEmailAccount(string provider)
-    {
-        if (EmailAccounts.ClientIdFor(provider).Length == 0)
-            OpenEmailOAuthSettings();
-        if (EmailAccounts.ClientIdFor(provider).Length == 0)
-        {
-            ShowStatus("configure o client_id OAuth primeiro", error: true);
-            return;
-        }
-
-        bool wasTop = Topmost;
-        _busyModal = true;
-        Topmost = false;
-        try
-        {
-            ShowStatus("abrindo login OAuth...");
-            var account = await EmailOAuth.ConnectAsync(provider);
-            _emailAccounts = EmailAccounts.Load();
-            _emailAccounts.Add(account);
-            EmailAccounts.Save(_emailAccounts);
-            _emailAccountId = account.Id;
-            LoadEmail();
-            ShowStatus("conta conectada");
-        }
-        catch (Exception ex)
-        {
-            ShowStatus("OAuth: " + ex.Message, error: true);
-        }
-        finally
-        {
-            Topmost = wasTop;
-            _busyModal = false;
-        }
-    }
-
-    */
 
     private void OpenEmailOAuthSettings()
     {
@@ -4312,21 +4145,6 @@ public partial class BarWindow : Window
         ShowStatus("conta removida");
     }
 
-    /*
-    private void OpenEmailOAuthSettings()
-    {
-        bool wasTop = Topmost;
-        _busyModal = true;
-        Topmost = false;
-        var dlg = new EmailOAuthSettingsDialog { Owner = this };
-        dlg.ShowDialog();
-        Topmost = wasTop;
-        _busyModal = false;
-    }
-
-    // -- Fun��es: notas, pomodoro, print, grava��o, temas -----------
-
-    */
 
     private void Notas_Click(object sender, RoutedEventArgs e)
     {
