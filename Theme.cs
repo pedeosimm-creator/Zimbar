@@ -15,7 +15,7 @@ public static class Config
 
     public static double? BarLeft, BarTop, PomoLeft, PomoTop, BarWidth, ViewMax;
     public static double PomoScale = 1.0;
-    public static string Theme = "Roxo";
+    public static string Theme = "Verde";
 
     public static void Load()
     {
@@ -31,7 +31,7 @@ public static class Config
             BarWidth = s["barWidth"]?.GetValue<double>();
             ViewMax = s["viewMax"]?.GetValue<double>();
             PomoScale = s["pomoScale"]?.GetValue<double>() ?? 1.0;
-            Theme = s["theme"]?.GetValue<string>() ?? "Roxo";
+            Theme = s["theme"]?.GetValue<string>() ?? "Verde";
         }
         catch { }
     }
@@ -79,31 +79,42 @@ public static class ThemeManager
 
     public static readonly System.Collections.Generic.Dictionary<string, Palette> Themes = new()
     {
-        ["Roxo"]  = new("#C9A6FF", "#9A7FE8", "#8B5CFF", "#160F22", "#1E1636", "#100A1B", "#6E4FD6"),
-        ["Azul"]  = new("#8FD0FF", "#5FA8E8", "#3D9BFF", "#0C1626", "#102237", "#0A0F1C", "#3C74C8"),
-        ["Verde"] = new("#8FF0C4", "#5FCFA0", "#34E89C", "#0B1F18", "#0F2C22", "#081711", "#2F9E76"),
-        ["Rosa"]  = new("#FFA8DC", "#E87FBB", "#FF5CBE", "#1E1020", "#2C1636", "#160B1B", "#C85CA6"),
-        ["Âmbar"] = new("#FFD79A", "#E8B87F", "#FFB35C", "#1E180F", "#2C2314", "#16110A", "#C89A54"),
-        ["Noir HUD"] = new("#D7CCFF", "#7E8CFF", "#B9A7FF", "#030407", "#0B0D12", "#020203", "#4D5268",
-            TextMain: "#F4F0E8", TextDim: "#A9A8B2", TextDone: "#62636D",
-            Surface: "#10FFFFFF", SurfaceHi: "#19FFFFFF", ChipBg: "#0FFFFFFF", ChipBgHover: "#24FFFFFF",
-            CardGlowOpacity: 0.24, AccentGlowOpacity: 0.55,
-            Dificil: "#FF7A7A", Media: "#E6D7A2", Facil: "#A8F0C8"),
-        ["Aurora Glass"] = new("#7CF7D4", "#7CB8FF", "#42F3C8", "#061014", "#102327", "#160E25", "#3DE2D0",
-            TextMain: "#F2FFF9", TextDim: "#A8D0CB", TextDone: "#6F928D",
-            Surface: "#18FFFFFF", SurfaceHi: "#2AFFFFFF", ChipBg: "#1CFFFFFF", ChipBgHover: "#3AFFFFFF",
-            CardGlowOpacity: 0.42, AccentGlowOpacity: 0.72,
-            Dificil: "#FF9BA8", Media: "#FFE08A", Facil: "#7CF7D4"),
-        ["Orbital Console"] = new("#7CCBFF", "#FFD166", "#48A8FF", "#050912", "#101A25", "#03060B", "#2F8ED6",
-            TextMain: "#EAF6FF", TextDim: "#9AB3C7", TextDone: "#5D7083",
-            Surface: "#12D5ECFF", SurfaceHi: "#20D5ECFF", ChipBg: "#13FFFFFF", ChipBgHover: "#2AFFFFFF",
-            CardGlowOpacity: 0.34, AccentGlowOpacity: 0.68,
-            Dificil: "#FF8B72", Media: "#FFD166", Facil: "#74E0B4"),
+        ["Roxo"] = Aurora(
+            "#C9A6FF", "#9EDFFF", "#B891FF", "#8E6DFF",
+            "#0C0714", "#1D1231", "#2B143E",
+            "#20C9A6FF", "#34C9A6FF", "#26C9A6FF", "#42C9A6FF",
+            "#D8C9FF", "#9383B6"),
+        ["Azul"] = Aurora(
+            "#8FD0FF", "#7CF7D4", "#48A8FF", "#57B8FF",
+            "#03101D", "#0C2237", "#11193D",
+            "#208FD0FF", "#348FD0FF", "#268FD0FF", "#428FD0FF",
+            "#B8DDFF", "#7395B4"),
+        ["Verde"] = Aurora(
+            "#7CF7D4", "#7CB8FF", "#42F3C8", "#3DE2D0",
+            "#061014", "#102327", "#160E25",
+            "#187CF7D4", "#2A7CF7D4", "#1C7CF7D4", "#3A7CF7D4",
+            "#A8D0CB", "#6F928D"),
+        ["Rosa"] = Aurora(
+            "#FFA8DC", "#9EDFFF", "#FF5CBE", "#E87FBB",
+            "#160712", "#2C1227", "#351335",
+            "#20FFA8DC", "#34FFA8DC", "#26FFA8DC", "#42FFA8DC",
+            "#FFD0EB", "#A9859C"),
+        ["Âmbar"] = Aurora(
+            "#FFD79A", "#7CF7D4", "#FFB35C", "#E8B87F",
+            "#150D04", "#2B1D0D", "#2F2412",
+            "#20FFD79A", "#34FFD79A", "#26FFD79A", "#42FFD79A",
+            "#FFE0B0", "#A58C63"),
     };
 
     public static void Apply(string name)
     {
-        if (!Themes.TryGetValue(name, out var p)) { name = "Roxo"; p = Themes["Roxo"]; }
+        name = name switch
+        {
+            "Aurora Glass" => "Verde",
+            "Noir HUD" or "Orbital Console" => "Roxo",
+            _ => name
+        };
+        if (!Themes.TryGetValue(name, out var p)) { name = "Verde"; p = Themes["Verde"]; }
         Config.Theme = name;
 
         var r = Application.Current.Resources;
@@ -198,6 +209,26 @@ public static class ThemeManager
         b.Freeze();
         return b;
     }
+
+    private static Palette Aurora(
+        string accent,
+        string accentSoft,
+        string glow,
+        string border,
+        string bg1,
+        string bg2,
+        string bg3,
+        string surface,
+        string surfaceHi,
+        string chipBg,
+        string chipBgHover,
+        string textDim,
+        string textDone)
+        => new(accent, accentSoft, glow, bg1, bg2, bg3, border,
+            TextMain: "#F2FFF9", TextDim: textDim, TextDone: textDone,
+            Surface: surface, SurfaceHi: surfaceHi, ChipBg: chipBg, ChipBgHover: chipBgHover,
+            CardGlowOpacity: 0.42, AccentGlowOpacity: 0.72,
+            Dificil: "#FF9BA8", Media: "#FFE08A", Facil: "#7CF7D4");
 
     private static Color Col(string hex) => (Color)ColorConverter.ConvertFromString(hex);
 }

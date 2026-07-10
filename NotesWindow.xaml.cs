@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace Zimbar;
 
@@ -21,8 +22,8 @@ public partial class NotesWindow : Window
 
     private static readonly (string Key, string Hex)[] Cores =
     {
-        ("", "#2B2150"), ("uva", "#40204A"), ("vinho", "#4A2230"),
-        ("mel", "#4A3A1E"), ("mata", "#1E4A32"), ("noite", "#1E304A"),
+        ("", "#00000000"), ("uva", "#66C9A6FF"), ("vinho", "#66FFA8DC"),
+        ("mel", "#66FFD79A"), ("mata", "#667CF7D4"), ("noite", "#668FD0FF"),
     };
 
     private readonly List<JsonObject> _notas = new();
@@ -30,6 +31,10 @@ public partial class NotesWindow : Window
     private string? _selectedId;
     private string _editCor = "";
     private bool _suppressEditorDirty;
+    private bool _editorDirty;
+    private bool _loadingNotas;
+    private DateTime _lastSync = DateTime.MinValue;
+    private readonly DispatcherTimer _syncTimer = new() { Interval = TimeSpan.FromSeconds(20) };
 
     public static void Open()
     {
@@ -42,7 +47,10 @@ public partial class NotesWindow : Window
     private NotesWindow()
     {
         InitializeComponent();
-        Closed += (_, _) => _instance = null;
+        Closed += (_, _) => { _syncTimer.Stop(); _instance = null; };
+        Activated += (_, _) => _ = LoadNotasIfSafe();
+        _syncTimer.Tick += (_, _) => _ = LoadNotasIfSafe();
+        _syncTimer.Start();
         PreviewKeyDown += Window_PreviewKeyDown;
         BuildColorRow();
         OpenEditor(null, focusTitle: false);
@@ -84,6 +92,8 @@ public partial class NotesWindow : Window
 
     private async Task LoadNotas()
     {
+        if (_loadingNotas) return;
+        _loadingNotas = true;
         try
         {
             var rows = await Supa.Select("notas?select=id,titulo,corpo,data_nota,cor&order=created_at.desc&limit=160");
@@ -100,6 +110,7 @@ public partial class NotesWindow : Window
             var selected = _notas.FirstOrDefault(n => IdOf(n) == _selectedId);
             OpenEditor(selected, focusTitle: false);
             StatusText.Text = "";
+            _lastSync = DateTime.Now;
         }
         catch
         {
@@ -110,6 +121,17 @@ public partial class NotesWindow : Window
             StatusText.Text = "offline";
             OpenEditor(null, focusTitle: false);
         }
+        finally
+        {
+            _loadingNotas = false;
+        }
+    }
+
+    private async Task LoadNotasIfSafe()
+    {
+        if (_editorDirty || _loadingNotas) return;
+        if ((DateTime.Now - _lastSync).TotalSeconds < 4) return;
+        await LoadNotas();
     }
 
     private void RenderNotesList()
@@ -147,11 +169,22 @@ public partial class NotesWindow : Window
         string data = n["data_nota"]?.GetValue<string>() ?? "";
         bool selected = id == _selectedId;
 
+        var row = new DockPanel();
+        row.Children.Add(new Border
+        {
+            Width = 3,
+            CornerRadius = new CornerRadius(2),
+            Background = selected
+                ? (Brush)FindResource("Accent")
+                : CorBrush(n["cor"]?.GetValue<string>() ?? ""),
+            Margin = new Thickness(0, 1, 10, 1)
+        });
+
         var sp = new StackPanel();
         sp.Children.Add(new TextBlock
         {
             Text = titulo.Length == 0 ? "sem titulo" : titulo,
-            FontSize = 13.2,
+            FontSize = 13.4,
             FontWeight = FontWeights.SemiBold,
             Foreground = (Brush)FindResource("TextMain"),
             TextWrapping = TextWrapping.NoWrap,
@@ -161,10 +194,10 @@ public partial class NotesWindow : Window
             sp.Children.Add(new TextBlock
             {
                 Text = corpo.Length > 108 ? corpo[..108] + "..." : corpo,
-                FontSize = 11.5,
+                FontSize = 11.8,
                 Foreground = (Brush)FindResource("TextDim"),
                 TextWrapping = TextWrapping.Wrap,
-                MaxHeight = 38,
+                MaxHeight = 36,
                 Margin = new Thickness(0, 5, 0, 0)
             });
         sp.Children.Add(new TextBlock
@@ -174,21 +207,32 @@ public partial class NotesWindow : Window
             Foreground = (Brush)FindResource("TextDone"),
             Margin = new Thickness(0, 7, 0, 0)
         });
+        row.Children.Add(sp);
 
         var card = new Border
         {
             Background = selected
-                ? new SolidColorBrush(Color.FromArgb(0x26, 0x7D, 0xFF, 0xD7))
-                : CorBrush(n["cor"]?.GetValue<string>() ?? ""),
+                ? (Brush)FindResource("SurfaceHi")
+                : (Brush)FindResource("ChipBg"),
             BorderBrush = selected
                 ? (Brush)FindResource("Accent")
-                : new SolidColorBrush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)),
+                : new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(11),
-            Padding = new Thickness(12, 10, 12, 9),
-            Margin = new Thickness(0, 0, 0, 9),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(11, 10, 12, 10),
+            Margin = new Thickness(0, 0, 0, 8),
             Cursor = Cursors.Hand,
-            Child = sp
+            Child = row
+        };
+        card.MouseEnter += (_, _) =>
+        {
+            if (!selected) card.Background = (Brush)FindResource("SurfaceHi");
+            card.BorderBrush = (Brush)FindResource("AccentSoft");
+        };
+        card.MouseLeave += (_, _) =>
+        {
+            card.Background = selected ? (Brush)FindResource("SurfaceHi") : (Brush)FindResource("ChipBg");
+            card.BorderBrush = selected ? (Brush)FindResource("Accent") : new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF));
         };
         card.MouseLeftButtonUp += (_, _) => SelectNote(n);
         return card;
@@ -241,17 +285,19 @@ public partial class NotesWindow : Window
         {
             var dot = new Border
             {
-                Width = 22,
-                Height = 22,
-                CornerRadius = new CornerRadius(11),
-                Margin = new Thickness(0, 0, 7, 0),
+                Width = 18,
+                Height = 18,
+                CornerRadius = new CornerRadius(9),
+                Margin = new Thickness(0, 0, 8, 0),
                 Cursor = Cursors.Hand,
-                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)),
+                Background = key.Length == 0
+                    ? (Brush)FindResource("ChipBg")
+                    : new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)),
                 BorderThickness = new Thickness(2),
                 BorderBrush = Brushes.Transparent,
                 Tag = key
             };
-            dot.MouseLeftButtonUp += (_, _) => { _editCor = key; MarkColor(); StatusText.Text = "alteracoes nao salvas"; };
+            dot.MouseLeftButtonUp += (_, _) => { _editCor = key; MarkColor(); _editorDirty = true; StatusText.Text = "alteracoes nao salvas"; };
             ColorRow.Children.Add(dot);
         }
     }
@@ -269,6 +315,7 @@ public partial class NotesWindow : Window
         _selectedId = null;
         OpenEditor(null);
         RenderNotesList();
+        _editorDirty = false;
         StatusText.Text = "nova nota";
     }
 
@@ -282,6 +329,7 @@ public partial class NotesWindow : Window
         EdDelete.Visibility = _editId is null ? Visibility.Collapsed : Visibility.Visible;
         MarkColor();
         StatusText.Text = "";
+        _editorDirty = false;
         _suppressEditorDirty = false;
 
         if (focusTitle)
@@ -294,7 +342,10 @@ public partial class NotesWindow : Window
     private void EditorTextChanged(object sender, TextChangedEventArgs e)
     {
         if (!_suppressEditorDirty)
+        {
+            _editorDirty = true;
             StatusText.Text = "alteracoes nao salvas";
+        }
     }
 
     private async void EditorSave_Click(object sender, RoutedEventArgs e)
@@ -340,6 +391,7 @@ public partial class NotesWindow : Window
             }
 
             await LoadNotas();
+            _editorDirty = false;
             StatusText.Text = "salvo";
         }
         catch

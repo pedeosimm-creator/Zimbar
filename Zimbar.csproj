@@ -13,6 +13,7 @@
     <Product>Zimbar</Product>
     <Description>Cinto de ferramentas do Pedro — barra rápida com hotkey global.</Description>
     <ApplicationIcon>assets\Zimbar.ico</ApplicationIcon>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
   </PropertyGroup>
 
   <!-- WinForms + WPF juntos colidem em Application/Point etc. (mesmo padrão do Relâmpago) -->

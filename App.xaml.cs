@@ -40,6 +40,7 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        WinForms.Application.SetHighDpiMode(WinForms.HighDpiMode.PerMonitorV2);
         base.OnStartup(e);
 
         _singleInstance = new Mutex(true, "Zimbar.SingleInstance", out bool isNew);
@@ -49,7 +50,6 @@ public partial class App : Application
             return;
         }
 
-        SetCurrentProcessExplicitAppUserModelID("Zimbar.Toolbelt");
         Config.Load();
         ThemeManager.Apply(Config.Theme);
         SetupTray();

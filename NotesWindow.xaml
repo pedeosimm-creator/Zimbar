@@ -8,76 +8,103 @@
         MinWidth="760" MinHeight="460"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterScreen"
-        ShowInTaskbar="True" ResizeMode="NoResize">
+        ShowInTaskbar="True" ResizeMode="NoResize"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        RenderOptions.BitmapScalingMode="HighQuality">
 
-    <Grid Margin="20">
+    <Grid Margin="18">
         <Border Style="{StaticResource Zimbar.Border.CosmicCard}">
             <Border.Effect>
-                <DropShadowEffect BlurRadius="30" ShadowDepth="0" Opacity="0.5" Color="#7B5CFF"/>
+                <DropShadowEffect BlurRadius="34" ShadowDepth="0" Opacity="0.42" Color="#42F3C8"/>
             </Border.Effect>
 
-            <Grid Margin="18,14">
+            <Grid Margin="18">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <DockPanel Grid.Row="0" Margin="0,0,0,12" MouseLeftButtonDown="Header_MouseDown">
+                <DockPanel Grid.Row="0" Margin="0,0,0,14" MouseLeftButtonDown="Header_MouseDown">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                        <Button Style="{StaticResource Chip}" Click="New_Click" Content="+ nova nota"/>
-                        <Button Style="{StaticResource Chip}" Click="CloseWin_Click" Content="x" Margin="0" Padding="10,7"/>
+                        <Button Style="{StaticResource Chip}" Click="New_Click" Content="+ nota" Padding="13,6"/>
+                        <Button Style="{StaticResource Chip}" Click="CloseWin_Click" Content="×" Margin="0" Padding="11,6"/>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="ZimNotes" FontSize="17" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextMain}" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="CountText" Text="" FontSize="12"
-                                   Foreground="{DynamicResource TextDim}"
-                                   VerticalAlignment="Center" Margin="12,2,0,0"/>
-                        <TextBlock x:Name="StatusText" Text="" FontSize="12"
-                                   Foreground="{DynamicResource AccentSoft}"
-                                   VerticalAlignment="Center" Margin="12,2,0,0"/>
-                    </StackPanel>
+                    <DockPanel>
+                        <Border Width="30" Height="30" CornerRadius="10"
+                                Background="{DynamicResource SurfaceHi}"
+                                BorderBrush="{DynamicResource CardBorderBrush}"
+                                BorderThickness="1"
+                                Margin="0,0,10,0">
+                            <TextBlock Text="Z" FontSize="15" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Accent}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel>
+                            <TextBlock Text="ZimNotes" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextMain}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <TextBlock x:Name="CountText" Text="" FontSize="11.5"
+                                           Foreground="{DynamicResource TextDim}"/>
+                                <TextBlock x:Name="StatusText" Text="" FontSize="11.5"
+                                           Foreground="{DynamicResource AccentSoft}"
+                                           Margin="12,0,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </DockPanel>
                 </DockPanel>
 
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="282"/>
-                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="292"/>
+                        <ColumnDefinition Width="12"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0"
-                            Background="#151E2830"
+                            Background="{DynamicResource Surface}"
                             BorderBrush="#22FFFFFF"
                             BorderThickness="1"
-                            CornerRadius="14"
+                            CornerRadius="18"
                             Padding="12">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
+                            <DockPanel Grid.Row="0" Margin="2,0,2,10">
+                                <TextBlock Text="BIBLIOTECA"
+                                           FontSize="10"
+                                           FontFamily="{DynamicResource Mono}"
+                                           Foreground="{DynamicResource TextDim}"
+                                           VerticalAlignment="Center"/>
+                            </DockPanel>
+
                             <TextBox x:Name="SearchBox"
-                                     Grid.Row="0"
+                                     Grid.Row="1"
                                      Style="{StaticResource InlineAdd}"
                                      TextChanged="SearchBox_TextChanged"
                                      FontSize="12.5"
-                                     Margin="0,0,0,10"
+                                     Margin="0,0,0,12"
                                      ToolTip="buscar notas"/>
 
-                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                                 <StackPanel x:Name="NotesListPanel"/>
                             </ScrollViewer>
                         </Grid>
                     </Border>
 
                     <Border Grid.Column="2"
-                            Background="#10171F2B"
+                            Background="{DynamicResource Surface}"
                             BorderBrush="#1FFFFFFF"
                             BorderThickness="1"
-                            CornerRadius="14"
-                            Padding="16">
+                            CornerRadius="18"
+                            Padding="18">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -92,19 +119,14 @@
                                      BorderThickness="0"
                                      Foreground="{DynamicResource TextMain}"
                                      CaretBrush="{DynamicResource Accent}"
-                                     FontSize="22"
+                                     FontSize="24"
                                      FontWeight="SemiBold"
-                                     Padding="0,0,0,8"
+                                     FontFamily="{DynamicResource Display}"
+                                     Padding="0,0,0,9"
                                      TextChanged="EditorTextChanged"/>
 
-                            <WrapPanel Grid.Row="1" Margin="0,0,0,10">
-                                <Button Style="{StaticResource Chip}" Click="Bold_Click" Content="B" FontWeight="Bold" ToolTip="negrito"/>
-                                <Button Style="{StaticResource Chip}" Click="Bullet_Click" Content="• lista" ToolTip="lista com bolinhas"/>
-                                <Button Style="{StaticResource Chip}" Click="Check_Click" Content="☐ check" ToolTip="checklist"/>
-                                <Button Style="{StaticResource Chip}" Click="Heading_Click" Content="H1" ToolTip="titulo no corpo"/>
-                                <Button Style="{StaticResource Chip}" Click="Smaller_Click" Content="A-" ToolTip="diminuir fonte"/>
-                                <Button Style="{StaticResource Chip}" Click="Bigger_Click" Content="A+" ToolTip="aumentar fonte"/>
-                            </WrapPanel>
+                            <Border Grid.Row="1" Height="1" Margin="0,0,0,14" Opacity="0.22"
+                                    Background="{DynamicResource CardBorderBrush}"/>
 
                             <TextBox x:Name="EdBody"
                                      Grid.Row="2"
@@ -112,17 +134,17 @@
                                      BorderThickness="0"
                                      Foreground="{DynamicResource TextMain}"
                                      CaretBrush="{DynamicResource Accent}"
-                                     FontSize="14.5"
+                                     FontSize="15"
                                      TextWrapping="Wrap"
                                      AcceptsReturn="True"
                                      AcceptsTab="True"
                                      VerticalScrollBarVisibility="Auto"
                                      TextChanged="EditorTextChanged"/>
 
-                            <DockPanel Grid.Row="3" Margin="0,12,0,0">
+                            <DockPanel Grid.Row="3" Margin="0,14,0,0">
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                    <Button Style="{StaticResource Chip}" Click="EditorDelete_Click" x:Name="EdDelete" Content="excluir"/>
-                                    <Button Style="{StaticResource Chip}" Click="EditorSave_Click" Content="salvar" Margin="0"/>
+                                    <Button Style="{StaticResource Chip}" Click="EditorDelete_Click" x:Name="EdDelete" Content="excluir" Padding="12,6"/>
+                                    <Button Style="{StaticResource PrimaryBtn}" Click="EditorSave_Click" Content="salvar" Margin="0" Padding="14,6"/>
                                 </StackPanel>
                                 <StackPanel x:Name="ColorRow" Orientation="Horizontal" VerticalAlignment="Center"/>
                             </DockPanel>
