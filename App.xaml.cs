@@ -50,6 +50,7 @@ public partial class App : Application
             return;
         }
 
+        SetCurrentProcessExplicitAppUserModelID("Zimbar.Toolbelt");
         Config.Load();
         ThemeManager.Apply(Config.Theme);
         SetupTray();

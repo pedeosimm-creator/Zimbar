@@ -46,6 +46,7 @@ public partial class BarWindow : Window
     private bool _emailLoading;
     private readonly Dictionary<string, (DateTime At, List<EmailItem> Items)> _emailCache = new();
     private bool _emailForceRefresh;
+    private int _emailReqGen;   // invalida buscas de e-mail obsoletas (troca de conta/pasta durante o fetch)
 
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(2.6) };
     private readonly DispatcherTimer _playerTimer = new() { Interval = TimeSpan.FromSeconds(5) };
@@ -3670,7 +3671,11 @@ public partial class BarWindow : Window
         _emailAccounts = EmailAccounts.Load();
         if (_emailAccountId != "all" && _emailAccounts.All(a => a.Id != _emailAccountId))
             _emailAccountId = "all";
+        // Sem conta Gmail visível, as pastas de categoria do Gmail não retornam nada: volta pra Entrada.
+        if (!EmailSelectionHasGmail() && _emailFolder.StartsWith("gmail_", StringComparison.OrdinalIgnoreCase))
+            _emailFolder = "inbox";
         _emailItems.Clear();
+        int gen = ++_emailReqGen;   // qualquer nova chamada invalida a busca anterior em voo
         var visibleAccounts = _emailAccountId == "all"
             ? _emailAccounts
             : _emailAccounts.Where(a => a.Id == _emailAccountId).ToList();
@@ -3687,14 +3692,31 @@ public partial class BarWindow : Window
         _emailForceRefresh = false;
         _emailLoading = visibleAccounts.Any(EmailAccounts.CanFetch);
         RenderEmail();
-        if (_emailLoading) _ = LoadEmailItemsOAuth(cacheKey);
+        if (_emailLoading) _ = LoadEmailItemsOAuth(cacheKey, gen);
     }
 
     private string EmailCacheKey(List<EmailAccount> accounts)
         => _emailFolder + "|" + string.Join(",", accounts.Where(EmailAccounts.CanFetch).Select(a => a.Id).OrderBy(x => x));
 
+    private bool EmailSelectionHasGmail()
+        => (_emailAccountId == "all" ? _emailAccounts : _emailAccounts.Where(a => a.Id == _emailAccountId))
+            .Any(a => a.Provider == "gmail");
+
     private void EmailView_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        // Se o cursor está sobre um ScrollViewer interno (corpo do e-mail) que ainda pode rolar,
+        // deixa o evento seguir pra ele em vez de capturar tudo pro painel externo.
+        for (var d = e.OriginalSource as DependencyObject; d != null && d != EmailView;)
+        {
+            if (d is ScrollViewer inner)
+            {
+                bool canScroll = (e.Delta < 0 && inner.VerticalOffset < inner.ScrollableHeight - 0.5)
+                              || (e.Delta > 0 && inner.VerticalOffset > 0.5);
+                if (canScroll) return;
+                break;
+            }
+            d = d is Visual ? VisualTreeHelper.GetParent(d) : null;
+        }
         EmailView.ScrollToVerticalOffset(EmailView.VerticalOffset - e.Delta * 0.85);
         e.Handled = true;
     }
@@ -3714,17 +3736,19 @@ public partial class BarWindow : Window
         head.Children.Add(HudLabel("EMAIL"));
         EmailPanel.Children.Add(head);
 
-        var folders = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
-        foreach (var (id, label) in new[]
+        var folderDefs = new List<(string id, string label)> { ("inbox", "Entrada") };
+        if (EmailSelectionHasGmail())   // categorias só existem no Gmail
         {
-            ("inbox", "Entrada"),
-            ("gmail_social", "Social"),
-            ("gmail_promotions", "Promocoes"),
-            ("gmail_updates", "Atualizacoes"),
-            ("gmail_forums", "Foruns"),
-            ("spam", "Spam"),
-            ("trash", "Lixo")
-        })
+            folderDefs.Add(("gmail_social", "Social"));
+            folderDefs.Add(("gmail_promotions", "Promocoes"));
+            folderDefs.Add(("gmail_updates", "Atualizacoes"));
+            folderDefs.Add(("gmail_forums", "Foruns"));
+        }
+        folderDefs.Add(("spam", "Spam"));
+        folderDefs.Add(("trash", "Lixo"));
+
+        var folders = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
+        foreach (var (id, label) in folderDefs)
             folders.Children.Add(EmailChip(label, _emailFolder == id, () => { _emailFolder = id; _emailExpandedId = null; LoadEmail(); }));
         EmailPanel.Children.Add(folders);
 
@@ -3826,29 +3850,29 @@ public partial class BarWindow : Window
 
     */
 
-    private async Task LoadEmailItemsOAuth(string cacheKey)
+    private async Task LoadEmailItemsOAuth(string cacheKey, int gen)
     {
-        try
+        var visibleAccounts = _emailAccountId == "all"
+            ? _emailAccounts
+            : _emailAccounts.Where(a => a.Id == _emailAccountId).ToList();
+        var all = new List<EmailItem>();
+        var errors = new List<string>();
+        foreach (var account in visibleAccounts.Where(EmailAccounts.CanFetch))
         {
-            var visibleAccounts = _emailAccountId == "all"
-                ? _emailAccounts
-                : _emailAccounts.Where(a => a.Id == _emailAccountId).ToList();
-            var all = new List<EmailItem>();
-            foreach (var account in visibleAccounts.Where(EmailAccounts.CanFetch))
-                all.AddRange(await EmailOAuth.FetchAsync(account, _emailFolder, 25));
-            _emailItems = all.OrderByDescending(i => i.When).Take(50).ToList();
-            _emailCache[cacheKey] = (DateTime.Now, _emailItems.ToList());
+            try { all.AddRange(await EmailOAuth.FetchAsync(account, _emailFolder, 25)); }
+            catch (Exception ex) { errors.Add(account.DisplayName + ": " + ex.Message); } // uma conta ruim não apaga as outras
         }
-        catch (Exception ex)
-        {
-            _emailItems.Clear();
-            ShowStatus("email OAuth: " + ex.Message, error: true);
-        }
-        finally
-        {
-            _emailLoading = false;
-            if (_currentView == "Email") RenderEmail();
-        }
+
+        var items = all.OrderByDescending(i => i.When).Take(50).ToList();
+        _emailCache[cacheKey] = (DateTime.Now, items.ToList());
+
+        // Se o usuário trocou de conta/pasta durante a busca, descarta este resultado (não sobrescreve a tela atual).
+        if (gen != _emailReqGen) return;
+
+        _emailItems = items;
+        _emailLoading = false;
+        if (errors.Count > 0) ShowStatus("email: " + string.Join(" · ", errors), error: true);
+        if (_currentView == "Email") RenderEmail();
     }
 
     private Button EmailChip(string label, bool on, Action click)
@@ -4076,7 +4100,9 @@ public partial class BarWindow : Window
             {
                 _emailItems[idx] = _emailItems[idx] with { Body = body };
                 string cacheKey = EmailCacheKey(_emailAccountId == "all" ? _emailAccounts : _emailAccounts.Where(a => a.Id == _emailAccountId).ToList());
-                _emailCache[cacheKey] = (DateTime.Now, _emailItems.ToList());
+                // preserva o timestamp original: atualizar o corpo não deve renovar a validade da lista
+                var at = _emailCache.TryGetValue(cacheKey, out var prev) ? prev.At : DateTime.Now;
+                _emailCache[cacheKey] = (at, _emailItems.ToList());
             }
             if (_currentView == "Email" && _emailExpandedId == key) RenderEmail();
         }
@@ -4199,17 +4225,16 @@ public partial class BarWindow : Window
             ShowStatus("abrindo login OAuth...");
             var oauthAccount = await EmailOAuth.ConnectAsync(provider);
             _emailAccounts = EmailAccounts.Load();
+            // dedup por provedor+endereço: reconectar a mesma caixa substitui em vez de duplicar
+            // (BuildAccount gera um Id novo a cada login, então Upsert por Id não bastaria).
+            _emailAccounts.RemoveAll(a => a.Provider == oauthAccount.Provider
+                && a.Address.Equals(oauthAccount.Address, StringComparison.OrdinalIgnoreCase));
             _emailAccounts.Add(oauthAccount);
             EmailAccounts.Save(_emailAccounts);
             _emailAccountId = oauthAccount.Id;
             LoadEmail();
             ShowStatus("conta conectada");
         }
-            /*
-                ShowStatus("conta adicionada");
-            }
-        }
-            */
         catch (Exception ex)
         {
             ShowStatus("email: " + ex.Message, error: true);
@@ -4282,7 +4307,8 @@ public partial class BarWindow : Window
         _emailAccounts.RemoveAll(a => a.Id == account.Id);
         EmailAccounts.Save(_emailAccounts);
         if (_emailAccountId == account.Id) _emailAccountId = "all";
-        RenderEmail();
+        _emailCache.Clear();   // o cache tinha e-mails da conta removida (podiam ressuscitar numa troca de pasta)
+        LoadEmail();           // recarrega do zero em vez de reusar _emailItems antigo
         ShowStatus("conta removida");
     }
 

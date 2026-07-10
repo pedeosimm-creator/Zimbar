@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -221,6 +222,23 @@ public static class EmailAccounts
 public static class EmailOAuth
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(25) };
+    // Serializa o refresh de token: dois fetches paralelos não podem renovar ao mesmo
+    // tempo (o Outlook rotaciona o refresh token e o 2º perderia o token bom).
+    private static readonly SemaphoreSlim RefreshLock = new(1, 1);
+
+    /// <summary>Lê expires_in tolerando número OU string (alguns proxies serializam como string).</summary>
+    private static int ExpiresIn(JsonNode? json)
+    {
+        var n = json?["expires_in"];
+        if (n is null) return 3600;
+        try
+        {
+            return n.GetValueKind() == JsonValueKind.String
+                ? (int.TryParse(n.GetValue<string>(), out var s) ? s : 3600)
+                : n.GetValue<int>();
+        }
+        catch { return 3600; }
+    }
 
     public static async Task<EmailAccount> ConnectAsync(string provider)
     {
@@ -252,48 +270,57 @@ public static class EmailOAuth
             : await FetchOutlookBodyAsync(fresh, item.MessageId);
     }
 
+    private static bool TokenFresh(EmailAccount a)
+        => !string.IsNullOrWhiteSpace(a.AccessToken)
+           && a.ExpiresAt is DateTimeOffset exp
+           && exp > DateTimeOffset.UtcNow.AddMinutes(2);
+
     private static async Task<EmailAccount> EnsureTokenAsync(EmailAccount account)
     {
-        if (!string.IsNullOrWhiteSpace(account.AccessToken)
-            && account.ExpiresAt is DateTimeOffset exp
-            && exp > DateTimeOffset.UtcNow.AddMinutes(2))
-            return account;
+        if (TokenFresh(account)) return account;
+        if (string.IsNullOrWhiteSpace(account.RefreshToken)) return account;
 
-        if (string.IsNullOrWhiteSpace(account.RefreshToken))
-            return account;
-
-        string clientId = EmailAccounts.ClientIdFor(account.Provider);
-        if (clientId.Length == 0) return account;
-
-        string tokenUrl = account.Provider == "gmail"
-            ? "https://oauth2.googleapis.com/token"
-            : "https://login.microsoftonline.com/common/oauth2/v2.0/token";
-
-        var refreshForm = new Dictionary<string, string>
+        await RefreshLock.WaitAsync();
+        try
         {
-            ["client_id"] = clientId,
-            ["grant_type"] = "refresh_token",
-            ["refresh_token"] = account.RefreshToken
-        };
-        if (account.Provider == "gmail")
-        {
-            string secret = EmailAccounts.GmailClientSecret();
-            if (secret.Length > 0) refreshForm["client_secret"] = secret;
+            // Outro fetch pode ter renovado enquanto esperávamos o lock: relê o token mais novo.
+            var latest = EmailAccounts.Load().FirstOrDefault(a => a.Id == account.Id) ?? account;
+            if (TokenFresh(latest)) return latest;
+            if (string.IsNullOrWhiteSpace(latest.RefreshToken)) return latest;
+
+            string clientId = EmailAccounts.ClientIdFor(latest.Provider);
+            if (clientId.Length == 0) return latest;
+
+            string tokenUrl = latest.Provider == "gmail"
+                ? "https://oauth2.googleapis.com/token"
+                : "https://login.microsoftonline.com/common/oauth2/v2.0/token";
+
+            var refreshForm = new Dictionary<string, string>
+            {
+                ["client_id"] = clientId,
+                ["grant_type"] = "refresh_token",
+                ["refresh_token"] = latest.RefreshToken!
+            };
+            if (latest.Provider == "gmail")
+            {
+                string secret = EmailAccounts.GmailClientSecret();
+                if (secret.Length > 0) refreshForm["client_secret"] = secret;
+            }
+
+            var json = await TokenRequest(tokenUrl, refreshForm);
+
+            string access = json["access_token"]?.GetValue<string>() ?? latest.AccessToken ?? "";
+            string refresh = json["refresh_token"]?.GetValue<string>() ?? latest.RefreshToken ?? "";
+            var fresh = latest with
+            {
+                AccessToken = access,
+                RefreshToken = refresh,
+                ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(ExpiresIn(json))
+            };
+            EmailAccounts.Upsert(fresh);
+            return fresh;
         }
-
-        var json = await TokenRequest(tokenUrl, refreshForm);
-
-        string access = json["access_token"]?.GetValue<string>() ?? account.AccessToken ?? "";
-        string refresh = json["refresh_token"]?.GetValue<string>() ?? account.RefreshToken ?? "";
-        int expires = json["expires_in"]?.GetValue<int>() ?? 3600;
-        var fresh = account with
-        {
-            AccessToken = access,
-            RefreshToken = refresh,
-            ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(expires)
-        };
-        EmailAccounts.Upsert(fresh);
-        return fresh;
+        finally { RefreshLock.Release(); }
     }
 
     private static async Task<JsonObject> RunOAuthAsync(string provider, string clientId)
@@ -335,7 +362,14 @@ public static class EmailOAuth
         listener.Start();
         Process.Start(new ProcessStartInfo(authUrl + "?" + Form(query)) { UseShellExecute = true });
 
-        var ctx = await listener.GetContextAsync();
+        // Espera o callback com teto de tempo: se o usuário abandonar o login, não trava pra sempre.
+        var getCtx = listener.GetContextAsync();
+        if (await Task.WhenAny(getCtx, Task.Delay(TimeSpan.FromMinutes(3))) != getCtx)
+        {
+            listener.Stop();
+            throw new InvalidOperationException("login expirou (tempo esgotado)");
+        }
+        var ctx = await getCtx;
         string code = ctx.Request.QueryString["code"] ?? "";
         string gotState = ctx.Request.QueryString["state"] ?? "";
         string html = "<html><body style='font-family:Segoe UI;padding:32px'>Zimbar conectado. Pode fechar esta janela.</body></html>";
@@ -370,27 +404,38 @@ public static class EmailOAuth
     private static async Task<EmailAccount> BuildGmailAccount(JsonObject token)
     {
         string access = token["access_token"]?.GetValue<string>() ?? "";
-        int expires = token["expires_in"]?.GetValue<int>() ?? 3600;
+        int expires = ExpiresIn(token);
         string refresh = token["refresh_token"]?.GetValue<string>() ?? "";
-        using var req = new HttpRequestMessage(HttpMethod.Get, "https://gmail.googleapis.com/gmail/v1/users/me/profile");
-        req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", access);
-        var res = await Http.SendAsync(req);
-        var profile = await ResponseJson(res);
-        string email = profile["emailAddress"]?.GetValue<string>() ?? "gmail";
+        string email = "gmail";
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, "https://gmail.googleapis.com/gmail/v1/users/me/profile");
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", access);
+            var res = await Http.SendAsync(req);
+            var profile = await ResponseJson(res);
+            email = profile["emailAddress"]?.GetValue<string>() ?? "gmail";
+        }
+        catch { /* falha no perfil não pode descartar o refresh token recém-concedido */ }
         return new EmailAccount(Guid.NewGuid().ToString("N"), "gmail", "Gmail", email, access, refresh, DateTimeOffset.UtcNow.AddSeconds(expires));
     }
 
     private static async Task<EmailAccount> BuildOutlookAccount(JsonObject token)
     {
         string access = token["access_token"]?.GetValue<string>() ?? "";
-        int expires = token["expires_in"]?.GetValue<int>() ?? 3600;
+        int expires = ExpiresIn(token);
         string refresh = token["refresh_token"]?.GetValue<string>() ?? "";
-        using var req = new HttpRequestMessage(HttpMethod.Get, "https://graph.microsoft.com/v1.0/me?$select=displayName,mail,userPrincipalName");
-        req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", access);
-        var res = await Http.SendAsync(req);
-        var me = await ResponseJson(res);
-        string email = me["mail"]?.GetValue<string>() ?? me["userPrincipalName"]?.GetValue<string>() ?? "outlook";
-        string name = me["displayName"]?.GetValue<string>() ?? "Outlook";
+        string email = "outlook";
+        string name = "Outlook";
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, "https://graph.microsoft.com/v1.0/me?$select=displayName,mail,userPrincipalName");
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", access);
+            var res = await Http.SendAsync(req);
+            var me = await ResponseJson(res);
+            email = me["mail"]?.GetValue<string>() ?? me["userPrincipalName"]?.GetValue<string>() ?? "outlook";
+            name = me["displayName"]?.GetValue<string>() ?? "Outlook";
+        }
+        catch { /* falha no perfil não pode descartar o refresh token recém-concedido */ }
         return new EmailAccount(Guid.NewGuid().ToString("N"), "outlook", name, email, access, refresh, DateTimeOffset.UtcNow.AddSeconds(expires));
     }
 
@@ -413,28 +458,32 @@ public static class EmailOAuth
         {
             string id = msg["id"]?.GetValue<string>() ?? "";
             if (id.Length == 0) continue;
-            var full = await ApiJson("https://gmail.googleapis.com/gmail/v1/users/me/messages/" + id
-                + "?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date", account.AccessToken);
-            var headers = full["payload"]?["headers"] as JsonArray ?? new JsonArray();
-            string H(string name) => headers.OfType<JsonObject>()
-                .FirstOrDefault(h => (h["name"]?.GetValue<string>() ?? "").Equals(name, StringComparison.OrdinalIgnoreCase))?["value"]?.GetValue<string>() ?? "";
-            long internalMs = long.TryParse(full["internalDate"]?.GetValue<string>(), out var ms) ? ms : 0;
-            string threadId = full["threadId"]?.GetValue<string>() ?? id;
-            string hash = folder switch
+            try
             {
-                "spam" => "spam",
-                "trash" => "trash",
-                "gmail_social" => "category/social",
-                "gmail_promotions" => "category/promotions",
-                "gmail_updates" => "category/updates",
-                "gmail_forums" => "category/forums",
-                _ => "inbox"
-            };
-            items.Add(new EmailItem("gmail", account.Id, account.DisplayName, id, H("From"), H("Subject"),
-                full["snippet"]?.GetValue<string>() ?? "", "",
-                DateTimeOffset.FromUnixTimeMilliseconds(internalMs),
-                (full["labelIds"] as JsonArray)?.Any(x => x?.GetValue<string>() == "UNREAD") == true,
-                $"https://mail.google.com/mail/u/{Uri.EscapeDataString(account.Address)}/#{hash}/{threadId}"));
+                var full = await ApiJson("https://gmail.googleapis.com/gmail/v1/users/me/messages/" + id
+                    + "?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date", account.AccessToken);
+                var headers = full["payload"]?["headers"] as JsonArray ?? new JsonArray();
+                string H(string name) => headers.OfType<JsonObject>()
+                    .FirstOrDefault(h => (h["name"]?.GetValue<string>() ?? "").Equals(name, StringComparison.OrdinalIgnoreCase))?["value"]?.GetValue<string>() ?? "";
+                long internalMs = long.TryParse(full["internalDate"]?.GetValue<string>(), out var ms) ? ms : 0;
+                string threadId = full["threadId"]?.GetValue<string>() ?? id;
+                string hash = folder switch
+                {
+                    "spam" => "spam",
+                    "trash" => "trash",
+                    "gmail_social" => "category/social",
+                    "gmail_promotions" => "category/promotions",
+                    "gmail_updates" => "category/updates",
+                    "gmail_forums" => "category/forums",
+                    _ => "inbox"
+                };
+                items.Add(new EmailItem("gmail", account.Id, account.DisplayName, id, H("From"), H("Subject"),
+                    full["snippet"]?.GetValue<string>() ?? "", "",
+                    DateTimeOffset.FromUnixTimeMilliseconds(internalMs),
+                    (full["labelIds"] as JsonArray)?.Any(x => x?.GetValue<string>() == "UNREAD") == true,
+                    $"https://mail.google.com/mail/u/{Uri.EscapeDataString(account.Address)}/#{hash}/{threadId}"));
+            }
+            catch { /* uma mensagem que falha (rate limit / erro transitório) não derruba as demais */ }
         }
         return items;
     }
