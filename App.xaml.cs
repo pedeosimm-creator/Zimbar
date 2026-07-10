@@ -28,9 +28,6 @@ public partial class App : Application
     [DllImport("user32.dll")]
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
-    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern int SetCurrentProcessExplicitAppUserModelID(string appID);
-
     private const uint MOD_ALT = 0x0001;
     private const uint MOD_CONTROL = 0x0002;
     private const uint MOD_NOREPEAT = 0x4000;
@@ -50,7 +47,10 @@ public partial class App : Application
             return;
         }
 
-        SetCurrentProcessExplicitAppUserModelID("Zimbar.Toolbelt");
+        // NÃO definir um AppUserModelID explícito: os atalhos (área de trabalho/inicializar/
+        // fixado) usam a identidade derivada do caminho do exe. Se o processo usasse uma
+        // identidade custom, a janela minimizada não agruparia com o atalho e apareceriam
+        // DOIS botões de Zimbar na barra de tarefas.
         Config.Load();
         ThemeManager.Apply(Config.Theme);
         SetupTray();
