@@ -2577,51 +2577,23 @@ public partial class BarWindow : Window
     }
 
     /// <summary>Favicon do site (via Google), com bolinha de fallback embaixo.</summary>
-    private static readonly string[] FaviconTints = { "SunSoft", "LeafSoft", "GrapeSoft", "RoseSoft", "SkySoft", "TangSoft" };
+    private static readonly string[] DotTints = { "Sun", "Leaf", "Grape", "Rose", "Sky", "Tang" };
 
-    /// <summary>Badge do link (estilo Acervo): quadradinho com borda de tinta. Mostra a
-    /// LETRA do site sempre; o favicon (DuckDuckGo) entra por cima quando carrega.</summary>
+    /// <summary>Pontinho do link: bolinha com borda de tinta, cor estável por domínio.</summary>
     private FrameworkElement Favicon(string url, bool ehLink)
     {
         string dom = "";
         try { dom = new Uri(EnsureUrl(url)).Host.Replace("www.", ""); } catch { }
-        string letra = dom.Length > 0 ? dom[0].ToString().ToUpperInvariant() : "•";
-        // Cor do badge estável por domínio (não pisca entre renders)
         int h = 0; foreach (char c in dom) h = (h * 31 + c) & 0x7fffffff;
-        var tint = (Brush)FindResource(ehLink ? FaviconTints[h % FaviconTints.Length] : "Mist");
-
-        var inner = new Grid { Width = 22, Height = 22 };
-        inner.Children.Add(new TextBlock
-        {
-            Text = letra, FontSize = 12, FontWeight = FontWeights.Bold,
-            FontFamily = (FontFamily)FindResource("Display"),
-            Foreground = (Brush)FindResource("Ink"),
-            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
-        });
-        if (ehLink && dom.Length > 0)
-            try
-            {
-                var img = new Image { Width = 16, Height = 16, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-                var bmp = new System.Windows.Media.Imaging.BitmapImage();
-                bmp.BeginInit();
-                bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                bmp.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreColorProfile;
-                bmp.UriSource = new Uri("https://icons.duckduckgo.com/ip3/" + Uri.EscapeDataString(dom) + ".ico");
-                bmp.DownloadFailed += (_, _) => inner.Children.Remove(img);   // falhou: fica a letra
-                bmp.EndInit();
-                img.Source = bmp;
-                inner.Children.Add(img);
-            }
-            catch { }
+        var cor = (Brush)FindResource(ehLink ? DotTints[h % DotTints.Length] : "TextDone");
 
         return new Border
         {
-            Width = 26, Height = 26, Margin = new Thickness(0, 0, 9, 0),
+            Width = 11, Height = 11, Margin = new Thickness(2, 0, 11, 0),
             VerticalAlignment = VerticalAlignment.Center,
-            Background = tint,
+            Background = cor,
             BorderBrush = (Brush)FindResource("Ink"), BorderThickness = new Thickness(1.5),
-            CornerRadius = new CornerRadius(7),
-            Child = inner
+            CornerRadius = new CornerRadius(6)
         };
     }
 

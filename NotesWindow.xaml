@@ -11,8 +11,8 @@
         ShowInTaskbar="True" ResizeMode="NoResize"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
-        TextOptions.TextFormattingMode="Display"
-        TextOptions.TextRenderingMode="ClearType"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
         RenderOptions.BitmapScalingMode="HighQuality">
 
     <Grid Margin="14">
