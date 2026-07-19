@@ -30,12 +30,10 @@
     <Resource Include="assets\ZimNotes.ico" />
   </ItemGroup>
 
-  <!-- Fontes do Acervo embutidas: Archivo Black (display) + Space Grotesk (corpo) -->
+  <!-- Fontes do Acervo embutidas: Archivo Black (display) + Space Grotesk (corpo, Regular+Bold) -->
   <ItemGroup>
     <Resource Include="assets\fonts\ArchivoBlack-Regular.ttf" />
     <Resource Include="assets\fonts\SpaceGrotesk-Regular.ttf" />
-    <Resource Include="assets\fonts\SpaceGrotesk-Medium.ttf" />
-    <Resource Include="assets\fonts\SpaceGrotesk-SemiBold.ttf" />
     <Resource Include="assets\fonts\SpaceGrotesk-Bold.ttf" />
   </ItemGroup>
 

@@ -182,11 +182,10 @@ public static class Zui
         if (onClick is not null)
         {
             host.Cursor = Cursors.Hand;
-            // nb-press do Acervo: hover LEVANTA o bloco (sobe/esquerda, sombra cresce)
-            var lift = new TranslateTransform(0, 0);
-            face.RenderTransform = lift;
-            host.MouseEnter += (_, _) => { lift.X = -2; lift.Y = -2; face.Margin = new Thickness(0, 0, shadow + 2, shadow + 2); };
-            host.MouseLeave += (_, _) => { lift.X = 0; lift.Y = 0; face.Margin = new Thickness(0, 0, shadow, shadow); };
+            // Hover: só realça a borda (sem translate — translate negativo era cortado
+            // pelo ScrollViewer e "comia" o canto do card, bug do print 5)
+            host.MouseEnter += (_, _) => face.BorderBrush = (Brush)owner.FindResource("Accent");
+            host.MouseLeave += (_, _) => face.BorderBrush = ink;
             host.MouseLeftButtonUp += (_, e) =>
             {
                 if (e.OriginalSource is FrameworkElement fe && fe.Cursor == Cursors.Hand && !ReferenceEquals(fe, host) && !ReferenceEquals(fe, face)) return;

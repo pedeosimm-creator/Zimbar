@@ -304,10 +304,12 @@ public partial class BarWindow : Window
         foreach (var (name, el) in views)
             el.Visibility = name == view ? Visibility.Visible : Visibility.Collapsed;
 
-        // Aba ativa = bloco de TINTA com texto claro (DESIGN.md §5); as outras, transparentes
+        // Aba ativa = bloco de TINTA com texto claro + SOMBRA na cor do accent
+        // (detalhe do .nb-tab.active do Acervo — deixa o tema visível)
         var ink = (Brush)FindResource("Ink");
         var onInk = (Brush)FindResource("Surface");   // texto claro sobre a tinta
         var txt = (Brush)FindResource("TextDim");
+        var accentColor = ((SolidColorBrush)FindResource("Accent")).Color;
         foreach (var (btn, name) in new[]
         {
             (NavPainel, "Painel"), (NavHoje, "Hoje"), (NavKanban, "Kanban"), (NavAgenda, "Agenda"),
@@ -318,6 +320,9 @@ public partial class BarWindow : Window
             btn.Background = on ? ink : Brushes.Transparent;
             btn.Foreground = on ? onInk : txt;
             btn.FontWeight = on ? FontWeights.Bold : FontWeights.SemiBold;
+            btn.Effect = on
+                ? new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 0, ShadowDepth = 3, Direction = 315, Opacity = 1, Color = accentColor }
+                : null;
         }
 
         var visivel = views.FirstOrDefault(v => v.Name == view).El;
@@ -924,7 +929,7 @@ public partial class BarWindow : Window
 
     // -- Captura: item da inbox com destinos (vive no Painel) ------
 
-    private Border CapturaItem(JsonObject item, bool compact = false)
+    private FrameworkElement CapturaItem(JsonObject item, bool compact = false)
     {
         string id = item["id"]?.GetValue<string>() ?? "";
         string text = item["text"]?.GetValue<string>() ?? "";
@@ -985,17 +990,12 @@ public partial class BarWindow : Window
         });
         sp.Children.Add(acts);
 
-        // Todas as capturas na MESMA cor (sun-soft), estilo Acervo
-        return new Border
-        {
-            Background = (Brush)FindResource("SunSoft"),
-            BorderBrush = (Brush)FindResource("Ink"),
-            BorderThickness = new Thickness(2),
-            CornerRadius = new CornerRadius(12),
-            Padding = new Thickness(12, 9, 11, 9),
-            Margin = compact ? new Thickness(0, 0, 8, 8) : new Thickness(0, 0, 0, 8),
-            Child = sp
-        };
+        // Card padrão: branco (paper) com sombra dura, igual aos outros cards
+        return Zui.Block(this, sp,
+            background: (Brush)FindResource("Surface"),
+            padding: new Thickness(12, 9, 11, 9),
+            margin: compact ? new Thickness(0, 0, 10, 10) : new Thickness(0, 0, 4, 8),
+            radius: 12);
     }
 
     private static async Task RemoveInbox(string id)
@@ -2202,10 +2202,8 @@ public partial class BarWindow : Window
             Child = body,
             ToolTip = "clica: editar - arrasta: mover de coluna"
         };
-        var lift = new TranslateTransform(0, 0);
-        card.RenderTransform = lift;
-        card.MouseEnter += (_, _) => { lift.X = -2; lift.Y = -2; };
-        card.MouseLeave += (_, _) => { lift.X = 0; lift.Y = 0; };
+        card.MouseEnter += (_, _) => card.BorderBrush = (Brush)FindResource("Accent");
+        card.MouseLeave += (_, _) => card.BorderBrush = (Brush)FindResource("Ink");
 
         card.PreviewMouseLeftButtonDown += (_, e) =>
         {
