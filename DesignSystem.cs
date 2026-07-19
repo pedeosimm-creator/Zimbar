@@ -72,8 +72,9 @@ public static class Zui
         {
             Text = text.ToUpper(new CultureInfo("pt-BR")),
             FontSize = 10,
+            FontWeight = FontWeights.Bold,
             FontFamily = (FontFamily)owner.FindResource(ZTokens.Mono),
-            Foreground = (Brush)owner.FindResource(ZTokens.TextDim),
+            Foreground = (Brush)owner.FindResource("Ink"),
             VerticalAlignment = VerticalAlignment.Center,
             Margin = margin ?? ZTokens.SpaceNone,
             TextWrapping = TextWrapping.Wrap
@@ -109,46 +110,102 @@ public static class Zui
             TextWrapping = TextWrapping.Wrap
         };
 
-    public static Border GlassCard(
+    /// <summary>Paleta de alternância (DESIGN.md §2). i cicla; blocos irmãos nunca repetem cor.</summary>
+    private static readonly string[] TintKeys =
+        { "BlockYellow", "BlockLime", "BlockPink", "BlockPurple", "BlockBlue", "BlockCoral" };
+
+    public static Brush Tint(FrameworkElement owner, int i)
+        => (Brush)owner.FindResource(TintKeys[((i % TintKeys.Length) + TintKeys.Length) % TintKeys.Length]);
+
+    /// <summary>
+    /// BLOCO neobrutal (DESIGN.md §4): sombra dura via BORDA DUPLA — um bloco de
+    /// tinta atrás, o bloco de cor na frente. Nunca DropShadowEffect (fantasma).
+    /// </summary>
+    public static Grid Block(
         FrameworkElement owner,
         UIElement body,
+        Brush? background = null,
         Action? onClick = null,
         Thickness? padding = null,
-        Thickness? margin = null)
+        Thickness? margin = null,
+        double shadow = 4,
+        double radius = 10)
     {
-        var idleBorder = new SolidColorBrush(Color.FromArgb(0x1E, 0xFF, 0xFF, 0xFF));
-        var card = new Border
+        var ink = (Brush)owner.FindResource("Ink");
+        var face = new Border
         {
-            Background = (Brush)owner.FindResource(ZTokens.Surface),
-            BorderBrush = idleBorder,
-            BorderThickness = new Thickness(1),
-            CornerRadius = ZTokens.RadiusLg,
+            Background = background ?? (Brush)owner.FindResource(ZTokens.Surface),
+            BorderBrush = ink,
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(radius),
             Padding = padding ?? new Thickness(15, 12, 15, 12),
-            Margin = margin ?? new Thickness(0, 0, 0, 10),
+            Margin = new Thickness(0, 0, shadow, shadow),
             Child = body
+        };
+        var sombra = new Border
+        {
+            Background = ink,
+            CornerRadius = new CornerRadius(radius),
+            Margin = new Thickness(shadow, shadow, 0, 0)
+        };
+        var host = new Grid
+        {
+            Margin = margin ?? new Thickness(0, 0, 0, 10),
+            SnapsToDevicePixels = true,
+            Children = { sombra, face }
         };
         if (onClick is not null)
         {
-            card.Cursor = Cursors.Hand;
-            card.ToolTip = "clica pra abrir a aba";
-            card.MouseEnter += (_, _) => card.BorderBrush = (Brush)owner.FindResource(ZTokens.Accent);
-            card.MouseLeave += (_, _) => card.BorderBrush = idleBorder;
-            card.MouseLeftButtonUp += (_, e) =>
+            host.Cursor = Cursors.Hand;
+            face.MouseEnter += (_, _) => face.BorderBrush = (Brush)owner.FindResource(ZTokens.AccentSoft);
+            face.MouseLeave += (_, _) => face.BorderBrush = ink;
+            host.MouseLeftButtonUp += (_, e) =>
             {
-                if (e.OriginalSource is FrameworkElement fe && fe.Cursor == Cursors.Hand && !ReferenceEquals(fe, card)) return;
+                if (e.OriginalSource is FrameworkElement fe && fe.Cursor == Cursors.Hand && !ReferenceEquals(fe, host) && !ReferenceEquals(fe, face)) return;
                 onClick();
                 e.Handled = true;
             };
         }
-        return card;
+        return host;
     }
 
-    public static Border StatCard(FrameworkElement owner, string title, UIElement body, Action? onClick = null)
+    /// <summary>Compat: os call sites antigos de card continuam funcionando, agora como Block.</summary>
+    public static FrameworkElement GlassCard(
+        FrameworkElement owner,
+        UIElement body,
+        Action? onClick = null,
+        Thickness? padding = null,
+        Thickness? margin = null,
+        int? tintIndex = null)
+        => Block(owner, body,
+            background: tintIndex is int ti ? Tint(owner, ti) : null,
+            onClick: onClick, padding: padding, margin: margin);
+
+    /// <summary>TAG de seção (DESIGN.md §5): mono maiúscula clara em bloquinho de tinta.</summary>
+    public static Border Tag(FrameworkElement owner, string text, Brush? bg = null, Brush? fg = null)
+        => new()
+        {
+            Background = bg ?? (Brush)owner.FindResource("Ink"),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(7, 2.5, 7, 2.5),
+            Margin = new Thickness(0, 0, 0, 8),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Child = new TextBlock
+            {
+                Text = text.ToUpper(new CultureInfo("pt-BR")),
+                FontSize = 9.5,
+                FontWeight = FontWeights.Bold,
+                FontFamily = (FontFamily)owner.FindResource(ZTokens.Mono),
+                Foreground = fg ?? Brushes.White
+            }
+        };
+
+    public static FrameworkElement StatCard(FrameworkElement owner, string title, UIElement body, Action? onClick = null, int? tintIndex = null)
     {
         var sp = new StackPanel();
-        sp.Children.Add(HudLabel(owner, title));
+        sp.Children.Add(Tag(owner, title));
         sp.Children.Add(body);
-        return GlassCard(owner, sp, onClick);
+        return GlassCard(owner, sp, onClick, tintIndex: tintIndex);
     }
 
     public static FrameworkElement InlineAddBox(

@@ -101,11 +101,6 @@
                                 VerticalAlignment="Center">
                             <StackPanel x:Name="PlayerContent" Orientation="Horizontal"/>
                         </Border>
-                        <!-- Clicador sutil no fim da barra: dia (evento) / pasta (referência) -->
-                        <Button x:Name="ModePicker" DockPanel.Dock="Right" Visibility="Collapsed"
-                                Style="{StaticResource Chip}" Click="ModePicker_Click"
-                                FontSize="11.5" Padding="11,5" Margin="10,0,0,0"
-                                VerticalAlignment="Center"/>
                         <Grid>
                             <TextBox x:Name="Input"
                                      Background="Transparent" BorderThickness="0"
@@ -135,8 +130,6 @@
                         <StackPanel x:Name="ActionItems" DockPanel.Dock="Right" Orientation="Horizontal">
                             <Button x:Name="NavNotas" Style="{StaticResource NavBtn}" Click="Notas_Click" Content="📝" FontSize="15" ToolTip="ZimNotes"/>
                             <Button Style="{StaticResource NavBtn}" Click="Pomo_Click" Content="🍅" FontSize="15" ToolTip="Pomodoro flutuante"/>
-                            <Button Style="{StaticResource NavBtn}" Click="Print_Click" Content="📸" FontSize="15" ToolTip="Print (Relâmpago)"/>
-                            <Button Style="{StaticResource NavBtn}" Click="Record_Click" Content="🎥" FontSize="15" ToolTip="Gravar tela (Relâmpago)"/>
                             <Button Style="{StaticResource NavBtn}" Click="Theme_Click" Content="🎨" FontSize="15" ToolTip="Cores" Margin="0"/>
                         </StackPanel>
                         <StackPanel x:Name="NavItems" Orientation="Horizontal">
@@ -144,7 +137,6 @@
                             <Button x:Name="NavHoje"   Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Hoje"   Content="☀ Hoje"/>
                             <Button x:Name="NavKanban" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Kanban" Content="◱ Kanban"/>
                             <Button x:Name="NavAgenda" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Agenda" Content="◷ Agenda"/>
-                            <Button x:Name="NavRefs"   Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Refs"   Content="◇ Referências"/>
                             <Button x:Name="NavLinks"  Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Links"  Content="⌘ Links"/>
                             <Button x:Name="NavListas" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Listas" Content="☰ Listas"/>
                             <Button x:Name="NavNews"   Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="News"   Content="✷ Notícias"/>
@@ -162,8 +154,8 @@
                         </Rectangle.Fill>
                     </Rectangle>
 
-                    <!-- Miolo -->
-                    <Grid x:Name="ViewHost" MaxHeight="430">
+                    <!-- Miolo: altura fixa pra janela não "pular" ao trocar de aba -->
+                    <Grid x:Name="ViewHost" Height="430">
                         <ScrollViewer x:Name="PainelView" VerticalScrollBarVisibility="Auto">
                             <StackPanel x:Name="PainelPanel" Margin="0,8,8,4"/>
                         </ScrollViewer>
@@ -175,9 +167,6 @@
                         </ScrollViewer>
                         <ScrollViewer x:Name="AgendaView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
                             <StackPanel x:Name="AgendaPanel" Margin="0,6,8,4"/>
-                        </ScrollViewer>
-                        <ScrollViewer x:Name="RefsView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
-                            <StackPanel x:Name="RefsPanel" Margin="0,6,8,4"/>
                         </ScrollViewer>
                         <ScrollViewer x:Name="LinksView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
                             <StackPanel x:Name="LinksPanel" Margin="0,6,8,4"/>
@@ -198,19 +187,26 @@
                         </ScrollViewer>
                     </Grid>
 
+
+
                     <!-- Rodapé + alça -->
                     <DockPanel Margin="2,9,0,2" Background="Transparent">
-                        <TextBlock DockPanel.Dock="Right" Text="⤡"
-                                   FontSize="15" Padding="16,4,3,1"
-                                   Foreground="{DynamicResource TextDim}"
-                                   Cursor="SizeNWSE" ToolTip="arrasta pra redimensionar"
-                                   MouseLeftButtonDown="Grip_MouseDown"
-                                   MouseMove="Grip_MouseMove"
-                                   MouseLeftButtonUp="Grip_MouseUp"/>
+                        <Border DockPanel.Dock="Right" Background="Transparent"
+                                Width="44" Height="26"
+                                Cursor="SizeNWSE" ToolTip="arrasta pra redimensionar"
+                                MouseLeftButtonDown="Grip_MouseDown"
+                                MouseMove="Grip_MouseMove"
+                                MouseLeftButtonUp="Grip_MouseUp">
+                            <TextBlock Text="⤡" FontSize="16" FontWeight="Bold"
+                                       Foreground="{DynamicResource TextDim}"
+                                       HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                       Margin="0,0,2,0"/>
+                        </Border>
                         <TextBlock FontSize="10" FontFamily="{DynamicResource Mono}"
                                    Foreground="{DynamicResource TextDone}"
+                                   VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis">
-                            ZIMBAR v0.9 · Ctrl+Alt+Z abre/fecha · Ctrl+Alt+D ZimNotes · clique fora minimiza · Esc fecha · Ctrl+1–9 abas
+                            ZIMBAR v1.0 · Ctrl+Alt+Z abre/minimiza · Esc fecha · Ctrl+Alt+D ZimNotes · Ctrl+1–8 abas
                         </TextBlock>
                     </DockPanel>
                 </StackPanel>
@@ -219,9 +215,9 @@
                 <Popup x:Name="PomoPopup" StaysOpen="False" Placement="Mouse"
                        AllowsTransparency="True" PopupAnimation="Fade">
                     <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
-                            BorderThickness="1" CornerRadius="14" Padding="6">
+                            BorderThickness="2.5" CornerRadius="12" Padding="6">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="26" ShadowDepth="0" Opacity="0.5" Color="#8B5CFF"/>
+                            <DropShadowEffect BlurRadius="0" ShadowDepth="6" Direction="315" Opacity="1" Color="#181320"/>
                         </Border.Effect>
                         <StackPanel>
                             <Button Style="{StaticResource GhostItem}" Click="PomoStart_Click" Tag="25,5"  Content="🍅  Foco 25 + 5 de pausa"/>
@@ -230,28 +226,13 @@
                     </Border>
                 </Popup>
 
-                <!-- Popup do clicador (pastas / categorias) -->
-                <Popup x:Name="ModePickerPopup" StaysOpen="False" Placement="Bottom"
-                       PlacementTarget="{Binding ElementName=ModePicker}"
-                       AllowsTransparency="True" PopupAnimation="Fade">
-                    <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
-                            BorderThickness="1" CornerRadius="12" Padding="7" MaxHeight="320">
-                        <Border.Effect>
-                            <DropShadowEffect BlurRadius="26" ShadowDepth="0" Opacity="0.5" Color="#8B5CFF"/>
-                        </Border.Effect>
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="300">
-                            <StackPanel x:Name="ModePickerList" MinWidth="150"/>
-                        </ScrollViewer>
-                    </Border>
-                </Popup>
-
                 <!-- Seletor de data (mini-calendário caprichado) -->
                 <Popup x:Name="DatePopup" StaysOpen="False" Placement="Bottom"
                        AllowsTransparency="True" PopupAnimation="Fade">
                     <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
-                            BorderThickness="1" CornerRadius="16" Padding="14" Width="290">
+                            BorderThickness="2.5" CornerRadius="12" Padding="14" Width="290">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="34" ShadowDepth="0" Opacity="0.55" Color="#8B5CFF"/>
+                            <DropShadowEffect BlurRadius="0" ShadowDepth="6" Direction="315" Opacity="1" Color="#181320"/>
                         </Border.Effect>
                         <StackPanel x:Name="DateCalHost"/>
                     </Border>
@@ -261,9 +242,9 @@
                 <Popup x:Name="ThemePopup" StaysOpen="False" Placement="Mouse"
                        AllowsTransparency="True" PopupAnimation="Fade">
                     <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
-                            BorderThickness="1" CornerRadius="14" Padding="8">
+                            BorderThickness="2.5" CornerRadius="12" Padding="8">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="26" ShadowDepth="0" Opacity="0.5" Color="#8B5CFF"/>
+                            <DropShadowEffect BlurRadius="0" ShadowDepth="6" Direction="315" Opacity="1" Color="#181320"/>
                         </Border.Effect>
                         <StackPanel x:Name="ThemeList"/>
                     </Border>
@@ -274,9 +255,9 @@
                        Placement="Center" PlacementTarget="{Binding ElementName=Card}"
                        AllowsTransparency="True" PopupAnimation="Fade">
                     <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
-                            BorderThickness="1.5" CornerRadius="18" Padding="22,18,22,18" Width="430">
+                            BorderThickness="2.5" CornerRadius="14" Padding="22,18,22,18" Width="430">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="40" ShadowDepth="0" Opacity="0.6" Color="#8B5CFF"/>
+                            <DropShadowEffect BlurRadius="0" ShadowDepth="7" Direction="315" Opacity="1" Color="#181320"/>
                         </Border.Effect>
                         <StackPanel>
                             <DockPanel Margin="0,0,0,14">

@@ -36,7 +36,6 @@ public partial class BarWindow : Window
     private JsonArray _tarefasCache = new();
     private string _inputMode = "captura"; // captura | busca | web
     private string _buscaQuery = "";
-    private string? _refsCat;              // null = todas
     private string _newsTopic = "";
     private string _emailFolder = "inbox"; // inbox | spam | trash
     private string _emailAccountId = "all";
@@ -59,12 +58,13 @@ public partial class BarWindow : Window
     {
         InitializeComponent();
         Width = Config.BarWidth ?? 1160;
-        ViewHost.MaxHeight = Config.ViewMax ?? 430;
+        ViewHost.Height = Config.ViewMax ?? 430;
+        SizeChanged += (_, _) => FitNav();
+        Loaded += (_, _) => FitNav();
         _statusTimer.Tick += (_, _) => { StatusText.Visibility = Visibility.Collapsed; _statusTimer.Stop(); };
         _playerTimer.Tick += (_, _) => _ = RenderTopPlayer();
         _refreshTimer.Tick += (_, _) => AutoRefresh();
         Activated += (_, _) => AutoRefresh();   // (A) recarrega quando a barra ganha foco
-        Deactivated += (_, _) => CollapseBar(); // clicar fora minimiza pra barra de tarefas
         StateChanged += Window_StateChanged;    // restaurar da barra de tarefas
         PreviewKeyDown += Window_PreviewKeyDown;
         BuildThemeList();
@@ -118,19 +118,20 @@ public partial class BarWindow : Window
 
     private void KeepOnScreen()
     {
-        var wa = SystemParameters.WorkArea;
-        var w = Math.Min(ActualWidth > 0 ? ActualWidth : Width, wa.Width);
-        var h = Math.Min(ActualHeight > 0 ? ActualHeight : 140, wa.Height);
-        Left = Math.Clamp(Left, wa.Left, Math.Max(wa.Left, wa.Right - w));
-        Top = Math.Clamp(Top, wa.Top, Math.Max(wa.Top, wa.Bottom - h));
+        // Tela VIRTUAL (todos os monitores) — a barra pode morar no monitor 2.
+        double vl = SystemParameters.VirtualScreenLeft, vt = SystemParameters.VirtualScreenTop;
+        double vr = vl + SystemParameters.VirtualScreenWidth, vb = vt + SystemParameters.VirtualScreenHeight;
+        var w = Math.Min(ActualWidth > 0 ? ActualWidth : Width, SystemParameters.VirtualScreenWidth);
+        var h = Math.Min(ActualHeight > 0 ? ActualHeight : 140, SystemParameters.VirtualScreenHeight);
+        Left = Math.Clamp(Left, vl, Math.Max(vl, vr - w));
+        Top = Math.Clamp(Top, vt, Math.Max(vt, vb - h));
     }
 
-    /// <summary>Clicar fora minimiza a barra pra barra de tarefas, como uma janela normal.</summary>
-    private void CollapseBar()
+    /// <summary>Minimiza a barra pra barra de tarefas, como uma janela normal (Ctrl+Alt+Z).</summary>
+    public void CollapseBar()
     {
         if (!IsVisible || _busyModal) return;
         if (WindowState == WindowState.Minimized) return;
-        if (IsUserBusy()) return;   // popup/edi��o/arraste aberto: n�o � "clicar fora" de verdade
 
         ShowInTaskbar = true;                  // bot�o normal na barra de tarefas
         WindowState = WindowState.Minimized;
@@ -174,9 +175,9 @@ public partial class BarWindow : Window
 
     private bool IsUserBusy()
     {
-        if (PomoPopup.IsOpen || ModePickerPopup.IsOpen || DatePopup.IsOpen
+        if (PomoPopup.IsOpen || DatePopup.IsOpen
             || ThemePopup.IsOpen || KbEditPopup.IsOpen) return true;
-        if (_hojeRenameId != null || _refRenameId != null || _catRename != null) return true;
+        if (_hojeRenameId != null) return true;
         if (Mouse.LeftButton == MouseButtonState.Pressed) return true;         // arrastando/clicando
         if (Input.IsKeyboardFocused && !string.IsNullOrEmpty(Input.Text)) return true; // digitando
         return false;
@@ -191,7 +192,6 @@ public partial class BarWindow : Window
             case "Hoje": _ = LoadHoje(); break;
             case "Kanban": _ = LoadKanban(); break;
             case "Agenda": _ = LoadAgenda(); break;
-            case "Refs": _ = LoadRefs(); break;
             case "Links": _ = LoadLinks(); break;
             case "Listas": _ = LoadListas(); break;
             case "Email": LoadEmail(); break;
@@ -210,8 +210,7 @@ public partial class BarWindow : Window
             string? v = e.Key switch
             {
                 Key.D1 => "Painel", Key.D2 => "Hoje", Key.D3 => "Kanban", Key.D4 => "Agenda",
-                Key.D5 => "Refs", Key.D6 => "Links", Key.D7 => "Listas", Key.D8 => "News",
-                Key.D9 => "Email",
+                Key.D5 => "Links", Key.D6 => "Listas", Key.D7 => "News", Key.D8 => "Email",
                 _ => null
             };
             if (v is not null) { SwitchView(v); e.Handled = true; }
@@ -246,7 +245,7 @@ public partial class BarWindow : Window
         _sizing = true;
         _sizeStart = e.GetPosition(this);
         _w0 = _pendW = ActualWidth;
-        _v0 = _pendV = ViewHost.MaxHeight;
+        _v0 = _pendV = ViewHost.Height;
         ((UIElement)sender).CaptureMouse();
         CompositionTarget.Rendering += Sizing_Rendering;
         e.Handled = true;
@@ -267,7 +266,7 @@ public partial class BarWindow : Window
         if (!_sizePending) return;
         _sizePending = false;
         Width = _pendW;
-        ViewHost.MaxHeight = _pendV;
+        ViewHost.Height = _pendV;
     }
 
     private void Grip_MouseUp(object sender, MouseButtonEventArgs e)
@@ -277,7 +276,7 @@ public partial class BarWindow : Window
         CompositionTarget.Rendering -= Sizing_Rendering;
         ((UIElement)sender).ReleaseMouseCapture();
         Width = _pendW;
-        ViewHost.MaxHeight = _pendV;
+        ViewHost.Height = _pendV;
         Config.BarWidth = _pendW;
         Config.ViewMax = _pendV;
         Config.Save();
@@ -297,7 +296,7 @@ public partial class BarWindow : Window
         var views = new (string Name, UIElement El)[]
         {
             ("Painel", PainelView), ("Hoje", HojeView), ("Kanban", KanbanView),
-            ("Agenda", AgendaView), ("Refs", RefsView),
+            ("Agenda", AgendaView),
             ("Links", LinksView), ("Listas", ListasView), ("News", NewsView),
             ("Email", EmailView),
             ("Busca", BuscaView),
@@ -305,24 +304,24 @@ public partial class BarWindow : Window
         foreach (var (name, el) in views)
             el.Visibility = name == view ? Visibility.Visible : Visibility.Collapsed;
 
-        // Aba ativa vira bloco vivo (accent + texto tinta); as outras, transparentes
-        var accent = (Brush)FindResource("Accent");
-        var ink = (Brush)FindResource("TextInk");
-        var txt = (Brush)FindResource("TextMain");
+        // Aba ativa = bloco de TINTA com texto claro (DESIGN.md §5); as outras, transparentes
+        var ink = (Brush)FindResource("Ink");
+        var onInk = (Brush)FindResource("Surface");   // texto claro sobre a tinta
+        var txt = (Brush)FindResource("TextDim");
         foreach (var (btn, name) in new[]
         {
             (NavPainel, "Painel"), (NavHoje, "Hoje"), (NavKanban, "Kanban"), (NavAgenda, "Agenda"),
-            (NavRefs, "Refs"), (NavLinks, "Links"), (NavListas, "Listas"), (NavNews, "News"), (NavEmail, "Email")
+            (NavLinks, "Links"), (NavListas, "Listas"), (NavNews, "News"), (NavEmail, "Email")
         })
         {
             bool on = name == view;
-            btn.Background = on ? accent : Brushes.Transparent;
-            btn.Foreground = on ? ink : txt;
+            btn.Background = on ? ink : Brushes.Transparent;
+            btn.Foreground = on ? onInk : txt;
             btn.FontWeight = on ? FontWeights.Bold : FontWeights.SemiBold;
         }
 
         var visivel = views.FirstOrDefault(v => v.Name == view).El;
-        if (visivel is not null) AnimateIn(visivel, fromY: 8, ms: 170);
+        if (visivel is not null) AnimateIn(visivel, fromY: 0, ms: 130);   // s� fade: sem "tiltada" na troca
 
         switch (view)
         {
@@ -330,7 +329,6 @@ public partial class BarWindow : Window
             case "Hoje": _ = LoadHoje(); break;
             case "Kanban": _ = LoadKanban(); break;
             case "Agenda": _ = LoadAgenda(); break;
-            case "Refs": _ = LoadRefs(); break;
             case "Links": _ = LoadLinks(); break;
             case "Listas": _ = LoadListas(); break;
             case "News": _ = LoadNews(); break;
@@ -341,37 +339,46 @@ public partial class BarWindow : Window
 
     private void ApplyShellDesign()
     {
+        // Shell NEOBRUTALISTA: papel chapado, borda de tinta grossa, blocos retos.
         ShellRail.Visibility = Visibility.Collapsed;
         RailColumn.Width = new GridLength(0);
         ShellStack.Margin = new Thickness(20, 16, 22, 12);
-        CommandSurface.BorderBrush = (Brush)FindResource("CardBorderBrush");
-        CommandSurface.BorderThickness = new Thickness(1);
+        CommandSurface.BorderBrush = (Brush)FindResource("Ink");
+        CommandSurface.BorderThickness = new Thickness(2);
         CommandSurface.Padding = new Thickness(12, 9, 12, 9);
         CommandDock.Margin = new Thickness(0);
         DecorLayer.Visibility = Visibility.Collapsed;
-        DecorLayer.Opacity = 1;
         DecorScanline.Opacity = 0;
         DecorOrbit.Opacity = 0;
-        Card.BorderThickness = new Thickness(1);
+        Card.BorderThickness = new Thickness(3);
         Card.Padding = new Thickness(0);
         ViewHost.Margin = new Thickness(0, 4, 0, 0);
 
         SetNavLabels(full: true, orbital: false);
         NavItems.Margin = new Thickness(0);
         ActionItems.Margin = new Thickness(0);
-        ShellSeparator.Height = 1;
-        ShellSeparator.Margin = new Thickness(2, 12, 2, 2);
-        RailMark.Text = "Z";
-        RailTitle.Text = "HUD";
-        RailMode.Text = "CAPTURE";
         DragGlyph.Text = "⠿";
-        Card.CornerRadius = new CornerRadius(28);
-        CommandSurface.Background = (Brush)FindResource("SurfaceHi");
-        CommandSurface.CornerRadius = new CornerRadius(18);
-        ShellSeparator.Opacity = 0.16;
-        RailMark.Text = "Z";
-        RailTitle.Text = "AURORA\nFLOW";
-        RailMode.Text = "SOFT HUD";
+        Card.CornerRadius = new CornerRadius(16);
+        CommandSurface.Background = (Brush)FindResource("Surface");
+        CommandSurface.CornerRadius = new CornerRadius(10);
+
+        // Régua sólida de tinta separando o miolo (nada de gradiente etéreo)
+        ShellSeparator.Fill = (Brush)FindResource("Ink");
+        ShellSeparator.Height = 2;
+        ShellSeparator.Margin = new Thickness(2, 12, 2, 2);
+        ShellSeparator.Opacity = 0.85;
+    }
+
+    /// <summary>Se as abas não couberem na largura atual, caem pra versão só-ícone (nenhuma some).</summary>
+    private void FitNav()
+    {
+        if (!IsLoaded) return;
+        double avail = NavDock.ActualWidth - ActionItems.ActualWidth - 6;
+        if (avail <= 0) return;
+        SetNavLabels(full: true, orbital: false);
+        NavItems.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        if (NavItems.DesiredSize.Width > avail)
+            SetNavLabels(full: false, orbital: false);
     }
 
     private void SetNavLabels(bool full, bool orbital)
@@ -382,11 +389,10 @@ public partial class BarWindow : Window
             (NavHoje, "☀ Hoje", "☀", "02 HOJ"),
             (NavKanban, "◱ Kanban", "◱", "03 KBN"),
             (NavAgenda, "◷ Agenda", "◷", "04 AGD"),
-            (NavRefs, "◇ Referencias", "◇", "05 REF"),
-            (NavLinks, "⌘ Links", "⌘", "06 LNK"),
-            (NavListas, "☰ Listas", "☰", "07 LST"),
-            (NavNews, "✷ Noticias", "✷", "08 NEW"),
-            (NavEmail, "✉ Email", "✉", "09 EML"),
+            (NavLinks, "⌘ Links", "⌘", "05 LNK"),
+            (NavListas, "☰ Listas", "☰", "06 LST"),
+            (NavNews, "✷ Noticias", "✷", "07 NEW"),
+            (NavEmail, "✉ Email", "✉", "08 EML"),
         };
 
         foreach (var (btn, longText, compact, orb) in items)
@@ -409,15 +415,12 @@ public partial class BarWindow : Window
         _statusTimer.Start();
     }
 
-    // -- Entrada com 5 modos: captura � busca � web � evento � refer�ncia --
+    // -- Entrada com 2 modos: captura � busca --
 
     private static readonly (string Mode, string Icon, string Label, string HintText)[] Modes =
     {
         ("captura", "+", "captura", "esvazia a cabeca - Enter joga na captura, voce decide depois..."),
-        ("busca", "B", "busca", "busca em tudo - tarefas, agenda, notas, referencias, listas..."),
-        ("web", "W", "web", "pesquisa na internet - Enter abre no navegador..."),
-        ("evento", "E", "evento", "novo evento - ex: 12/08 gravacao, ou amanha reuniao..."),
-        ("referencia", "R", "referencia", "guarda uma referencia - #categoria no comeco classifica..."),
+        ("busca", "B", "busca", "busca em tudo - tarefas, agenda, notas, listas..."),
     };
 
     private readonly Dictionary<string, Button> _modeBtns = new();
@@ -443,9 +446,6 @@ public partial class BarWindow : Window
         SetInputMode("captura");
     }
 
-    private DateTime _eventoDate = DateTime.Now.Date;
-    private string _refTargetCat = "";
-
     private void SetInputMode(string mode)
     {
         _inputMode = mode;
@@ -464,7 +464,6 @@ public partial class BarWindow : Window
             btn.Background = on ? accent : Brushes.Transparent;
             btn.Foreground = on ? ink : txt;
         }
-        UpdateModePicker();
     }
 
     private static string DayLabel(DateTime d)
@@ -474,30 +473,6 @@ public partial class BarWindow : Window
         if (d == hoje.AddDays(1)) return "amanha";
         var culture = new CultureInfo("pt-BR");
         return $"{culture.DateTimeFormat.GetAbbreviatedDayName(d.DayOfWeek).TrimEnd('.')} {d:dd/MM}";
-    }
-
-    /// <summary>Atualiza o clicador sutil no fim da barra conforme o modo.</summary>
-    private void UpdateModePicker()
-    {
-        if (_inputMode == "evento")
-        {
-            ModePicker.Visibility = Visibility.Visible;
-            ModePicker.Content = "data  " + DayLabel(_eventoDate) + "  v";
-        }
-        else if (_inputMode == "referencia")
-        {
-            ModePicker.Visibility = Visibility.Visible;
-            ModePicker.Content = "pasta  " + (_refTargetCat.Length == 0 ? "sem categoria" : "#" + _refTargetCat) + "  v";
-        }
-        else ModePicker.Visibility = Visibility.Collapsed;
-    }
-
-    private void ModePicker_Click(object sender, RoutedEventArgs e)
-    {
-        if (_inputMode == "evento")
-            OpenDatePicker(ModePicker, _eventoDate, d => { _eventoDate = d; UpdateModePicker(); Input.Focus(); });
-        else if (_inputMode == "referencia")
-            _ = FillRefPicker();
     }
 
     // -- Seletor de data caprichado (mini-calend�rio) ---------------
@@ -607,37 +582,6 @@ public partial class BarWindow : Window
         DateCalHost.Children.Add(quick);
     }
 
-    private async Task FillRefPicker()
-    {
-        var cats = await RefCats(await GetKvArray("me2_ideias"));
-        ModePickerList.Children.Clear();
-        ModePickerList.Children.Add(PickerOption("sem categoria", _refTargetCat.Length == 0, () =>
-        { _refTargetCat = ""; ModePickerPopup.IsOpen = false; UpdateModePicker(); Input.Focus(); }));
-        foreach (var c in cats)
-        {
-            string cc = c;
-            ModePickerList.Children.Add(PickerOption("#" + c, _refTargetCat == cc, () =>
-            { _refTargetCat = cc; ModePickerPopup.IsOpen = false; UpdateModePicker(); Input.Focus(); }));
-        }
-        ModePickerPopup.IsOpen = true;
-    }
-
-    private Button PickerOption(string label, bool on, Action onClick)
-    {
-        var b = new Button
-        {
-            Style = (Style)FindResource("GhostItem"),
-            Content = new TextBlock
-            {
-                Text = (on ? "✓ " : "   ") + label, FontSize = 12.5,
-                Foreground = (Brush)FindResource(on ? "Accent" : "TextMain")
-            },
-            Padding = new Thickness(9, 5, 9, 5)
-        };
-        b.Click += (_, _) => onClick();
-        return b;
-    }
-
     private void Input_TextChanged(object sender, TextChangedEventArgs e)
         => Hint.Visibility = string.IsNullOrEmpty(Input.Text) ? Visibility.Visible : Visibility.Collapsed;
 
@@ -648,61 +592,10 @@ public partial class BarWindow : Window
         if (text.Length == 0) return;
         e.Handled = true;
 
-        if (_inputMode == "web")
-        {
-            OpenExternal("https://www.google.com/search?q=" + Uri.EscapeDataString(text));
-            Input.Clear();
-            HideBar();
-            return;
-        }
-
         if (_inputMode == "busca")
         {
             _buscaQuery = text;
             SwitchView("Busca");
-            return;
-        }
-
-        if (_inputMode == "evento")
-        {
-            try
-            {
-                // Dia escolhido nos chips; se escrever uma data no texto, ela manda.
-                string titulo = text;
-                string data = _eventoDate.ToString("yyyy-MM-dd");
-                var (t2, d2) = ParseDataDoTexto(text);
-                if (d2 != DateTime.Now.Date.ToString("yyyy-MM-dd") || Regex.IsMatch(text, @"\d{1,2}/\d{1,2}|amanh|hoje"))
-                { titulo = t2; data = d2; }
-                await Supa.Insert("tarefas", new JsonObject
-                {
-                    ["id"] = "t" + Ms(),
-                    ["titulo"] = titulo,
-                    ["descricao"] = "",
-                    ["status"] = "a fazer",
-                    ["prazo"] = data
-                });
-                Input.Clear();
-                ShowStatus($"evento em {DateTime.Parse(data):dd/MM}");
-                if (_currentView is "Agenda" or "Painel") SwitchView(_currentView);
-            }
-            catch (Exception ex) { ShowStatus("nao criou o evento: " + ex.Message, error: true); }
-            return;
-        }
-
-        if (_inputMode == "referencia")
-        {
-            try
-            {
-                var item = new JsonObject { ["id"] = Supa.NewId(), ["ts"] = Ms() };
-                var m = Regex.Match(text, @"^#([\w\p{L}-]+)\s+(.+)$");
-                if (m.Success) { item["cat"] = m.Groups[1].Value.ToLower(new CultureInfo("pt-BR")); item["text"] = m.Groups[2].Value; }
-                else { item["text"] = text; if (_refTargetCat.Length > 0) item["cat"] = _refTargetCat; }
-                await PushKvList("me2_ideias", item);
-                Input.Clear();
-                ShowStatus(_refTargetCat.Length > 0 ? $"referencia em #{_refTargetCat}" : "referencia guardada");
-                if (_currentView == "Refs") await LoadRefs();
-            }
-            catch (Exception ex) { ShowStatus("nao guardou: " + ex.Message, error: true); }
             return;
         }
 
@@ -761,22 +654,38 @@ public partial class BarWindow : Window
         int h24 = DateTime.Now.Hour;
         string saud = h24 < 5 ? "boa madrugada" : h24 < 12 ? "bom dia" : h24 < 18 ? "boa tarde" : "boa noite";
 
-        // -- Hero minimalista: sauda��o (display fino) + data --
-        var hero = new StackPanel { Margin = new Thickness(2, 0, 2, 14) };
-        hero.Children.Add(new TextBlock
+        // -- Hero neobrutal: saudacao (display pesada) com "Pedro" em marca-texto --
+        var hero = new StackPanel { Margin = new Thickness(2, 0, 2, 15) };
+        var heroLine = new TextBlock
         {
-            Text = saud + ", Pedro",
-            FontSize = 25,
+            FontSize = 29,
             FontFamily = (FontFamily)FindResource("Display"),
-            Foreground = (Brush)FindResource("TextMain"),
-            Effect = new System.Windows.Media.Effects.DropShadowEffect
-            { BlurRadius = 18, ShadowDepth = 0, Opacity = 0.4, Color = ((SolidColorBrush)FindResource("Accent")).Color }
-        });
+            FontWeight = FontWeights.Bold,
+            Foreground = (Brush)FindResource("Ink"),
+            TextWrapping = TextWrapping.Wrap
+        };
+        heroLine.Inlines.Add(new Run(saud + ", "));
+        // "Pedro" num bloco de accent (marca-texto), estilo neobrutal
+        var marca = new InlineUIContainer(new Border
+        {
+            Background = (Brush)FindResource("Accent"),
+            BorderBrush = (Brush)FindResource("Ink"),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(8, 0, 8, 1),
+            Child = new TextBlock
+            {
+                Text = "Pedro", FontSize = 29, FontFamily = (FontFamily)FindResource("Display"),
+                FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("TextInk")
+            }
+        }) { BaselineAlignment = BaselineAlignment.Center };
+        heroLine.Inlines.Add(marca);
+        hero.Children.Add(heroLine);
         hero.Children.Add(new TextBlock
         {
             Text = culture.TextInfo.ToTitleCase(hoje.ToString("dddd, dd 'de' MMMM", culture)).ToUpper(culture),
-            FontSize = 10, FontFamily = (FontFamily)FindResource("Mono"),
-            Foreground = (Brush)FindResource("TextDim"), Margin = new Thickness(1, 3, 0, 0)
+            FontSize = 10, FontWeight = FontWeights.Bold, FontFamily = (FontFamily)FindResource("Mono"),
+            Foreground = (Brush)FindResource("TextDim"), Margin = new Thickness(2, 6, 0, 0)
         });
         PainelPanel.Children.Add(hero);
 
@@ -815,9 +724,10 @@ public partial class BarWindow : Window
                 Columns = ResponsiveColumns(minItemWidth: 390, maxColumns: 3),
                 Margin = new Thickness(0, 0, 0, 12)
             };
+            int capIdx = 0;
             foreach (var node in inbox)
                 if (node is JsonObject item)
-                    capWrap.Children.Add(CapturaItem(item, compact: true));
+                    capWrap.Children.Add(CapturaItem(item, compact: true, tintIndex: capIdx++));
             PainelPanel.Children.Add(capWrap);
         }
 
@@ -869,7 +779,7 @@ public partial class BarWindow : Window
         else if (tot > mostradas)
             tasksWrap.Children.Add(new TextBlock { Text = $"+{tot - mostradas} no plano", FontSize = 11, Foreground = (Brush)FindResource("TextDone"), Margin = new Thickness(18, 2, 0, 0) });
         hojeBody.Children.Add(tasksWrap);
-        Grid.SetColumn(GlassCardInto(grid, 0, hojeBody, "Hoje"), 0);
+        Grid.SetColumn(GlassCardInto(grid, 0, hojeBody, "Hoje", tintIndex: 0), 0);
 
         // -- PR�XIMOS EVENTOS: eventos + recorrentes (cor diferente), mesmo formato --
         var proxBody = new StackPanel();
@@ -889,7 +799,7 @@ public partial class BarWindow : Window
         if (proxWrap.Children.Count == 0)
             proxWrap.Children.Add(new TextBlock { Text = "nada marcado pela frente", FontSize = 12, Foreground = (Brush)FindResource("TextDone") });
         proxBody.Children.Add(proxWrap);
-        Grid.SetColumn(GlassCardInto(grid, 1, proxBody, "Agenda"), 1);
+        Grid.SetColumn(GlassCardInto(grid, 1, proxBody, "Agenda", tintIndex: 4), 1);
 
         PainelPanel.Children.Add(grid);
         AnimateIn(PainelPanel);
@@ -924,9 +834,9 @@ public partial class BarWindow : Window
         return row;
     }
 
-    private Border GlassCardInto(Grid g, int col, UIElement body, string? gotoView)
+    private FrameworkElement GlassCardInto(Grid g, int col, UIElement body, string? gotoView, int? tintIndex = null)
     {
-        var card = GlassCard(body, gotoView);
+        var card = Zui.GlassCard(this, body, gotoView is null ? null : () => SwitchView(gotoView), tintIndex: tintIndex);
         card.Margin = new Thickness(col == 0 ? 0 : 6, 0, col == 0 ? 6 : 0, 0);
         Grid.SetColumn(card, col);
         g.Children.Add(card);
@@ -942,8 +852,8 @@ public partial class BarWindow : Window
     /// <summary>R�tulo HUD: mono, mai�sculo, espa�ado, com brilho suave.</summary>
     private TextBlock HudLabel(string text) => Zui.HudLabel(this, text);
 
-    /// <summary>Card de vidro futurista com brilho na borda ao passar o mouse.</summary>
-    private Border GlassCard(UIElement body, string? gotoView)
+    /// <summary>Bloco neobrutal (sombra dura por borda dupla); hover realca a borda ao abrir aba.</summary>
+    private FrameworkElement GlassCard(UIElement body, string? gotoView)
     {
         return Zui.GlassCard(this, body, gotoView is null ? null : () => SwitchView(gotoView));
     }
@@ -955,7 +865,7 @@ public partial class BarWindow : Window
         return Math.Max(1, Math.Min(maxColumns, (int)Math.Floor(width / minItemWidth)));
     }
 
-    private Border StatCard(string title, UIElement body, string? gotoView)
+    private FrameworkElement StatCard(string title, UIElement body, string? gotoView)
         => Zui.StatCard(this, title, body, gotoView is null ? null : () => SwitchView(gotoView));
 
     // -- Player no topo, ao lado do campo de texto ------------------
@@ -1015,7 +925,7 @@ public partial class BarWindow : Window
 
     // -- Captura: item da inbox com destinos (vive no Painel) ------
 
-    private Border CapturaItem(JsonObject item, bool compact = false)
+    private Border CapturaItem(JsonObject item, bool compact = false, int tintIndex = 0)
     {
         string id = item["id"]?.GetValue<string>() ?? "";
         string text = item["text"]?.GetValue<string>() ?? "";
@@ -1076,11 +986,12 @@ public partial class BarWindow : Window
         });
         sp.Children.Add(acts);
 
+        // Bloco neobrutal com cor alternada
         return new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(0x2A, 0x7B, 0x5C, 0xD6)),
-            BorderBrush = (Brush)FindResource("AccentSoft"),
-            BorderThickness = new Thickness(2, 0, 0, 0),
+            Background = Zui.Tint(this, tintIndex),
+            BorderBrush = (Brush)FindResource("Ink"),
+            BorderThickness = new Thickness(2),
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(11, 8, 10, 7),
             Margin = compact ? new Thickness(0, 0, 8, 8) : new Thickness(0, 0, 0, 7),
@@ -1367,21 +1278,22 @@ public partial class BarWindow : Window
         HojePanel.Children.Clear();
         bool isToday = _foco?["date"]?.GetValue<string>() == Today();
 
+        var ink = (Brush)FindResource("Ink");
         foreach (var (arr, titulo, corKey, bgKey) in Niveis)
         {
             var section = new StackPanel();
-            // Etiqueta do n�vel: bolinha de cor + nome (harmonizado)
-            var tag = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 6) };
+            // Etiqueta do nivel: bolinha de cor + nome em mono (texto tinta, legivel)
+            var tag = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
             tag.Children.Add(new Border
             {
-                Width = 9, Height = 9, CornerRadius = new CornerRadius(3),
-                Background = (Brush)FindResource(corKey), Margin = new Thickness(0, 0, 8, 0),
-                VerticalAlignment = VerticalAlignment.Center
+                Width = 11, Height = 11, CornerRadius = new CornerRadius(3),
+                Background = (Brush)FindResource(corKey), BorderBrush = ink, BorderThickness = new Thickness(1.5),
+                Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center
             });
             tag.Children.Add(new TextBlock
             {
-                Text = titulo, FontSize = 10, FontFamily = (FontFamily)FindResource("Mono"),
-                Foreground = (Brush)FindResource(corKey), VerticalAlignment = VerticalAlignment.Center
+                Text = titulo, FontSize = 10, FontWeight = FontWeights.Bold, FontFamily = (FontFamily)FindResource("Mono"),
+                Foreground = ink, VerticalAlignment = VerticalAlignment.Center
             });
             section.Children.Add(tag);
 
@@ -1397,31 +1309,41 @@ public partial class BarWindow : Window
                 section.Children.Add(new TextBlock
                 {
                     Text = "arrasta tarefas pra ca", FontSize = 11,
-                    Foreground = (Brush)FindResource("TextDone"),
+                    Foreground = (Brush)FindResource("TextDim"),
                     Margin = new Thickness(6, 0, 0, 2)
                 });
 
+            // Bloco neobrutal: pastel opaco da cor do nivel + borda de tinta + sombra dura
+            var levelCol = ((SolidColorBrush)FindResource(corKey)).Color;
+            byte Mix(byte c) => (byte)(255 - (255 - c) * 0.30);
+            var pastel = new SolidColorBrush(Color.FromRgb(Mix(levelCol.R), Mix(levelCol.G), Mix(levelCol.B)));
             var secBorder = new Border
             {
-                Background = (Brush)FindResource(bgKey),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(13),
+                Background = pastel,
+                BorderBrush = ink,
+                BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(10),
                 Padding = new Thickness(13, 11, 13, 11),
-                Margin = new Thickness(0, 0, 0, 8),
+                Margin = new Thickness(0, 0, 4, 0),
                 AllowDrop = true,
-                Tag = arr
+                Tag = arr,
+                Child = section
             };
-            secBorder.Child = section;
-            secBorder.DragEnter += (_, _) => secBorder.BorderBrush = (Brush)FindResource(corKey);
-            secBorder.DragLeave += (_, _) => secBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF));
+            secBorder.DragEnter += (_, _) => secBorder.BorderBrush = (Brush)FindResource("AccentSoft");
+            secBorder.DragLeave += (_, _) => secBorder.BorderBrush = ink;
             secBorder.DragOver += (_, e) => { e.Effects = DragDropEffects.Move; e.Handled = true; };
             secBorder.Drop += async (_, e) =>
             {
-                secBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF));
+                secBorder.BorderBrush = ink;
                 if (e.Data.GetData(DataFormats.Text) is string dragId) await MoveHojeById(dragId, arr, null);
             };
-            HojePanel.Children.Add(secBorder);
+            var sombra = new Border { Background = ink, CornerRadius = new CornerRadius(10), Margin = new Thickness(4, 4, 0, 0) };
+            HojePanel.Children.Add(new Grid
+            {
+                Margin = new Thickness(0, 0, 0, 9),
+                SnapsToDevicePixels = true,
+                Children = { sombra, secBorder }
+            });
         }
 
         // Adi��o: seletor de n�vel (blocos) + bot�o discreto que revela o campo
@@ -1680,17 +1602,31 @@ public partial class BarWindow : Window
 
     private FrameworkElement ProgressBarZ(double frac, bool tall = false)
     {
-        double h = tall ? 8 : 5;
-        var g = new Grid { Height = h, Margin = new Thickness(0, 4, tall ? 2 : 20, 4) };
-        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(frac, 0.001), GridUnitType.Star) });
-        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(1 - frac, 0.001), GridUnitType.Star) });
-        var fill = new Border { Background = (Brush)FindResource("Accent"), CornerRadius = new CornerRadius(h / 2) };
-        if (tall) fill.Effect = new System.Windows.Media.Effects.DropShadowEffect
-        { BlurRadius = 8, ShadowDepth = 0, Opacity = 0.6, Color = ((SolidColorBrush)FindResource("Accent")).Color };
-        var rest = new Border { Background = new SolidColorBrush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)), CornerRadius = new CornerRadius(h / 2) };
-        Grid.SetColumn(fill, 0); Grid.SetColumn(rest, 1);
-        g.Children.Add(fill); g.Children.Add(rest);
-        return g;
+        // Trilho branco com borda de tinta, preenchimento accent chapado (DESIGN.md §5)
+        double h = tall ? 14 : 11;
+        var inner = new Grid { Height = h - 4, Margin = new Thickness(0) };
+        inner.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(frac, 0.001), GridUnitType.Star) });
+        inner.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(1 - frac, 0.001), GridUnitType.Star) });
+        var fill = new Border
+        {
+            Background = (Brush)FindResource("Accent"),
+            BorderBrush = (Brush)FindResource("Ink"),
+            BorderThickness = new Thickness(frac > 0.02 ? 1.5 : 0),
+            CornerRadius = new CornerRadius(3)
+        };
+        Grid.SetColumn(fill, 0);
+        inner.Children.Add(fill);
+        return new Border
+        {
+            Height = h,
+            Margin = new Thickness(0, 4, tall ? 2 : 20, 4),
+            Background = (Brush)FindResource("Surface"),
+            BorderBrush = (Brush)FindResource("Ink"),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(5),
+            Padding = new Thickness(1.5),
+            Child = inner
+        };
     }
 
     /// <summary>Fade + leve subida, d� o toque de fluidez na troca de conte�do.</summary>
@@ -2090,44 +2026,43 @@ public partial class BarWindow : Window
                 .Where(t => (t["status"]?.GetValue<string>() ?? "a fazer") == status)
                 .ToList();
 
+            var ink = (Brush)FindResource("Ink");
             var col = new StackPanel { MinHeight = 138 };
-            var head = new DockPanel { Margin = new Thickness(2, 0, 2, 11) };
+            // Cabecalho = TAG de accent com borda de tinta + contador em bloquinho
+            var head = new DockPanel { Margin = new Thickness(0, 0, 0, 11) };
             var countPill = new Border
             {
-                Background = (Brush)FindResource("ChipBg"),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(0x24, 0xFF, 0xFF, 0xFF)),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(999),
-                Padding = new Thickness(8, 2, 8, 2),
+                Background = (Brush)FindResource("Surface"),
+                BorderBrush = ink,
+                BorderThickness = new Thickness(1.5),
+                CornerRadius = new CornerRadius(5),
+                Padding = new Thickness(7, 1, 7, 1),
+                VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock
                 {
                     Text = itens.Count.ToString(),
-                    FontSize = 10,
+                    FontSize = 10, FontWeight = FontWeights.Bold,
                     FontFamily = (FontFamily)FindResource("Mono"),
-                    Foreground = (Brush)FindResource("TextDim")
+                    Foreground = ink
                 }
             };
             DockPanel.SetDock(countPill, Dock.Right);
             head.Children.Add(countPill);
-            var titleRow = new StackPanel { Orientation = Orientation.Horizontal };
-            titleRow.Children.Add(new Border
+            head.Children.Add(new Border
             {
-                Width = 7, Height = 7,
-                CornerRadius = new CornerRadius(3.5),
                 Background = accent,
-                Margin = new Thickness(0, 0, 8, 0),
-                VerticalAlignment = VerticalAlignment.Center
+                BorderBrush = ink, BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(9, 3, 9, 3),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Child = new TextBlock
+                {
+                    Text = status.ToUpper(new CultureInfo("pt-BR")),
+                    FontSize = 10.5, FontWeight = FontWeights.Bold,
+                    FontFamily = (FontFamily)FindResource("Mono"),
+                    Foreground = ink
+                }
             });
-            titleRow.Children.Add(new TextBlock
-            {
-                Text = status.ToUpper(new CultureInfo("pt-BR")),
-                FontSize = 11,
-                FontFamily = (FontFamily)FindResource("Mono"),
-                FontWeight = FontWeights.SemiBold,
-                Foreground = (Brush)FindResource("TextMain"),
-                VerticalAlignment = VerticalAlignment.Center
-            });
-            head.Children.Add(titleRow);
             col.Children.Add(head);
 
             foreach (var t in itens) col.Children.Add(KanbanCard(t));
@@ -2135,21 +2070,23 @@ public partial class BarWindow : Window
             var colInner = new Border
             {
                 Background = (Brush)FindResource("Surface"),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(18),
+                BorderBrush = ink,
+                BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(10),
                 Padding = new Thickness(10, 10, 10, 8),
                 MinHeight = 120,
+                Margin = new Thickness(0, 0, 4, 4),
                 Child = col
             };
-            var colBorder = new Border
+            var sombra = new Border { Background = ink, CornerRadius = new CornerRadius(10), Margin = new Thickness(4, 4, 0, 0) };
+            var colBorder = new Grid
             {
-                AllowDrop = true,
+                Margin = new Thickness(c == 0 ? 0 : 9, 0, 0, 0),
                 Background = Brushes.Transparent, // precisa pro hit-test do drop
-                Margin = new Thickness(c == 0 ? 0 : 8, 0, 0, 0),
-                Child = colInner,
-                Tag = status
+                SnapsToDevicePixels = true,
+                Children = { sombra, colInner }
             };
+            colBorder.AllowDrop = true;
             colBorder.DragEnter += (_, _) => SetKanbanDropVisual(colInner, true);
             colBorder.DragLeave += (_, _) => SetKanbanDropVisual(colInner, false);
             colBorder.DragOver += (_, e) => { e.Effects = DragDropEffects.Move; e.Handled = true; };
@@ -2178,23 +2115,11 @@ public partial class BarWindow : Window
             lane.RenderTransform = new ScaleTransform(1, 1);
 
         lane.BorderBrush = active
-            ? (Brush)FindResource("Accent")
-            : new SolidColorBrush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF));
+            ? (Brush)FindResource("AccentSoft")
+            : (Brush)FindResource("Ink");
         lane.Background = active
-            ? (Brush)FindResource("SurfaceHi")
+            ? (Brush)FindResource("ChipBgHover")
             : (Brush)FindResource("Surface");
-        var accentColor = FindResource("Accent") is SolidColorBrush accentBrush
-            ? accentBrush.Color
-            : Color.FromRgb(125, 255, 215);
-        lane.Effect = active
-            ? new System.Windows.Media.Effects.DropShadowEffect
-            {
-                BlurRadius = 24,
-                ShadowDepth = 0,
-                Opacity = 0.32,
-                Color = accentColor
-            }
-            : null;
 
         if (lane.RenderTransform is ScaleTransform scale)
         {
@@ -2442,448 +2367,35 @@ public partial class BarWindow : Window
         ["status"] = "a fazer"
     });
 
-    // -- REFER�NCIAS (me2_ideias) com categorias --------------------
+    // -- LINKS: barra de favoritos - tudo a vista, 1 clique abre ----
 
-    private bool _refDragging;
-    private Point _refDownPos;
-
-    private async Task<List<string>> RefCats(JsonArray ideias)
-    {
-        var stored = (await GetKvArray("zimbar_ref_cats"))
-            .Select(x => x?.GetValue<string>() ?? "").Where(s => s.Length > 0);
-        var fromItems = ideias.OfType<JsonObject>()
-            .Select(r => r["cat"]?.GetValue<string>() ?? "").Where(s => s.Length > 0);
-        return stored.Concat(fromItems).Distinct().OrderBy(s => s).ToList();
-    }
-
-    private static readonly string[] CatBlocos =
-        { "BlockPurple", "BlockBlue", "BlockLime", "BlockYellow", "BlockPink", "BlockCoral" };
-
-    private async Task LoadRefs()
-    {
-        try
-        {
-            var ideias = await GetKvArray("me2_ideias");
-            RefsPanel.Children.Clear();
-
-            // Cabe�alho: r�tulo + bot�o "+ categoria" � direita
-            var head = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };
-            var addCat = RevealAdd("+ categoria", "nome da categoria (ex: inspiracao)", async text =>
-            {
-                var nome = text.TrimStart('#').Trim().ToLower(new CultureInfo("pt-BR"));
-                if (nome.Length == 0) return;
-                var lista = await GetKvArray("zimbar_ref_cats");
-                if (!lista.Any(x => (x?.GetValue<string>() ?? "") == nome)) lista.Add(nome);
-                await SetKvArray("zimbar_ref_cats", lista);
-                await LoadRefs();
-            });
-            addCat.Margin = new Thickness(0);
-            DockPanel.SetDock(addCat, Dock.Right);
-            head.Children.Add(addCat);
-            head.Children.Add(HudLabel("REFERENCIAS"));
-            RefsPanel.Children.Add(head);
-
-            var cats = await RefCats(ideias);
-            var itens = ideias.OfType<JsonObject>().ToList();
-
-            int ci = 0;
-            bool algo = false;
-            var mapCols = cats.Count + (itens.Any(r => (r["cat"]?.GetValue<string>() ?? "").Length == 0) ? 1 : 0);
-            var map = new UniformGrid
-            {
-                Columns = Math.Min(4, Math.Max(1, mapCols)),
-                Margin = new Thickness(0, 2, 0, 6)
-            };
-
-            // Mapa por categoria: cada categoria vira uma lane compacta.
-            foreach (var c in cats)
-            {
-                var doGrupo = itens.Where(r => (r["cat"]?.GetValue<string>() ?? "") == c).ToList();
-                map.Children.Add(RefSection(c, c, CatBlocos[ci++ % CatBlocos.Length], doGrupo));
-                algo = true;
-            }
-            // Sem categoria
-            var semcat = itens.Where(r => (r["cat"]?.GetValue<string>() ?? "").Length == 0).ToList();
-            if (semcat.Count > 0)
-            {
-                map.Children.Add(RefSection("sem categoria", "", null, semcat));
-                algo = true;
-            }
-
-            if (algo) RefsPanel.Children.Add(map);
-
-            if (!algo)
-                RefsPanel.Children.Add(DimText("nada aqui ainda - use o modo referencia la em cima, ou o botao abaixo. crie categorias com + categoria."));
-
-            RefsPanel.Children.Add(RevealAdd("+ referencia", "#categoria no comeco classifica (ex: #design https://...)", async text =>
-            {
-                var item = new JsonObject { ["id"] = Supa.NewId(), ["ts"] = Ms() };
-                var m = Regex.Match(text, @"^#([\w\p{L}-]+)\s+(.+)$");
-                if (m.Success) { item["cat"] = m.Groups[1].Value.ToLower(new CultureInfo("pt-BR")); item["text"] = m.Groups[2].Value; }
-                else item["text"] = text;
-                await PushKvList("me2_ideias", item);
-                await LoadRefs();
-            }));
-        }
-        catch
-        {
-            RefsPanel.Children.Clear();
-            RefsPanel.Children.Add(DimText("sem conexao com o banco agora"));
-        }
-    }
-
-    /// <summary>Se��o de uma categoria: cabe�alho colorido (alvo de arrasto) + itens listados.</summary>
-    private Border RefSection(string titulo, string cat, string? blockKey, List<JsonObject> itens)
-    {
-        var bloco = blockKey is not null ? (Brush)FindResource(blockKey) : (Brush)FindResource("TextDone");
-        var sp = new StackPanel { MinHeight = 126 };
-
-        var head = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };
-        var count = new Border
-        {
-            Background = (Brush)FindResource("ChipBg"),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(999),
-            Padding = new Thickness(7, 2, 7, 2),
-            Child = new TextBlock
-            {
-                Text = itens.Count.ToString(),
-                FontSize = 10,
-                FontFamily = (FontFamily)FindResource("Mono"),
-                Foreground = (Brush)FindResource("TextDim")
-            }
-        };
-        DockPanel.SetDock(count, Dock.Right);
-        head.Children.Add(count);
-
-        // Editar/excluir categoria (s� categorias reais)
-        if (cat.Length > 0)
-        {
-            var catActs = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
-            DockPanel.SetDock(catActs, Dock.Right);
-            Button CatBtn(string g, string tip)
-            {
-                var b = new Button
-                {
-                    Style = (Style)FindResource("NavBtn"), Content = g, FontSize = 10.5,
-                    Padding = new Thickness(4, 1, 4, 1), Margin = new Thickness(2, 0, 0, 0),
-                    Foreground = (Brush)FindResource("TextDone"), ToolTip = tip
-                };
-                catActs.Children.Add(b);
-                return b;
-            }
-            CatBtn("✎", "renomear categoria").Click += (_, _) => _ = RenameCategoria(cat);
-            CatBtn("✕", "excluir categoria (itens viram sem categoria)").Click += async (_, _) => await DeleteCategoria(cat);
-            head.Children.Add(catActs);
-        }
-
-        head.Children.Add(new Border
-        {
-            Width = 10, Height = 10, CornerRadius = new CornerRadius(3),
-            Background = bloco, Margin = new Thickness(0, 0, 9, 0),
-            VerticalAlignment = VerticalAlignment.Center
-        });
-        if (cat.Length > 0 && _catRename == cat)
-        {
-            var box = new TextBox { Style = (Style)FindResource("InlineAdd"), Text = cat, FontSize = 12.5, Width = 180, HorizontalAlignment = HorizontalAlignment.Left };
-            box.Loaded += (_, _) => { box.Focus(); box.SelectAll(); };
-            box.KeyDown += async (_, e) =>
-            {
-                if (e.Key == Key.Escape) { _catRename = null; await LoadRefs(); e.Handled = true; }
-                else if (e.Key == Key.Enter) { e.Handled = true; await ApplyRenameCategoria(cat, box.Text); }
-            };
-            head.Children.Add(box);
-        }
-        else
-            head.Children.Add(new TextBlock
-            {
-                Text = titulo.ToUpper(new CultureInfo("pt-BR")),
-                FontSize = 11,
-                FontFamily = (FontFamily)FindResource("Mono"),
-                FontWeight = FontWeights.SemiBold,
-                Foreground = (Brush)FindResource("TextMain"), VerticalAlignment = VerticalAlignment.Center
-            });
-        sp.Children.Add(head);
-
-        if (itens.Count == 0)
-            sp.Children.Add(new TextBlock
-            {
-                Text = "solte referencias aqui", FontSize = 11,
-                Foreground = (Brush)FindResource("TextDone"), Margin = new Thickness(2, 2, 0, 2)
-            });
-        else
-            foreach (var r in itens) sp.Children.Add(RefIdeiaItem(r, showCat: false));
-
-        var card = new Border
-        {
-            Background = (Brush)FindResource("Surface"),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x24, 0xFF, 0xFF, 0xFF)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(18),
-            Padding = new Thickness(12, 11, 12, 11),
-            Margin = new Thickness(0, 0, 9, 9),
-            AllowDrop = true,
-            Child = sp
-        };
-        // Soltar um item aqui = classifica nesta categoria (ou remove, se "sem categoria")
-        card.DragEnter += (_, _) => card.BorderBrush = (Brush)FindResource("Accent");
-        card.DragLeave += (_, _) => card.BorderBrush = new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF));
-        card.DragOver += (_, e) => { e.Effects = DragDropEffects.Move; e.Handled = true; };
-        card.Drop += async (_, e) =>
-        {
-            card.BorderBrush = new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF));
-            if (e.Data.GetData(DataFormats.Text) is string dragId) await SetRefCat(dragId, cat);
-        };
-        return card;
-    }
-
-    private async Task SetRefCat(string id, string cat)
-    {
-        try
-        {
-            var arr = await GetKvArray("me2_ideias");
-            foreach (var n in arr.OfType<JsonObject>())
-                if (n["id"]?.GetValue<string>() == id) n["cat"] = cat;
-            await SetKvArray("me2_ideias", arr);
-            ShowStatus(cat.Length == 0 ? "tirado da categoria" : "classificado em #" + cat);
-            await LoadRefs();
-        }
-        catch { ShowStatus("nao classificou", error: true); }
-    }
-
-    private string? _catRename;
-
-    private Task RenameCategoria(string cat) { _catRename = cat; return LoadRefs(); }
-
-    private async Task ApplyRenameCategoria(string oldCat, string novoRaw)
-    {
-        _catRename = null;
-        var novo = novoRaw.TrimStart('#').Trim().ToLower(new CultureInfo("pt-BR"));
-        if (novo.Length == 0 || novo == oldCat) { await LoadRefs(); return; }
-        try
-        {
-            var ideias = await GetKvArray("me2_ideias");
-            foreach (var n in ideias.OfType<JsonObject>())
-                if ((n["cat"]?.GetValue<string>() ?? "") == oldCat) n["cat"] = novo;
-            await SetKvArray("me2_ideias", ideias);
-
-            var lista = await GetKvArray("zimbar_ref_cats");
-            var nl = new JsonArray();
-            foreach (var x in lista) { var s = x?.GetValue<string>() ?? ""; if (s.Length > 0 && s != oldCat) nl.Add(s); }
-            if (!nl.Any(x => x?.GetValue<string>() == novo)) nl.Add(novo);
-            await SetKvArray("zimbar_ref_cats", nl);
-            ShowStatus($"categoria virou #{novo}");
-            await LoadRefs();
-        }
-        catch { ShowStatus("nao renomeou", error: true); await LoadRefs(); }
-    }
-
-    private async Task DeleteCategoria(string cat)
-    {
-        try
-        {
-            var ideias = await GetKvArray("me2_ideias");
-            foreach (var n in ideias.OfType<JsonObject>())
-                if ((n["cat"]?.GetValue<string>() ?? "") == cat) n["cat"] = "";
-            await SetKvArray("me2_ideias", ideias);
-
-            var lista = await GetKvArray("zimbar_ref_cats");
-            var nl = new JsonArray();
-            foreach (var x in lista) { var s = x?.GetValue<string>() ?? ""; if (s.Length > 0 && s != cat) nl.Add(s); }
-            await SetKvArray("zimbar_ref_cats", nl);
-            ShowStatus($"categoria #{cat} excluida");
-            await LoadRefs();
-        }
-        catch { ShowStatus("nao excluiu", error: true); }
-    }
-
-    /// <summary>Move a refer�ncia arrastada pra antes do alvo (reordena me2_ideias).</summary>
-    private async Task ReorderRef(string dragId, string targetId)
-    {
-        if (dragId == targetId) return;
-        try
-        {
-            var arr = await GetKvArray("me2_ideias");
-            var list = arr.OfType<JsonObject>().Select(o => (JsonObject)o.DeepClone()!).ToList();
-            var dragged = list.FirstOrDefault(o => o["id"]?.GetValue<string>() == dragId);
-            if (dragged is null) return;
-            list.Remove(dragged);
-            int idx = list.FindIndex(o => o["id"]?.GetValue<string>() == targetId);
-            if (idx < 0) idx = list.Count;
-            list.Insert(idx, dragged);
-            var novo = new JsonArray();
-            foreach (var o in list) novo.Add(o);
-            await SetKvArray("me2_ideias", novo);
-            await LoadRefs();
-        }
-        catch { ShowStatus("nao reordenou", error: true); }
-    }
-
-    private string? _refRenameId;
-
-    private Border RefIdeiaItem(JsonObject r, bool showCat = true)
-    {
-        string id = r["id"]?.GetValue<string>() ?? "";
-        string text = r["text"]?.GetValue<string>() ?? "";
-        bool ehLink = LooksLikeUrl(text);
-
-        var card = new Border
-        {
-            Background = (Brush)FindResource("ChipBg"),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(12),
-            Padding = new Thickness(8, 7, 8, 7),
-            Margin = new Thickness(0, 0, 0, 6),
-            AllowDrop = true
-        };
-
-        // Editando este? campo inline discreto.
-        if (_refRenameId == id)
-        {
-            var box = new TextBox { Style = (Style)FindResource("InlineAdd"), Text = text, FontSize = 12.5 };
-            box.Loaded += (_, _) => { box.Focus(); box.SelectAll(); };
-            box.KeyDown += async (_, e) =>
-            {
-                if (e.Key == Key.Escape) { _refRenameId = null; RenderRefsInPlace(); e.Handled = true; return; }
-                if (e.Key != Key.Enter) return;
-                e.Handled = true;
-                var novo = box.Text.Trim();
-                _refRenameId = null;
-                if (novo.Length > 0)
-                {
-                    var arr = await GetKvArray("me2_ideias");
-                    foreach (var n in arr.OfType<JsonObject>())
-                        if (n["id"]?.GetValue<string>() == id) n["text"] = novo;
-                    await SetKvArray("me2_ideias", arr);
-                }
-                await LoadRefs();
-            };
-            card.Child = box;
-            return card;
-        }
-
-        var row = new DockPanel();
-
-        // A��es discretas (aparecem no hover)
-        var acts = new StackPanel { Orientation = Orientation.Horizontal, Opacity = 0, VerticalAlignment = VerticalAlignment.Center };
-        DockPanel.SetDock(acts, Dock.Right);
-        Button MiniBtn(string glyph, string tip)
-        {
-            var b = new Button
-            {
-                Style = (Style)FindResource("NavBtn"), Content = glyph, FontSize = 11,
-                Padding = new Thickness(5, 2, 5, 2), Margin = new Thickness(2, 0, 0, 0),
-                Foreground = (Brush)FindResource("TextDim"), ToolTip = tip
-            };
-            acts.Children.Add(b);
-            return b;
-        }
-        MiniBtn("✎", "editar").Click += (_, _) => { _refRenameId = id; RenderRefsInPlace(); };
-        MiniBtn("✕", "apagar").Click += async (_, _) =>
-        {
-            var arr = await GetKvArray("me2_ideias");
-            var novo = new JsonArray();
-            foreach (var n in arr.ToList())
-                if (n is JsonObject o && o["id"]?.GetValue<string>() != id) novo.Add(n.DeepClone());
-            await SetKvArray("me2_ideias", novo);
-            await LoadRefs();
-        };
-        row.Children.Add(acts);
-
-        var content = new TextBlock
-        {
-            Foreground = (Brush)FindResource("TextMain"),
-            FontSize = 13,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            VerticalAlignment = VerticalAlignment.Center,
-            LineHeight = 16
-        };
-        content.Inlines.Add(new Run(ehLink ? text.Replace("https://", "").Replace("http://", "").TrimEnd('/') : text));
-
-        var main = new Button
-        {
-            Style = (Style)FindResource("GhostItem"), Content = content,
-            Padding = new Thickness(0),
-            ToolTip = ehLink ? "clica pra abrir" : "clica pra copiar"
-        };
-        main.Click += (_, _) =>
-        {
-            if (_refDragging) { _refDragging = false; return; }
-            if (ehLink) { OpenExternal(text.Contains("://") ? text : "https://" + text); ShowStatus("abrindo"); }
-            else { Clipboard.SetText(text); ShowStatus("copiado"); }
-        };
-        row.Children.Add(main);
-        card.Child = row;
-
-        card.MouseEnter += (_, _) =>
-        {
-            acts.Opacity = 1;
-            card.Background = (Brush)FindResource("SurfaceHi");
-            card.BorderBrush = (Brush)FindResource("AccentSoft");
-        };
-        card.MouseLeave += (_, _) =>
-        {
-            acts.Opacity = 0;
-            card.Background = (Brush)FindResource("ChipBg");
-            card.BorderBrush = new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF));
-        };
-
-        // Arrastar pra reordenar / recategorizar
-        card.PreviewMouseLeftButtonDown += (_, e) => { _refDownPos = e.GetPosition(this); _refDragging = false; };
-        card.PreviewMouseMove += (_, e) =>
-        {
-            if (e.LeftButton != MouseButtonState.Pressed || _refDragging) return;
-            var p = e.GetPosition(this);
-            if (Math.Abs(p.X - _refDownPos.X) > 6 || Math.Abs(p.Y - _refDownPos.Y) > 6)
-            {
-                _refDragging = true;
-                card.Opacity = 0.5;
-                DragDrop.DoDragDrop(card, id, DragDropEffects.Move);
-                card.Opacity = 1;
-            }
-        };
-        card.DragOver += (_, e) => { e.Effects = DragDropEffects.Move; e.Handled = true; };
-        card.Drop += async (_, e) =>
-        {
-            if (e.Data.GetData(DataFormats.Text) is string dragId) await ReorderRef(dragId, id);
-        };
-        return card;
-    }
-
-    private void RenderRefsInPlace() => _ = LoadRefs();
-
-    // -- LINKS: pastas simples + lista direta -----------------------
-
-    private (string Id, string Name)? _currentFolder;
     private string? _linkEditId;
-    private List<string> _linkOrder = new();
-    private List<JsonObject> _linkCurrentRefs = new();
+    private readonly Dictionary<string, List<string>> _linkOrders = new();
 
     private async Task LoadLinks()
     {
         try
         {
-            if (_currentFolder is null)
+            var foldersT = Supa.Select("zimbar_folders?select=id,name,parent_id&order=name.asc");
+            var refsT = Supa.Select("zimbar_refs?select=id,kind,title,content,folder_id&order=created_at.asc");
+            var ordersT = Supa.Select("app_kv?select=k,v&k=like.zimbar_link_order_*");
+            await Task.WhenAll(foldersT, refsT, ordersT);
+
+            _linkOrders.Clear();
+            foreach (var row in ordersT.Result.OfType<JsonObject>())
             {
-                var pastas = await Supa.Select("zimbar_folders?select=id,name&parent_id=is.null&order=name.asc");
-                RenderLinksRoot(pastas);
+                string k = row["k"]?.GetValue<string>() ?? "";
+                if (!k.StartsWith("zimbar_link_order_", StringComparison.Ordinal)) continue;
+                try
+                {
+                    if (row["v"]?.GetValue<string>() is string s && JsonNode.Parse(s) is JsonArray arr)
+                        _linkOrders[k["zimbar_link_order_".Length..]] =
+                            arr.Select(x => x?.GetValue<string>() ?? "").Where(x => x.Length > 0).ToList();
+                }
+                catch { }
             }
-            else
-            {
-                string fid = _currentFolder.Value.Id;
-                var cats = await Supa.Select($"zimbar_folders?select=id,name&parent_id=eq.{fid}&order=name.asc");
-                var ids = new List<string> { fid };
-                ids.AddRange(cats.OfType<JsonObject>().Select(c => c["id"]?.GetValue<string>() ?? ""));
-                string inList = string.Join(",", ids.Where(x => x.Length > 0).Select(Uri.EscapeDataString));
-                var refs = await Supa.Select($"zimbar_refs?select=id,kind,title,content,folder_id&folder_id=in.({inList})&order=created_at.desc");
-                _linkOrder = (await GetKvArray(LinkOrderKey(fid)))
-                    .Select(x => x?.GetValue<string>() ?? "")
-                    .Where(x => x.Length > 0)
-                    .ToList();
-                RenderLinksFolder(refs);
-            }
+
+            RenderLinksBoard(foldersT.Result, refsT.Result);
         }
         catch
         {
@@ -2892,68 +2404,48 @@ public partial class BarWindow : Window
         }
     }
 
-    // Raiz: s� pastas prim�rias
-    private void RenderLinksRoot(JsonArray pastas)
+    private void RenderLinksBoard(JsonArray folders, JsonArray refs)
     {
         LinksPanel.Children.Clear();
-        _linkOrder.Clear();
-        LinksPanel.Children.Add(HudLabel("LINKS - suas pastas"));
 
-        var wrap = new UniformGrid
+        var roots = new List<(string Id, string Name)>();
+        var kids = new Dictionary<string, List<(string Id, string Name)>>();
+        foreach (var f in folders.OfType<JsonObject>())
         {
-            Columns = ResponsiveColumns(minItemWidth: 190, maxColumns: 5),
+            string id = f["id"]?.GetValue<string>() ?? "";
+            string name = f["name"]?.GetValue<string>() ?? "";
+            string? parent = f["parent_id"]?.GetValue<string>();
+            if (id.Length == 0) continue;
+            if (string.IsNullOrEmpty(parent)) roots.Add((id, name));
+            else
+            {
+                if (!kids.TryGetValue(parent, out var l)) kids[parent] = l = new();
+                l.Add((id, name));
+            }
+        }
+        var porPasta = new Dictionary<string, List<JsonObject>>();
+        foreach (var r in refs.OfType<JsonObject>())
+        {
+            string fid = r["folder_id"]?.GetValue<string>() ?? "";
+            if (!porPasta.TryGetValue(fid, out var l)) porPasta[fid] = l = new();
+            l.Add(r);
+        }
+
+        LinksPanel.Children.Add(HudLabel("LINKS - sua barra de favoritos: 1 clique abre"));
+
+        var board = new UniformGrid
+        {
+            Columns = ResponsiveColumns(minItemWidth: 252, maxColumns: 4),
             Margin = new Thickness(0, 8, 0, 0)
         };
-        foreach (var node in pastas)
-            if (node is JsonObject p)
-            {
-                string id = p["id"]?.GetValue<string>() ?? "";
-                string name = p["name"]?.GetValue<string>() ?? "";
+        int i = 0;
+        foreach (var (id, name) in roots)
+            board.Children.Add(LinkFolderCard(id, name, porPasta, kids, tint: i++));
 
-                var del = new Button
-                {
-                    Style = (Style)FindResource("NavBtn"), Content = "x", FontSize = 10.5,
-                    Padding = new Thickness(5, 1, 5, 1), Margin = new Thickness(0),
-                    HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
-                    Foreground = (Brush)FindResource("TextDone"), Visibility = Visibility.Hidden,
-                    ToolTip = "excluir pasta"
-                };
-                del.Click += async (_, _) => await DeleteFolder(id, name);
-
-                var content = new Grid
-                {
-                    Children =
-                    {
-                        new StackPanel
-                        {
-                            Children =
-                            {
-                                new TextBlock { Text = name, FontSize = 13.5, FontWeight = FontWeights.SemiBold,
-                                    Foreground = (Brush)FindResource("TextMain"), Margin = new Thickness(0, 6, 0, 0),
-                                    TextTrimming = TextTrimming.CharacterEllipsis }
-                            }
-                        },
-                        del
-                    }
-                };
-                var card = new Border
-                {
-                    Background = (Brush)FindResource("Surface"),
-                    BorderBrush = new SolidColorBrush(Color.FromArgb(0x1E, 0xFF, 0xFF, 0xFF)),
-                    BorderThickness = new Thickness(1),
-                    CornerRadius = new CornerRadius(14),
-                    Padding = new Thickness(16, 12, 12, 14),
-                    Margin = new Thickness(0, 0, 10, 10),
-                    MinHeight = 84, Cursor = Cursors.Hand,
-                    Child = content
-                };
-                card.MouseEnter += (_, _) => { card.BorderBrush = (Brush)FindResource("Accent"); del.Visibility = Visibility.Visible; };
-                card.MouseLeave += (_, _) => { card.BorderBrush = new SolidColorBrush(Color.FromArgb(0x1E, 0xFF, 0xFF, 0xFF)); del.Visibility = Visibility.Hidden; };
-                card.MouseLeftButtonUp += (_, _) => { _currentFolder = (id, name); _ = LoadLinks(); };
-                wrap.Children.Add(card);
-            }
-        if (pastas.Count == 0) wrap.Children.Add(DimText("nenhuma pasta ainda"));
-        LinksPanel.Children.Add(wrap);
+        if (roots.Count == 0)
+            LinksPanel.Children.Add(DimText("nenhuma pasta ainda - cria a primeira abaixo"));
+        else
+            LinksPanel.Children.Add(board);
 
         LinksPanel.Children.Add(RevealAdd("+ pasta", "nome da pasta", async text =>
         {
@@ -2962,7 +2454,246 @@ public partial class BarWindow : Window
         }));
     }
 
-    /// <summary>Exclui uma pasta. Links que ainda estejam em categorias antigas entram na contagem e s�o removidos junto.</summary>
+    /// <summary>Card de uma pasta: bloco colorido com os links direto nele (e subpastas como secoes).</summary>
+    private Border LinkFolderCard(string id, string name,
+        Dictionary<string, List<JsonObject>> porPasta,
+        Dictionary<string, List<(string Id, string Name)>> kids, int tint)
+    {
+        var col = new StackPanel();
+
+        var del = new Button
+        {
+            Style = (Style)FindResource("NavBtn"), Content = "✕", FontSize = 10.5,
+            Padding = new Thickness(6, 2, 6, 2), Margin = new Thickness(0),
+            Foreground = (Brush)FindResource("TextDim"), Visibility = Visibility.Hidden,
+            ToolTip = "excluir pasta e tudo dentro"
+        };
+        del.Click += async (_, _) => await DeleteFolder(id, name);
+
+        var head = new DockPanel { Margin = new Thickness(2, 0, 0, 6) };
+        DockPanel.SetDock(del, Dock.Right);
+        head.Children.Add(del);
+        head.Children.Add(new TextBlock
+        {
+            Text = name, FontSize = 13.5, FontWeight = FontWeights.Bold,
+            Foreground = (Brush)FindResource("TextMain"),
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        col.Children.Add(head);
+
+        void AddLinks(string folderId)
+        {
+            var lista = OrderedLinks(porPasta.TryGetValue(folderId, out var l) ? l : new(), folderId);
+            var ids = lista.Select(x => x["id"]?.GetValue<string>() ?? "").Where(x => x.Length > 0).ToList();
+            foreach (var r in lista) col.Children.Add(LinkRow(r, folderId, ids));
+        }
+
+        AddLinks(id);
+
+        if (kids.TryGetValue(id, out var cats))
+            foreach (var (cid, cname) in cats)
+            {
+                var catDel = new Button
+                {
+                    Style = (Style)FindResource("NavBtn"), Content = "✕", FontSize = 9,
+                    Padding = new Thickness(5, 1, 5, 1), Margin = new Thickness(4, 0, 0, 0),
+                    Foreground = (Brush)FindResource("TextDone"), Opacity = 0,
+                    ToolTip = "excluir esta secao"
+                };
+                catDel.Click += async (_, _) => await DeleteFolder(cid, cname);
+                var sub = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 8, 0, 3) };
+                sub.Children.Add(new TextBlock
+                {
+                    Text = cname.ToUpper(new CultureInfo("pt-BR")), FontSize = 9.5,
+                    FontFamily = (FontFamily)FindResource("Mono"),
+                    Foreground = (Brush)FindResource("TextDim"),
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                sub.Children.Add(catDel);
+                sub.MouseEnter += (_, _) => catDel.Opacity = 1;
+                sub.MouseLeave += (_, _) => catDel.Opacity = 0;
+                col.Children.Add(sub);
+                AddLinks(cid);
+            }
+
+        col.Children.Add(RevealAdd("+ link", "nome | url  (ou so a url)", async text =>
+        {
+            var parsed = ParseLinkInput(text);
+            await Supa.Insert("zimbar_refs", new JsonObject
+            {
+                ["kind"] = parsed.Kind,
+                ["title"] = parsed.Title,
+                ["content"] = parsed.Content,
+                ["folder_id"] = id
+            });
+            await LoadLinks();
+        }));
+
+        var shadow = new System.Windows.Media.Effects.DropShadowEffect
+        { BlurRadius = 0, ShadowDepth = 3, Direction = 315, Opacity = 1, Color = Color.FromRgb(0x18, 0x13, 0x20) };
+        shadow.Freeze();
+        var card = new Border
+        {
+            Background = Zui.Tint(this, tint),
+            BorderBrush = (Brush)FindResource("Ink"),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(12, 10, 12, 11),
+            Margin = new Thickness(0, 0, 9, 9),
+            Effect = shadow,
+            Child = col
+        };
+        card.MouseEnter += (_, _) => del.Visibility = Visibility.Visible;
+        card.MouseLeave += (_, _) => del.Visibility = Visibility.Hidden;
+        return card;
+    }
+
+    private List<JsonObject> OrderedLinks(List<JsonObject> refs, string folderId)
+    {
+        if (!_linkOrders.TryGetValue(folderId, out var order) || order.Count == 0) return refs;
+        var rank = order.Select((rid, i) => (rid, i)).ToDictionary(x => x.rid, x => x.i);
+        return refs
+            .Select((item, original) => (item, original, id: item["id"]?.GetValue<string>() ?? ""))
+            .OrderBy(x => rank.TryGetValue(x.id, out var pos) ? pos : int.MaxValue)
+            .ThenBy(x => x.original)
+            .Select(x => x.item)
+            .ToList();
+    }
+
+    private static string LinkOrderKey(string folderId) => "zimbar_link_order_" + folderId;
+
+    private async Task MoveLink(string folderId, List<string> visibleIds, string id, int delta)
+    {
+        int i = visibleIds.IndexOf(id);
+        int j = i + delta;
+        if (i < 0 || j < 0 || j >= visibleIds.Count) return;
+        (visibleIds[i], visibleIds[j]) = (visibleIds[j], visibleIds[i]);
+        await SetKvArray(LinkOrderKey(folderId), new JsonArray(visibleIds.Select(x => JsonValue.Create(x)).ToArray()));
+        await LoadLinks();
+    }
+
+    /// <summary>Favicon do site (via Google), com bolinha de fallback embaixo.</summary>
+    private FrameworkElement Favicon(string url, bool ehLink)
+    {
+        var host = new Grid { Width = 16, Height = 16, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center };
+        host.Children.Add(new Border
+        {
+            Width = 7, Height = 7, CornerRadius = new CornerRadius(3.5),
+            Background = (Brush)FindResource(ehLink ? "AccentSoft" : "TextDone"),
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+        });
+        if (ehLink)
+            try
+            {
+                var dom = new Uri(EnsureUrl(url)).Host;
+                var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                bmp.BeginInit();
+                bmp.UriSource = new Uri("https://www.google.com/s2/favicons?domain=" + Uri.EscapeDataString(dom) + "&sz=32");
+                bmp.EndInit();
+                host.Children.Add(new Image { Width = 16, Height = 16, Source = bmp });
+            }
+            catch { }
+        return host;
+    }
+
+    /// <summary>Linha de link: favicon + nome, clique abre. Acoes aparecem no hover.</summary>
+    private UIElement LinkRow(JsonObject r, string folderId, List<string> visibleIds)
+    {
+        string id = r["id"]?.GetValue<string>() ?? "";
+        string kind = r["kind"]?.GetValue<string>() ?? "link";
+        string title = r["title"]?.GetValue<string>() ?? "";
+        string content = r["content"]?.GetValue<string>() ?? "";
+        bool ehLink = kind == "link" || LooksLikeUrl(content);
+        if (ehLink) content = EnsureUrl(content);
+        string label = title.Length > 0 ? title : ehLink ? LinkLabel(content) : content;
+
+        // Edicao inline (nome | url)
+        if (_linkEditId == id)
+        {
+            var box = new TextBox
+            {
+                Style = (Style)FindResource("InlineAdd"),
+                Text = title.Length > 0 ? title + " | " + content : content,
+                FontSize = 12, Margin = new Thickness(0, 2, 0, 2)
+            };
+            box.Loaded += (_, _) => { box.Focus(); box.CaretIndex = box.Text.Length; };
+            box.KeyDown += async (_, e) =>
+            {
+                if (e.Key == Key.Escape) { _linkEditId = null; await LoadLinks(); e.Handled = true; return; }
+                if (e.Key != Key.Enter) return;
+                e.Handled = true;
+                var parsed = ParseLinkInput(box.Text.Trim());
+                _linkEditId = null;
+                try
+                {
+                    await Supa.Update("zimbar_refs", "id=eq." + Uri.EscapeDataString(id), new JsonObject
+                    { ["kind"] = parsed.Kind, ["title"] = parsed.Title, ["content"] = parsed.Content });
+                }
+                catch { ShowStatus("nao salvou", error: true); }
+                await LoadLinks();
+            };
+            return box;
+        }
+
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Opacity = 0 };
+        Button ActionBtn(string glyph, string tip)
+        {
+            var b = new Button
+            {
+                Style = (Style)FindResource("NavBtn"), Content = glyph, FontSize = 10.5,
+                Padding = new Thickness(4, 1, 4, 1), Margin = new Thickness(1, 0, 0, 0),
+                Foreground = (Brush)FindResource("TextDim"), ToolTip = tip
+            };
+            actions.Children.Add(b);
+            return b;
+        }
+        ActionBtn("↑", "subir").Click += async (_, _) => await MoveLink(folderId, visibleIds.ToList(), id, -1);
+        ActionBtn("↓", "descer").Click += async (_, _) => await MoveLink(folderId, visibleIds.ToList(), id, 1);
+        ActionBtn("✎", "editar").Click += (_, _) => { _linkEditId = id; _ = LoadLinks(); };
+        ActionBtn("✕", "apagar").Click += async (_, _) =>
+        {
+            try { await Supa.Delete("zimbar_refs", "id=eq." + Uri.EscapeDataString(id)); await LoadLinks(); }
+            catch { ShowStatus("nao apagou", error: true); }
+        };
+
+        var row = new DockPanel();
+        DockPanel.SetDock(actions, Dock.Right);
+        row.Children.Add(actions);
+        var icon = Favicon(content, ehLink);
+        DockPanel.SetDock(icon, Dock.Left);
+        row.Children.Add(icon);
+        row.Children.Add(new TextBlock
+        {
+            Text = label, FontSize = 12.5, FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("TextMain"),
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+
+        var cell = new Border
+        {
+            Background = Brushes.Transparent,
+            CornerRadius = new CornerRadius(7),
+            Padding = new Thickness(6, 4, 4, 4),
+            Margin = new Thickness(0, 1, 0, 1),
+            Cursor = Cursors.Hand,
+            ToolTip = ehLink ? content : "clica pra copiar",
+            Child = row
+        };
+        cell.MouseEnter += (_, _) => { actions.Opacity = 1; cell.Background = (Brush)FindResource("Surface"); };
+        cell.MouseLeave += (_, _) => { actions.Opacity = 0; cell.Background = Brushes.Transparent; };
+        cell.MouseLeftButtonUp += (_, e) =>
+        {
+            if (e.OriginalSource is FrameworkElement fe && fe is Button) return;
+            if (ehLink) { OpenExternal(content); ShowStatus("abrindo"); }
+            else { Clipboard.SetText(content); ShowStatus("copiado"); }
+            e.Handled = true;
+        };
+        return cell;
+    }
+
+    /// <summary>Exclui uma pasta. Links que ainda estejam em categorias antigas entram na contagem e sao removidos junto.</summary>
     private async Task DeleteFolder(string id, string name)
     {
         try
@@ -2978,7 +2709,7 @@ public partial class BarWindow : Window
             if (nCats > 0 || nLinks > 0)
             {
                 bool wasTop = Topmost;
-                _busyModal = true;   // nao deixa virar aba enquanto o dialogo esta aberto
+                _busyModal = true;   // nao deixa minimizar enquanto o dialogo esta aberto
                 Topmost = false;     // pro MessageBox nao ficar atras da barra
                 var r = MessageBox.Show(this,
                     $"Excluir a pasta \"{name}\" e tudo dentro?\n\n{nLinks} link(s) serao apagados. Isso nao volta.",
@@ -2995,354 +2726,6 @@ public partial class BarWindow : Window
             ShowStatus($"pasta \"{name}\" excluida");
         }
         catch { ShowStatus("nao excluiu a pasta", error: true); }
-    }
-
-    private void RenderLinksFolder(JsonArray refs)
-    {
-        LinksPanel.Children.Clear();
-        string fid = _currentFolder!.Value.Id;
-        _linkCurrentRefs = refs.OfType<JsonObject>().Select(o => (JsonObject)o.DeepClone()).ToList();
-        var links = OrderedLinks(_linkCurrentRefs);
-
-        var head = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };
-        var back = new Button
-        {
-            Style = (Style)FindResource("Chip"), Content = "< pastas",
-            FontSize = 11, Padding = new Thickness(10, 4, 10, 4)
-        };
-        back.Click += (_, _) => { _currentFolder = null; _ = LoadLinks(); };
-        DockPanel.SetDock(back, Dock.Right);
-        head.Children.Add(back);
-        head.Children.Add(HudLabel(_currentFolder.Value.Name));
-        LinksPanel.Children.Add(head);
-
-        var table = new StackPanel();
-        var header = new Grid { Margin = new Thickness(8, 0, 8, 6) };
-        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.36, GridUnitType.Star) });
-        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.64, GridUnitType.Star) });
-        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        TextBlock Th(string text)
-        {
-            return new TextBlock
-            {
-                Text = text.ToUpper(new CultureInfo("pt-BR")),
-                FontSize = 10,
-                FontFamily = (FontFamily)FindResource("Mono"),
-                Foreground = (Brush)FindResource("TextDim"),
-                Margin = new Thickness(0, 0, 12, 0)
-            };
-        }
-        var thName = Th("nome");
-        var thUrl = Th("link");
-        Grid.SetColumn(thUrl, 1);
-        header.Children.Add(thName);
-        header.Children.Add(thUrl);
-        table.Children.Add(header);
-
-        if (links.Count == 0)
-            table.Children.Add(DimText("nenhum link nesta pasta"));
-        else
-            foreach (var r in links) table.Children.Add(LinkRow(r));
-
-        LinksPanel.Children.Add(new Border
-        {
-            Background = (Brush)FindResource("Surface"),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14),
-            Padding = new Thickness(12, 11, 12, 12),
-            Margin = new Thickness(0, 0, 0, 9),
-            Child = table
-        });
-
-        LinksPanel.Children.Add(LinkAddBox(fid));
-    }
-
-
-    private List<JsonObject> OrderedLinks(IEnumerable<JsonObject> refs)
-    {
-        var links = refs.ToList();
-        if (_linkOrder.Count == 0) return links;
-        var rank = _linkOrder.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
-        return links
-            .Select((item, original) => (item, original, id: item["id"]?.GetValue<string>() ?? ""))
-            .OrderBy(x => rank.TryGetValue(x.id, out var pos) ? pos : int.MaxValue)
-            .ThenBy(x => x.original)
-            .Select(x => x.item)
-            .ToList();
-    }
-
-    private static string LinkOrderKey(string folderId) => "zimbar_link_order_" + folderId;
-
-    private FrameworkElement LinkAddBox(string folderId)
-    {
-        var panel = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
-        var button = Zui.Button(this, "+ link");
-        button.HorizontalAlignment = HorizontalAlignment.Left;
-        button.Background = Brushes.Transparent;
-        button.FontSize = 11;
-        panel.Children.Add(button);
-
-        var editor = new Grid { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 5, 0, 0) };
-        editor.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.34, GridUnitType.Star) });
-        editor.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.66, GridUnitType.Star) });
-        editor.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var nameBox = new TextBox
-        {
-            Style = (Style)FindResource("InlineAdd"),
-            FontSize = 12.5,
-            Margin = new Thickness(0, 0, 8, 0),
-            ToolTip = "nome do link"
-        };
-        var urlBox = new TextBox
-        {
-            Style = (Style)FindResource("InlineAdd"),
-            FontSize = 12.5,
-            Margin = new Thickness(0, 0, 8, 0),
-            ToolTip = "URL"
-        };
-        var hintName = new TextBlock { Text = "nome", FontSize = 12, Foreground = (Brush)FindResource("TextDone"), Margin = new Thickness(10, 5, 0, 0), IsHitTestVisible = false };
-        var hintUrl = new TextBlock { Text = "https://site.com", FontSize = 12, Foreground = (Brush)FindResource("TextDone"), Margin = new Thickness(10, 5, 0, 0), IsHitTestVisible = false };
-
-        var nameHost = new Grid();
-        nameHost.Children.Add(nameBox);
-        nameHost.Children.Add(hintName);
-        var urlHost = new Grid();
-        urlHost.Children.Add(urlBox);
-        urlHost.Children.Add(hintUrl);
-        Grid.SetColumn(urlHost, 1);
-        editor.Children.Add(nameHost);
-        editor.Children.Add(urlHost);
-
-        var actions = new StackPanel { Orientation = Orientation.Horizontal };
-        Grid.SetColumn(actions, 2);
-        var save = Zui.Button(this, "salvar");
-        var cancel = Zui.Button(this, "cancelar");
-        actions.Children.Add(save);
-        actions.Children.Add(cancel);
-        editor.Children.Add(actions);
-        panel.Children.Add(editor);
-
-        void SyncHints()
-        {
-            hintName.Visibility = nameBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-            hintUrl.Visibility = urlBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-        }
-        nameBox.TextChanged += (_, _) => SyncHints();
-        urlBox.TextChanged += (_, _) => SyncHints();
-
-        button.Click += (_, _) =>
-        {
-            button.Visibility = Visibility.Collapsed;
-            editor.Visibility = Visibility.Visible;
-            nameBox.Focus();
-            SyncHints();
-        };
-        cancel.Click += (_, _) =>
-        {
-            nameBox.Clear();
-            urlBox.Clear();
-            editor.Visibility = Visibility.Collapsed;
-            button.Visibility = Visibility.Visible;
-        };
-
-        async Task Save()
-        {
-            string title = nameBox.Text.Trim();
-            string url = urlBox.Text.Trim();
-            if (url.Length == 0 && title.Length > 0 && LooksLikeUrl(title))
-            {
-                url = title;
-                title = "";
-            }
-            if (url.Length == 0) { ShowStatus("preencha o link", error: true); return; }
-            var parsed = ParseLinkInput(title.Length > 0 ? title + " | " + url : url);
-            await Supa.Insert("zimbar_refs", new JsonObject
-            {
-                ["kind"] = parsed.Kind,
-                ["title"] = parsed.Title,
-                ["content"] = parsed.Content,
-                ["folder_id"] = folderId
-            });
-            ShowStatus("link adicionado");
-            await LoadLinks();
-        }
-
-        save.Click += async (_, _) => await Save();
-        nameBox.KeyDown += async (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; await Save(); } if (e.Key == Key.Escape) cancel.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); };
-        urlBox.KeyDown += async (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; await Save(); } if (e.Key == Key.Escape) cancel.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); };
-        return panel;
-    }
-
-    private async Task MoveLink(string id, int delta)
-    {
-        if (_currentFolder is null) return;
-        var visibleIds = OrderedLinks(_linkCurrentRefs)
-            .Select(x => x["id"]?.GetValue<string>() ?? "")
-            .Where(x => x.Length > 0)
-            .ToList();
-        if (visibleIds.Count == 0) return;
-        _linkOrder = visibleIds;
-        int i = _linkOrder.IndexOf(id);
-        int j = i + delta;
-        if (i < 0 || j < 0 || j >= _linkOrder.Count) return;
-        (_linkOrder[i], _linkOrder[j]) = (_linkOrder[j], _linkOrder[i]);
-        await SetKvArray(LinkOrderKey(_currentFolder.Value.Id), new JsonArray(_linkOrder.Select(x => JsonValue.Create(x)).ToArray()));
-        await LoadLinks();
-    }
-
-    private UIElement LinkRow(JsonObject r)
-    {
-        string id = r["id"]?.GetValue<string>() ?? "";
-        string kind = r["kind"]?.GetValue<string>() ?? "link";
-        string title = r["title"]?.GetValue<string>() ?? "";
-        string content = r["content"]?.GetValue<string>() ?? "";
-        bool ehLink = kind == "link" || LooksLikeUrl(content);
-        if (ehLink) content = EnsureUrl(content);
-
-        string label = title.Length > 0 ? title
-            : ehLink ? LinkLabel(content)
-            : content;
-
-        var card = new Border
-        {
-            Background = Brushes.Transparent,
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x10, 0xFF, 0xFF, 0xFF)),
-            BorderThickness = new Thickness(0, 1, 0, 0),
-            Padding = new Thickness(8, 7, 8, 7),
-            Margin = new Thickness(0)
-        };
-        var row = new Grid();
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.36, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.64, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        if (_linkEditId == id)
-        {
-            var titleBox = new TextBox
-            {
-                Style = (Style)FindResource("InlineAdd"),
-                Text = label,
-                FontSize = 12.5,
-                Margin = new Thickness(0, 0, 8, 0)
-            };
-            var urlBox = new TextBox
-            {
-                Style = (Style)FindResource("InlineAdd"),
-                Text = content,
-                FontSize = 12.5,
-                Margin = new Thickness(0, 0, 8, 0)
-            };
-            Grid.SetColumn(urlBox, 1);
-            row.Children.Add(titleBox);
-            row.Children.Add(urlBox);
-
-            var acts = new StackPanel { Orientation = Orientation.Horizontal };
-            Grid.SetColumn(acts, 2);
-            Button EditBtn(string glyph, string tip)
-            {
-                var b = new Button
-                {
-                    Style = (Style)FindResource("NavBtn"),
-                    Content = glyph,
-                    FontSize = 11,
-                    Padding = new Thickness(6, 2, 6, 2),
-                    Margin = new Thickness(2, 0, 0, 0),
-                    Foreground = (Brush)FindResource("TextDim"),
-                    ToolTip = tip
-                };
-                acts.Children.Add(b);
-                return b;
-            }
-            EditBtn("✓", "salvar").Click += async (_, _) =>
-            {
-                var parsed = ParseLinkInput(titleBox.Text.Trim().Length > 0
-                    ? titleBox.Text.Trim() + " | " + urlBox.Text.Trim()
-                    : urlBox.Text.Trim());
-                _linkEditId = null;
-                try
-                {
-                    await Supa.Update("zimbar_refs", "id=eq." + Uri.EscapeDataString(id), new JsonObject
-                    {
-                        ["kind"] = parsed.Kind,
-                        ["title"] = parsed.Title,
-                        ["content"] = parsed.Content
-                    });
-                    await LoadLinks();
-                }
-                catch { ShowStatus("nao renomeou", error: true); }
-            };
-            EditBtn("✕", "cancelar").Click += (_, _) => { _linkEditId = null; _ = LoadLinks(); };
-            row.Children.Add(acts);
-
-            titleBox.Loaded += (_, _) => { titleBox.Focus(); titleBox.SelectAll(); };
-            titleBox.KeyDown += (_, e) => { if (e.Key == Key.Escape) { _linkEditId = null; _ = LoadLinks(); e.Handled = true; } };
-            urlBox.KeyDown += (_, e) => { if (e.Key == Key.Escape) { _linkEditId = null; _ = LoadLinks(); e.Handled = true; } };
-            card.Child = row;
-            return card;
-        }
-
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Opacity = 0 };
-        Grid.SetColumn(actions, 2);
-        Button ActionBtn(string glyph, string tip)
-        {
-            var b = new Button
-            {
-                Style = (Style)FindResource("NavBtn"), Content = glyph, FontSize = 11,
-                Padding = new Thickness(5, 2, 5, 2), Margin = new Thickness(2, 0, 0, 0),
-                Foreground = (Brush)FindResource("TextDim"), ToolTip = tip
-            };
-            actions.Children.Add(b);
-            return b;
-        }
-        ActionBtn("↑", "subir").Click += async (_, _) => await MoveLink(id, -1);
-        ActionBtn("↓", "descer").Click += async (_, _) => await MoveLink(id, 1);
-        ActionBtn("✎", "renomear").Click += (_, _) => { _linkEditId = id; _ = LoadLinks(); };
-        var del = ActionBtn("✕", "apagar");
-        del.Click += async (_, _) =>
-        {
-            try { await Supa.Delete("zimbar_refs", "id=eq." + Uri.EscapeDataString(id)); await LoadLinks(); }
-            catch { ShowStatus("nao apagou", error: true); }
-        };
-        row.Children.Add(actions);
-
-        var titleCell = new TextBlock
-        {
-            Foreground = ehLink ? (Brush)FindResource("Accent") : (Brush)FindResource("TextMain"),
-            FontSize = 12.5,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            VerticalAlignment = VerticalAlignment.Center,
-            Cursor = ehLink ? Cursors.Hand : Cursors.Arrow,
-            TextDecorations = ehLink ? TextDecorations.Underline : null,
-            Margin = new Thickness(0, 0, 12, 0),
-            Text = label
-        };
-        var urlCell = new TextBlock
-        {
-            Foreground = (Brush)FindResource("TextDim"),
-            FontSize = 12,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            VerticalAlignment = VerticalAlignment.Center,
-            Cursor = ehLink ? Cursors.Hand : Cursors.Arrow,
-            Text = ehLink ? content.Replace("https://", "").Replace("http://", "") : content
-        };
-        void OpenOrCopy()
-        {
-            if (ehLink) { OpenExternal(content); ShowStatus("abrindo"); }
-            else { Clipboard.SetText(content); ShowStatus("copiado"); }
-        }
-        titleCell.MouseLeftButtonUp += (_, _) => OpenOrCopy();
-        urlCell.MouseLeftButtonUp += (_, _) => OpenOrCopy();
-        Grid.SetColumn(urlCell, 1);
-        row.Children.Add(titleCell);
-        row.Children.Add(urlCell);
-
-        card.Child = row;
-        card.MouseEnter += (_, _) => { actions.Opacity = 1; card.Background = new SolidColorBrush(Color.FromArgb(0x0E, 0xFF, 0xFF, 0xFF)); };
-        card.MouseLeave += (_, _) => { actions.Opacity = 0; card.Background = Brushes.Transparent; };
-        return card;
     }
 
     // -- LISTAS: puxadas do mural do Meu Espa�o (tabela mural_items) ----
@@ -3433,15 +2816,26 @@ public partial class BarWindow : Window
                 await LoadListas();
             }));
 
-            grid.Children.Add(new Border
+            // Bloco neobrutal opaco na cor da lista + sombra dura (DESIGN.md §4)
+            var ink = (Brush)FindResource("Ink");
+            var bc = ((SolidColorBrush)bloco).Color;
+            byte Mix(byte c) => (byte)(255 - (255 - c) * 0.34);
+            var face = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(0x10, 0xFF, 0xFF, 0xFF)),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)),
-                BorderThickness = new Thickness(1.5),
-                CornerRadius = new CornerRadius(12),
+                Background = new SolidColorBrush(Color.FromRgb(Mix(bc.R), Mix(bc.G), Mix(bc.B))),
+                BorderBrush = ink,
+                BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(10),
                 Padding = new Thickness(11, 10, 11, 10),
-                Margin = new Thickness(0, 0, 8, 8),
+                Margin = new Thickness(0, 0, 4, 4),
                 Child = col
+            };
+            var sombra = new Border { Background = ink, CornerRadius = new CornerRadius(10), Margin = new Thickness(4, 4, 0, 0) };
+            grid.Children.Add(new Grid
+            {
+                Margin = new Thickness(0, 0, 9, 9),
+                SnapsToDevicePixels = true,
+                Children = { sombra, face }
             });
         }
         if (ordem.Count == 0)
@@ -3832,7 +3226,7 @@ public partial class BarWindow : Window
         return b;
     }
 
-    private Border EmailEmptyCard()
+    private FrameworkElement EmailEmptyCard()
     {
         var body = new StackPanel();
         body.Children.Add(Zui.BodyText(this, "Nenhuma conta adicionada", 16, weight: FontWeights.SemiBold));
@@ -4200,44 +3594,6 @@ public partial class BarWindow : Window
             };
             ThemeList.Children.Add(b);
         }
-    }
-
-    [DllImport("user32.dll")]
-    private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-    private const uint KEYEVENTF_KEYUP = 0x0002;
-
-    private async void Print_Click(object sender, RoutedEventArgs e) => await TriggerRelampago(0x32);
-    private async void Record_Click(object sender, RoutedEventArgs e) => await TriggerRelampago(0x33);
-
-    /// <summary>Dispara o hotkey global do Rel�mpago (Ctrl+Shift+2/3), subindo ele se preciso.</summary>
-    private async Task TriggerRelampago(byte vk)
-    {
-        HideBar();
-        if (Process.GetProcessesByName("Relampago").Length == 0)
-        {
-            var exe = new[]
-            {
-                @"D:\Relampago\bin\Release\net9.0-windows\Relampago.exe",
-                @"D:\Relampago\bin\Debug\net9.0-windows\Relampago.exe",
-                @"D:\Relampago\artifacts\Relampago-1.0.0-win-x64\Relampago.exe"
-            }.FirstOrDefault(File.Exists);
-
-            if (exe is null)
-            {
-                ((App)Application.Current).Notify("Zimbar", "Nao achei o Relampago.exe no D:\\Relampago.");
-                return;
-            }
-            Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
-            await Task.Delay(2200);
-        }
-
-        await Task.Delay(250);
-        keybd_event(0x11, 0, 0, UIntPtr.Zero);
-        keybd_event(0x10, 0, 0, UIntPtr.Zero);
-        keybd_event(vk, 0, 0, UIntPtr.Zero);
-        keybd_event(vk, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-        keybd_event(0x10, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-        keybd_event(0x11, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
     }
 
     // -- Utilit�rios ------------------------------------------------

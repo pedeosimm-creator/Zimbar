@@ -4,37 +4,36 @@
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
 
-        <!-- Fontes: corpo moderno (Variable Text), display fino e elegante,
-             mono estilo HUD pros rótulos futuristas -->
+        <!-- Fontes (DESIGN.md §3): display GROTESCA pesada, corpo limpo, mono pros rótulos/tags -->
         <FontFamily x:Key="Body">Segoe UI Variable Text, Segoe UI</FontFamily>
-        <FontFamily x:Key="Display">Segoe UI Variable Display Semilight, Segoe UI Semilight, Segoe UI</FontFamily>
+        <FontFamily x:Key="Display">Bahnschrift, Segoe UI</FontFamily>
         <FontFamily x:Key="Mono">Cascadia Mono, Cascadia Code, Consolas, Segoe UI</FontFamily>
 
-        <!-- Valores iniciais; o ThemeManager troca em runtime -->
-        <SolidColorBrush x:Key="Accent" Color="#C9A6FF"/>
-        <SolidColorBrush x:Key="AccentSoft" Color="#9A7FE8"/>
-        <SolidColorBrush x:Key="Ink" Color="#0C0A12"/>
-        <SolidColorBrush x:Key="TextInk" Color="#120A22"/>
-        <SolidColorBrush x:Key="TextMain" Color="#F1ECFF"/>
-        <SolidColorBrush x:Key="TextDim" Color="#B4ADD4"/>
-        <SolidColorBrush x:Key="TextDone" Color="#7F78A2"/>
-        <SolidColorBrush x:Key="Surface" Color="#14FFFFFF"/>
-        <SolidColorBrush x:Key="SurfaceHi" Color="#22FFFFFF"/>
-        <SolidColorBrush x:Key="ChipBg" Color="#18FFFFFF"/>
-        <SolidColorBrush x:Key="ChipBgHover" Color="#33FFFFFF"/>
-        <SolidColorBrush x:Key="CardBg" Color="#1E1636"/>
-        <SolidColorBrush x:Key="BlockYellow" Color="#FFD98A"/>
-        <SolidColorBrush x:Key="BlockLime" Color="#9BE8B8"/>
-        <SolidColorBrush x:Key="BlockPink" Color="#FF9FD4"/>
-        <SolidColorBrush x:Key="BlockPurple" Color="#C4A6FF"/>
-        <SolidColorBrush x:Key="BlockBlue" Color="#8FD0FF"/>
-        <SolidColorBrush x:Key="BlockCoral" Color="#FF9E86"/>
-        <SolidColorBrush x:Key="Dificil" Color="#FF8C6B"/>
-        <SolidColorBrush x:Key="DificilBg" Color="#33FF6B4A"/>
-        <SolidColorBrush x:Key="Media" Color="#FFD98A"/>
-        <SolidColorBrush x:Key="MediaBg" Color="#33FFC46B"/>
-        <SolidColorBrush x:Key="Facil" Color="#8FF0C4"/>
-        <SolidColorBrush x:Key="FacilBg" Color="#3334E89C"/>
+        <!-- Valores iniciais (neobrutalista Roxo); o ThemeManager troca em runtime -->
+        <SolidColorBrush x:Key="Accent" Color="#A78BFA"/>
+        <SolidColorBrush x:Key="AccentSoft" Color="#8B5CF6"/>
+        <SolidColorBrush x:Key="Ink" Color="#181320"/>
+        <SolidColorBrush x:Key="TextInk" Color="#181320"/>
+        <SolidColorBrush x:Key="TextMain" Color="#181320"/>
+        <SolidColorBrush x:Key="TextDim" Color="#5A5468"/>
+        <SolidColorBrush x:Key="TextDone" Color="#A09AAD"/>
+        <SolidColorBrush x:Key="Surface" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="SurfaceHi" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="ChipBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="ChipBgHover" Color="#2EA78BFA"/>
+        <SolidColorBrush x:Key="CardBg" Color="#F5F1FF"/>
+        <SolidColorBrush x:Key="BlockYellow" Color="#FFD84D"/>
+        <SolidColorBrush x:Key="BlockLime" Color="#7DE57C"/>
+        <SolidColorBrush x:Key="BlockPink" Color="#FF90C8"/>
+        <SolidColorBrush x:Key="BlockPurple" Color="#B69CFF"/>
+        <SolidColorBrush x:Key="BlockBlue" Color="#7CC8FF"/>
+        <SolidColorBrush x:Key="BlockCoral" Color="#FF9E7C"/>
+        <SolidColorBrush x:Key="Dificil" Color="#FF6B6B"/>
+        <SolidColorBrush x:Key="DificilBg" Color="#2EFF6B6B"/>
+        <SolidColorBrush x:Key="Media" Color="#FFC94D"/>
+        <SolidColorBrush x:Key="MediaBg" Color="#2EFFC94D"/>
+        <SolidColorBrush x:Key="Facil" Color="#4ADE80"/>
+        <SolidColorBrush x:Key="FacilBg" Color="#2E4ADE80"/>
         <RotateTransform x:Key="RotateRailText" Angle="-90"/>
 
         <!-- Design System aliases: novos componentes devem preferir Zimbar.*.
@@ -54,44 +53,13 @@
         <Color x:Key="Zimbar.Color.Accent">#C9A6FF</Color>
         <Color x:Key="Zimbar.Color.Glow">#8B5CFF</Color>
 
-        <!-- ══ Chip: vidro translúcido, hover ilumina ══ -->
+        <!-- ══ Chip (DESIGN.md §5): bloco branco, borda de tinta 2px, hover pinta de accent ══ -->
         <Style x:Key="Chip" TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource ChipBg}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextMain}"/>
-            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Padding" Value="11,5"/>
             <Setter Property="Margin" Value="0,0,7,0"/>
-            <Setter Property="FontSize" Value="12.5"/>
-            <Setter Property="FontFamily" Value="{DynamicResource Body}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="#22FFFFFF" BorderThickness="1"
-                                CornerRadius="10"
-                                Padding="{TemplateBinding Padding}"
-                                SnapsToDevicePixels="True">
-                            <ContentPresenter VerticalAlignment="Center"
-                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ChipBgHover}"/>
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentSoft}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- ══ Botão primário: accent luminoso com glow ══ -->
-        <Style x:Key="PrimaryBtn" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource Accent}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextInk}"/>
-            <Setter Property="Padding" Value="15,7"/>
-            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontFamily" Value="{DynamicResource Body}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -100,19 +68,57 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="bd"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="11"
-                                Padding="{TemplateBinding Padding}">
-                            <Border.Effect>
-                                <DropShadowEffect BlurRadius="16" ShadowDepth="0" Opacity="0.6" Color="#8B5CFF"/>
-                            </Border.Effect>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                BorderBrush="{DynamicResource Ink}" BorderThickness="2"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ChipBgHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ══ Botão primário (DESIGN.md §5): borda DUPLA = sombra dura crua; press AFUNDA ══ -->
+        <Style x:Key="PrimaryBtn" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextInk}"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontFamily" Value="{DynamicResource Display}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid SnapsToDevicePixels="True">
+                            <Border x:Name="sh" Background="{DynamicResource Ink}"
+                                    CornerRadius="9" Margin="3,3,0,0"/>
+                            <Border x:Name="bd"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{DynamicResource Ink}" BorderThickness="2"
+                                    CornerRadius="9"
+                                    Padding="{TemplateBinding Padding}"
+                                    Margin="0,0,3,3">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentSoft}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Opacity" Value="0.8"/>
+                                <Setter TargetName="bd" Property="Margin" Value="3,3,0,0"/>
+                                <Setter TargetName="sh" Property="Visibility" Value="Hidden"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -122,13 +128,15 @@
         <Style x:Key="NeoBtn" TargetType="Button" BasedOn="{StaticResource PrimaryBtn}"/>
         <Style x:Key="Zimbar.Button.Primary" TargetType="Button" BasedOn="{StaticResource PrimaryBtn}"/>
 
-        <!-- ══ Aba de navegação: pílula translúcida; ativa vira accent (via código) ══ -->
+        <!-- ══ Tab de navegação (DESIGN.md §5): repouso tinta; hover bloco branco;
+             ativa = bloco de TINTA com texto claro (via código no SwitchView) ══ -->
         <Style x:Key="NavBtn" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource TextDim}"/>
-            <Setter Property="Padding" Value="12,7"/>
-            <Setter Property="Margin" Value="0,0,3,0"/>
+            <Setter Property="Padding" Value="11,6"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
             <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontFamily" Value="{DynamicResource Body}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -136,14 +144,16 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="bd"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="10"
+                                BorderBrush="Transparent" BorderThickness="2"
+                                CornerRadius="8"
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ChipBg}"/>
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource Surface}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Ink}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource TextMain}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -175,7 +185,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#14FFFFFF"/>
+                                <Setter TargetName="bd" Property="Background" Value="#10181320"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -197,14 +207,15 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="10"
-                                BorderBrush="#2EFFFFFF" BorderThickness="1">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8"
+                                BorderBrush="#66181320" BorderThickness="1.5">
                             <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
                                           VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Ink}"/>
+                                <Setter TargetName="bd" Property="BorderThickness" Value="2"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -227,10 +238,10 @@
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
                                                 <Border x:Name="th" CornerRadius="4" Margin="2,2"
-                                                        Background="#40FFFFFF"/>
+                                                        Background="#40181320"/>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="th" Property="Background" Value="{DynamicResource Accent}"/>
+                                                        <Setter TargetName="th" Property="Background" Value="{DynamicResource Ink}"/>
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -254,23 +265,24 @@
 
         <Style x:Key="Zimbar.Border.GlassPanel" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource Surface}"/>
-            <Setter Property="BorderBrush" Value="#1EFFFFFF"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Ink}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Padding" Value="15,12"/>
         </Style>
+        <!-- Card principal neobrutal: papel chapado, borda de tinta grossa, sombra dura -->
         <Style x:Key="Zimbar.Border.CosmicCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1.5"/>
-            <Setter Property="CornerRadius" Value="22"/>
+            <Setter Property="BorderThickness" Value="3"/>
+            <Setter Property="CornerRadius" Value="16"/>
             <Setter Property="Effect" Value="{DynamicResource CardGlow}"/>
         </Style>
         <Style x:Key="Zimbar.Border.PopupCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBg}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Ink}"/>
+            <Setter Property="BorderThickness" Value="2.5"/>
+            <Setter Property="CornerRadius" Value="12"/>
         </Style>
 
     </Application.Resources>

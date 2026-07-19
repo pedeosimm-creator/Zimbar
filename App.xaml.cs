@@ -155,9 +155,9 @@ public partial class App : Application
         if (!_bar.IsVisible)
             _bar.ShowBar();
         else if (_bar.IsCollapsed)
-            _bar.ExpandBar();   // se está como aba, o hotkey reabre
+            _bar.ExpandBar();     // minimizada: o hotkey restaura
         else
-            _bar.HideBar();     // aberta de fato: fecha pra bandeja
+            _bar.CollapseBar();   // aberta: o hotkey minimiza (Esc é quem fecha)
     }
 
     /// <summary>Balão de notificação da bandeja (usado pelo pomodoro).</summary>

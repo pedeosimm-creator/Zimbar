@@ -55,55 +55,28 @@ public static class Config
 }
 
 /// <summary>
-/// Temas cósmicos. Troca os recursos no nível do Application, então tudo que
-/// usa DynamicResource atualiza na hora (barra, ZimNotes, pomodoro).
+/// Temas NEOBRUTALISTAS: papel claro, tinta preta, bordas grossas, sombras duras
+/// (sem blur) e blocos de cor vivos. Troca os recursos no nível do Application,
+/// então tudo que usa DynamicResource atualiza na hora (barra, ZimNotes, pomodoro).
 /// </summary>
 public static class ThemeManager
 {
-    // Estética "nebulosa": fundo espacial profundo, accent neon, brilho suave,
-    // vidro translúcido. Cada tema muda o accent e o tom do espaço.
-    public record Palette(string Accent, string AccentSoft, string Glow,
-                          string Bg1, string Bg2, string Bg3, string Border,
-                          string TextMain = "#F1ECFF",
-                          string TextDim = "#B4ADD4",
-                          string TextDone = "#7F78A2",
-                          string Surface = "#14FFFFFF",
-                          string SurfaceHi = "#22FFFFFF",
-                          string ChipBg = "#18FFFFFF",
-                          string ChipBgHover = "#33FFFFFF",
-                          double CardGlowOpacity = 0.5,
-                          double AccentGlowOpacity = 0.85,
-                          string Dificil = "#FF8C6B",
-                          string Media = "#FFD98A",
-                          string Facil = "#8FF0C4");
+    // Cada tema muda o accent e o tom do "papel"; a tinta é sempre preta. (DESIGN.md §2)
+    public record Palette(string Accent, string AccentDeep, string Paper,
+                          string Ink = "#111111",
+                          string TextDim = "#4A4458",
+                          string TextDone = "#8B8598",
+                          string Dificil = "#FF6B6B",
+                          string Media = "#FFDB58",
+                          string Facil = "#90EE90");
 
     public static readonly System.Collections.Generic.Dictionary<string, Palette> Themes = new()
     {
-        ["Roxo"] = Aurora(
-            "#C9A6FF", "#9EDFFF", "#B891FF", "#8E6DFF",
-            "#0C0714", "#1D1231", "#2B143E",
-            "#20C9A6FF", "#34C9A6FF", "#26C9A6FF", "#42C9A6FF",
-            "#D8C9FF", "#9383B6"),
-        ["Azul"] = Aurora(
-            "#8FD0FF", "#7CF7D4", "#48A8FF", "#57B8FF",
-            "#03101D", "#0C2237", "#11193D",
-            "#208FD0FF", "#348FD0FF", "#268FD0FF", "#428FD0FF",
-            "#B8DDFF", "#7395B4"),
-        ["Verde"] = Aurora(
-            "#7CF7D4", "#7CB8FF", "#42F3C8", "#3DE2D0",
-            "#061014", "#102327", "#160E25",
-            "#187CF7D4", "#2A7CF7D4", "#1C7CF7D4", "#3A7CF7D4",
-            "#A8D0CB", "#6F928D"),
-        ["Rosa"] = Aurora(
-            "#FFA8DC", "#9EDFFF", "#FF5CBE", "#E87FBB",
-            "#160712", "#2C1227", "#351335",
-            "#20FFA8DC", "#34FFA8DC", "#26FFA8DC", "#42FFA8DC",
-            "#FFD0EB", "#A9859C"),
-        ["Âmbar"] = Aurora(
-            "#FFD79A", "#7CF7D4", "#FFB35C", "#E8B87F",
-            "#150D04", "#2B1D0D", "#2F2412",
-            "#20FFD79A", "#34FFD79A", "#26FFD79A", "#42FFD79A",
-            "#FFE0B0", "#A58C63"),
+        ["Roxo"] = new("#A78BFA", "#7C3AED", "#E6DBFF"),
+        ["Azul"] = new("#6EC1FF", "#1D9BF0", "#CFE8FF"),
+        ["Verde"] = new("#6EE7A0", "#16A34A", "#D3F5DC"),
+        ["Rosa"] = new("#FF8FC2", "#EC4899", "#FFD9EC"),
+        ["Âmbar"] = new("#FFD34D", "#F59E0B", "#FFEDB8"),
     };
 
     public static void Apply(string name)
@@ -114,93 +87,77 @@ public static class ThemeManager
             "Noir HUD" or "Orbital Console" => "Roxo",
             _ => name
         };
-        if (!Themes.TryGetValue(name, out var p)) { name = "Verde"; p = Themes["Verde"]; }
+        if (!Themes.TryGetValue(name, out var p)) { name = "Roxo"; p = Themes["Roxo"]; }
         Config.Theme = name;
 
         var r = Application.Current.Resources;
+        string inkHex = p.Ink;
 
         r["Accent"] = Brush(p.Accent);
-        r["AccentSoft"] = Brush(p.AccentSoft);
+        r["AccentSoft"] = Brush(p.AccentDeep);
         r["AccentColor"] = Col(p.Accent);
-        r["GlowColor"] = Col(p.Glow);
+        r["GlowColor"] = Col(inkHex);
         r["Zimbar.Brush.Accent"] = Brush(p.Accent);
-        r["Zimbar.Brush.AccentSoft"] = Brush(p.AccentSoft);
+        r["Zimbar.Brush.AccentSoft"] = Brush(p.AccentDeep);
         r["Zimbar.Color.Accent"] = Col(p.Accent);
-        r["Zimbar.Color.Glow"] = Col(p.Glow);
-        r["Ink"] = Brush("#0C0A12");
-        r["TextInk"] = Brush("#120A22");
-        r["Zimbar.Brush.Text.OnAccent"] = Brush("#120A22");
+        r["Zimbar.Color.Glow"] = Col(inkHex);
 
-        r["TextMain"] = Brush(p.TextMain);
+        // Tinta: texto sobre papel e sobre blocos de accent — sempre quase-preta.
+        r["Ink"] = Brush(inkHex);
+        r["TextInk"] = Brush(inkHex);
+        r["Zimbar.Brush.Text.OnAccent"] = Brush(inkHex);
+        r["TextMain"] = Brush(inkHex);
         r["TextDim"] = Brush(p.TextDim);
         r["TextDone"] = Brush(p.TextDone);
-        r["Zimbar.Brush.Text.Primary"] = Brush(p.TextMain);
+        r["Zimbar.Brush.Text.Primary"] = Brush(inkHex);
         r["Zimbar.Brush.Text.Secondary"] = Brush(p.TextDim);
         r["Zimbar.Brush.Text.Muted"] = Brush(p.TextDone);
 
-        // Vidro translúcido (branco em alfa baixo por cima do espaço)
-        r["Surface"] = Brush(p.Surface);
-        r["SurfaceHi"] = Brush(p.SurfaceHi);
-        r["ChipBg"] = Brush(p.ChipBg);
-        r["ChipBgHover"] = Brush(p.ChipBgHover);
-        r["CardBg"] = Brush(p.Bg2);
-        r["Zimbar.Brush.Surface.Glass"] = Brush(p.Surface);
-        r["Zimbar.Brush.Surface.GlassStrong"] = Brush(p.SurfaceHi);
-        r["Zimbar.Brush.Surface.CardFlat"] = Brush(p.Bg2);
+        // Superfícies: branco puro sobre papel colorido
+        r["Surface"] = Brush("#FFFFFF");
+        r["SurfaceHi"] = Brush("#FFFFFF");
+        r["ChipBg"] = Brush("#FFFFFF");
+        r["ChipBgHover"] = Brush("#2E" + p.Accent[1..]);
+        r["CardBg"] = Brush(p.Paper);
+        r["Zimbar.Brush.Surface.Glass"] = Brush("#FFFFFF");
+        r["Zimbar.Brush.Surface.GlassStrong"] = Brush("#FFFFFF");
+        r["Zimbar.Brush.Surface.CardFlat"] = Brush(p.Paper);
 
-        // Tints de categoria (suaves, futuristas)
-        r["BlockYellow"] = Brush("#FFD98A");
-        r["BlockLime"] = Brush("#9BE8B8");
-        r["BlockPink"] = Brush("#FF9FD4");
-        r["BlockPurple"] = Brush("#C4A6FF");
-        r["BlockBlue"] = Brush("#8FD0FF");
-        r["BlockCoral"] = Brush("#FF9E86");
+        // Blocos vibrantes (paleta de alternância do DESIGN.md §2)
+        r["BlockYellow"] = Brush("#FDFD96");
+        r["BlockLime"] = Brush("#90EE90");
+        r["BlockPink"] = Brush("#FFB2EF");
+        r["BlockPurple"] = Brush("#C4A1FF");
+        r["BlockBlue"] = Brush("#87CEEB");
+        r["BlockCoral"] = Brush("#FFA07A");
 
-        // Fundo do card principal: gradiente espacial + estrelas (XAML)
-        var bg = new LinearGradientBrush
-        {
-            StartPoint = new Point(0, 0),
-            EndPoint = new Point(1, 1),
-            GradientStops =
-            {
-                new GradientStop(Col(p.Bg1), 0),
-                new GradientStop(Col(p.Bg2), 0.55),
-                new GradientStop(Col(p.Bg3), 1)
-            }
-        };
-        bg.Freeze();
+        // Fundo do card principal: papel chapado (nada de gradiente)
+        var bg = Brush(p.Paper);
         r["CardBgBrush"] = bg;
         r["Zimbar.Brush.Surface.CardCosmic"] = bg;
 
-        // Borda hairline luminosa (accent → transparente)
-        var border = new LinearGradientBrush
-        {
-            StartPoint = new Point(0, 0),
-            EndPoint = new Point(1, 1),
-            GradientStops =
-            {
-                new GradientStop(Col(p.Accent), 0),
-                new GradientStop(Col(p.Border), 0.5),
-                new GradientStop((Color)ColorConverter.ConvertFromString("#22" + p.Accent[1..]), 1)
-            }
-        };
-        border.Freeze();
-        r["CardBorderBrush"] = border;
-        r["Zimbar.Brush.Border.Card"] = border;
+        // Borda: tinta sólida e grossa
+        r["CardBorderBrush"] = Brush(inkHex);
+        r["Zimbar.Brush.Border.Card"] = Brush(inkHex);
 
-        // Brilhos suaves (a assinatura futurista)
-        r["CardGlow"] = new DropShadowEffect { BlurRadius = 40, ShadowDepth = 0, Opacity = p.CardGlowOpacity, Color = Col(p.Glow) };
-        r["AccentGlow"] = new DropShadowEffect { BlurRadius = 14, ShadowDepth = 0, Opacity = p.AccentGlowOpacity, Color = Col(p.Accent) };
-        r["Zimbar.Effect.Glow.Card"] = r["CardGlow"];
-        r["Zimbar.Effect.Glow.Accent"] = r["AccentGlow"];
+        // Sombras DURAS (sem blur, deslocadas) — SO pra janela/popups opacos;
+        // dentro de conteudo usar Zui.Block (borda dupla), nunca Effect (DESIGN.md §4)
+        var hard = new DropShadowEffect { BlurRadius = 0, ShadowDepth = 8, Direction = 315, Opacity = 1, Color = Col(inkHex) };
+        hard.Freeze();
+        var none = new DropShadowEffect { BlurRadius = 0, ShadowDepth = 0, Opacity = 0 };
+        none.Freeze();
+        r["CardGlow"] = hard;      // card principal: sombra dura grande
+        r["AccentGlow"] = none;    // sem glow em texto/ícone
+        r["Zimbar.Effect.Glow.Card"] = hard;
+        r["Zimbar.Effect.Glow.Accent"] = none;
 
-        // Plano de hoje — três energias, com brilho
+        // Plano de hoje — três energias, chapadas
         r["Dificil"] = Brush(p.Dificil);
-        r["DificilBg"] = Brush("#33" + p.Dificil[1..]);
+        r["DificilBg"] = Brush("#2E" + p.Dificil[1..]);
         r["Media"] = Brush(p.Media);
-        r["MediaBg"] = Brush("#33" + p.Media[1..]);
+        r["MediaBg"] = Brush("#2E" + p.Media[1..]);
         r["Facil"] = Brush(p.Facil);
-        r["FacilBg"] = Brush("#33" + p.Facil[1..]);
+        r["FacilBg"] = Brush("#2E" + p.Facil[1..]);
     }
 
     private static SolidColorBrush Brush(string hex)
@@ -209,26 +166,6 @@ public static class ThemeManager
         b.Freeze();
         return b;
     }
-
-    private static Palette Aurora(
-        string accent,
-        string accentSoft,
-        string glow,
-        string border,
-        string bg1,
-        string bg2,
-        string bg3,
-        string surface,
-        string surfaceHi,
-        string chipBg,
-        string chipBgHover,
-        string textDim,
-        string textDone)
-        => new(accent, accentSoft, glow, bg1, bg2, bg3, border,
-            TextMain: "#F2FFF9", TextDim: textDim, TextDone: textDone,
-            Surface: surface, SurfaceHi: surfaceHi, ChipBg: chipBg, ChipBgHover: chipBgHover,
-            CardGlowOpacity: 0.42, AccentGlowOpacity: 0.72,
-            Dificil: "#FF9BA8", Media: "#FFE08A", Facil: "#7CF7D4");
 
     private static Color Col(string hex) => (Color)ColorConverter.ConvertFromString(hex);
 }

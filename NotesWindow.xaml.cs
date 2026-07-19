@@ -13,25 +13,15 @@ using System.Windows.Threading;
 namespace Zimbar;
 
 /// <summary>
-/// ZimNotes: janela independente de notas, gravada na tabela `notas`.
-/// A interface usa lista pesquisavel + editor permanente para leitura e escrita rapida.
+/// ZimNotes: a BIBLIOTECA de notas (tabela `notas`). Clicar numa nota abre
+/// uma janela autoadesiva (StickyWindow) so com o texto dela, como o
+/// Sticky Notes do Windows.
 /// </summary>
 public partial class NotesWindow : Window
 {
     private static NotesWindow? _instance;
 
-    private static readonly (string Key, string Hex)[] Cores =
-    {
-        ("", "#00000000"), ("uva", "#66C9A6FF"), ("vinho", "#66FFA8DC"),
-        ("mel", "#66FFD79A"), ("mata", "#667CF7D4"), ("noite", "#668FD0FF"),
-    };
-
     private readonly List<JsonObject> _notas = new();
-    private string? _editId;
-    private string? _selectedId;
-    private string _editCor = "";
-    private bool _suppressEditorDirty;
-    private bool _editorDirty;
     private bool _loadingNotas;
     private DateTime _lastSync = DateTime.MinValue;
     private readonly DispatcherTimer _syncTimer = new() { Interval = TimeSpan.FromSeconds(20) };
@@ -44,6 +34,12 @@ public partial class NotesWindow : Window
         _ = _instance.LoadNotas();
     }
 
+    /// <summary>As autoadesivas chamam isso ao salvar/excluir pra lista refletir na hora.</summary>
+    public static void RefreshIfOpen()
+    {
+        if (_instance is not null) _ = _instance.LoadNotas();
+    }
+
     private NotesWindow()
     {
         InitializeComponent();
@@ -52,16 +48,12 @@ public partial class NotesWindow : Window
         _syncTimer.Tick += (_, _) => _ = LoadNotasIfSafe();
         _syncTimer.Start();
         PreviewKeyDown += Window_PreviewKeyDown;
-        BuildColorRow();
-        OpenEditor(null, focusTitle: false);
     }
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
-        if (ctrl && e.Key == Key.S) { EditorSave_Click(this, new RoutedEventArgs()); e.Handled = true; return; }
         if (ctrl && e.Key == Key.N) { New_Click(this, new RoutedEventArgs()); e.Handled = true; return; }
-        if (ctrl && e.Key == Key.B) { Bold_Click(this, new RoutedEventArgs()); e.Handled = true; return; }
         if (ctrl && e.Key == Key.F) { SearchBox.Focus(); SearchBox.SelectAll(); e.Handled = true; return; }
 
         if (e.Key == Key.Escape)
@@ -102,13 +94,7 @@ public partial class NotesWindow : Window
                 if (node is JsonObject n)
                     _notas.Add(n);
 
-            if (_selectedId is not null && _notas.All(n => IdOf(n) != _selectedId))
-                _selectedId = null;
-            _selectedId ??= _notas.FirstOrDefault() is JsonObject first ? IdOf(first) : null;
-
             RenderNotesList();
-            var selected = _notas.FirstOrDefault(n => IdOf(n) == _selectedId);
-            OpenEditor(selected, focusTitle: false);
             StatusText.Text = "";
             _lastSync = DateTime.Now;
         }
@@ -119,7 +105,6 @@ public partial class NotesWindow : Window
             NotesListPanel.Children.Add(EmptyText("sem conexao com o banco agora"));
             CountText.Text = "";
             StatusText.Text = "offline";
-            OpenEditor(null, focusTitle: false);
         }
         finally
         {
@@ -129,7 +114,7 @@ public partial class NotesWindow : Window
 
     private async Task LoadNotasIfSafe()
     {
-        if (_editorDirty || _loadingNotas) return;
+        if (_loadingNotas) return;
         if ((DateTime.Now - _lastSync).TotalSeconds < 4) return;
         await LoadNotas();
     }
@@ -148,7 +133,7 @@ public partial class NotesWindow : Window
 
         if (_notas.Count == 0)
         {
-            NotesListPanel.Children.Add(EmptyText("nenhuma nota ainda"));
+            NotesListPanel.Children.Add(EmptyText("nenhuma nota ainda - cria com + nota"));
             return;
         }
         if (filtered.Count == 0)
@@ -158,34 +143,23 @@ public partial class NotesWindow : Window
         }
 
         foreach (var n in filtered)
-            NotesListPanel.Children.Add(NoteRow(n));
+            NotesListPanel.Children.Add(NoteCard(n));
     }
 
-    private Border NoteRow(JsonObject n)
+    /// <summary>Bloco neobrutal na cor da nota; clique abre a autoadesiva.</summary>
+    private Border NoteCard(JsonObject n)
     {
-        string id = IdOf(n);
         string titulo = TitleOf(n);
         string corpo = BodyPreview(n);
         string data = n["data_nota"]?.GetValue<string>() ?? "";
-        bool selected = id == _selectedId;
-
-        var row = new DockPanel();
-        row.Children.Add(new Border
-        {
-            Width = 3,
-            CornerRadius = new CornerRadius(2),
-            Background = selected
-                ? (Brush)FindResource("Accent")
-                : CorBrush(n["cor"]?.GetValue<string>() ?? ""),
-            Margin = new Thickness(0, 1, 10, 1)
-        });
+        string cor = n["cor"]?.GetValue<string>() ?? "";
 
         var sp = new StackPanel();
         sp.Children.Add(new TextBlock
         {
             Text = titulo.Length == 0 ? "sem titulo" : titulo,
-            FontSize = 13.4,
-            FontWeight = FontWeights.SemiBold,
+            FontSize = 13.5,
+            FontWeight = FontWeights.Bold,
             Foreground = (Brush)FindResource("TextMain"),
             TextWrapping = TextWrapping.NoWrap,
             TextTrimming = TextTrimming.CharacterEllipsis
@@ -193,50 +167,47 @@ public partial class NotesWindow : Window
         if (corpo.Length > 0)
             sp.Children.Add(new TextBlock
             {
-                Text = corpo.Length > 108 ? corpo[..108] + "..." : corpo,
+                Text = corpo.Length > 110 ? corpo[..110] + "..." : corpo,
                 FontSize = 11.8,
                 Foreground = (Brush)FindResource("TextDim"),
                 TextWrapping = TextWrapping.Wrap,
                 MaxHeight = 36,
-                Margin = new Thickness(0, 5, 0, 0)
+                Margin = new Thickness(0, 4, 0, 0)
             });
         sp.Children.Add(new TextBlock
         {
             Text = data,
             FontSize = 9.5,
+            FontFamily = (FontFamily)FindResource("Mono"),
             Foreground = (Brush)FindResource("TextDone"),
-            Margin = new Thickness(0, 7, 0, 0)
+            Margin = new Thickness(0, 6, 0, 0)
         });
-        row.Children.Add(sp);
 
+        var ink = (Brush)FindResource("Ink");
+        var shadow = new System.Windows.Media.Effects.DropShadowEffect
+        { BlurRadius = 0, ShadowDepth = 3, Direction = 315, Opacity = 1, Color = Color.FromRgb(0x18, 0x13, 0x20) };
+        shadow.Freeze();
         var card = new Border
         {
-            Background = selected
-                ? (Brush)FindResource("SurfaceHi")
-                : (Brush)FindResource("ChipBg"),
-            BorderBrush = selected
-                ? (Brush)FindResource("Accent")
-                : new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(12),
-            Padding = new Thickness(11, 10, 12, 10),
-            Margin = new Thickness(0, 0, 0, 8),
+            Background = StickyWindow.CorFundo(cor),
+            BorderBrush = ink,
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(12, 10, 12, 10),
+            Margin = new Thickness(0, 0, 4, 9),
             Cursor = Cursors.Hand,
-            Child = row
+            ToolTip = "clica pra abrir a autoadesiva",
+            Effect = shadow,
+            Child = sp
         };
-        card.MouseEnter += (_, _) =>
-        {
-            if (!selected) card.Background = (Brush)FindResource("SurfaceHi");
-            card.BorderBrush = (Brush)FindResource("AccentSoft");
-        };
-        card.MouseLeave += (_, _) =>
-        {
-            card.Background = selected ? (Brush)FindResource("SurfaceHi") : (Brush)FindResource("ChipBg");
-            card.BorderBrush = selected ? (Brush)FindResource("Accent") : new SolidColorBrush(Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF));
-        };
-        card.MouseLeftButtonUp += (_, _) => SelectNote(n);
+        card.MouseEnter += (_, _) => card.BorderBrush = (Brush)FindResource("AccentSoft");
+        card.MouseLeave += (_, _) => card.BorderBrush = ink;
+        card.MouseLeftButtonUp += (_, _) => OpenSticky(n);
         return card;
     }
+
+    private static void OpenSticky(JsonObject n)
+        => StickyWindow.OpenNote(IdOf(n), TitleOf(n), n["corpo"]?.GetValue<string>() ?? "", n["cor"]?.GetValue<string>() ?? "");
 
     private TextBlock EmptyText(string text) => new()
     {
@@ -246,11 +217,29 @@ public partial class NotesWindow : Window
         Margin = new Thickness(4, 4, 0, 0)
     };
 
-    private void SelectNote(JsonObject n)
+    /// <summary>Cria a nota no banco na hora e ja abre a autoadesiva dela.</summary>
+    private async void New_Click(object sender, RoutedEventArgs e)
     {
-        _selectedId = IdOf(n);
-        OpenEditor(n);
-        RenderNotesList();
+        try
+        {
+            StatusText.Text = "criando...";
+            string id = Supa.NewId();
+            await Supa.Insert("notas", new JsonObject
+            {
+                ["id"] = id,
+                ["titulo"] = "",
+                ["corpo"] = "",
+                ["data_nota"] = DateTime.Now.ToString("yyyy-MM-dd"),
+                ["cor"] = ""
+            });
+            StatusText.Text = "";
+            StickyWindow.OpenNote(id, "", "", "");
+            await LoadNotas();
+        }
+        catch
+        {
+            StatusText.Text = "erro ao criar";
+        }
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => RenderNotesList();
@@ -266,211 +255,5 @@ public partial class NotesWindow : Window
         return corpo.StartsWith(titulo, StringComparison.Ordinal) && corpo.Length > titulo.Length
             ? corpo[titulo.Length..].TrimStart('\n', '\r', ' ')
             : corpo;
-    }
-
-    private static Brush CorBrush(string cor)
-    {
-        foreach (var (key, hex) in Cores)
-            if (key == cor && key != "")
-                return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
-        return (Brush)Application.Current.Resources["ChipBg"];
-    }
-
-    // -- Editor ------------------------------------------------------
-
-    private void BuildColorRow()
-    {
-        ColorRow.Children.Clear();
-        foreach (var (key, hex) in Cores)
-        {
-            var dot = new Border
-            {
-                Width = 18,
-                Height = 18,
-                CornerRadius = new CornerRadius(9),
-                Margin = new Thickness(0, 0, 8, 0),
-                Cursor = Cursors.Hand,
-                Background = key.Length == 0
-                    ? (Brush)FindResource("ChipBg")
-                    : new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)),
-                BorderThickness = new Thickness(2),
-                BorderBrush = Brushes.Transparent,
-                Tag = key
-            };
-            dot.MouseLeftButtonUp += (_, _) => { _editCor = key; MarkColor(); _editorDirty = true; StatusText.Text = "alteracoes nao salvas"; };
-            ColorRow.Children.Add(dot);
-        }
-    }
-
-    private void MarkColor()
-    {
-        foreach (Border dot in ColorRow.Children)
-            dot.BorderBrush = (string)dot.Tag == _editCor
-                ? (Brush)FindResource("Accent")
-                : Brushes.Transparent;
-    }
-
-    private void New_Click(object sender, RoutedEventArgs e)
-    {
-        _selectedId = null;
-        OpenEditor(null);
-        RenderNotesList();
-        _editorDirty = false;
-        StatusText.Text = "nova nota";
-    }
-
-    private void OpenEditor(JsonObject? n, bool focusTitle = true)
-    {
-        _suppressEditorDirty = true;
-        _editId = n is null ? null : IdOf(n);
-        _editCor = n?["cor"]?.GetValue<string>() ?? "";
-        EdTitle.Text = n is null ? "" : TitleOf(n);
-        EdBody.Text = n is null ? "" : BodyPreview(n);
-        EdDelete.Visibility = _editId is null ? Visibility.Collapsed : Visibility.Visible;
-        MarkColor();
-        StatusText.Text = "";
-        _editorDirty = false;
-        _suppressEditorDirty = false;
-
-        if (focusTitle)
-        {
-            EdTitle.Focus();
-            EdTitle.CaretIndex = EdTitle.Text.Length;
-        }
-    }
-
-    private void EditorTextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (!_suppressEditorDirty)
-        {
-            _editorDirty = true;
-            StatusText.Text = "alteracoes nao salvas";
-        }
-    }
-
-    private async void EditorSave_Click(object sender, RoutedEventArgs e)
-    {
-        string titulo = EdTitle.Text.Trim();
-        string corpo = EdBody.Text.Trim();
-        if (titulo.Length == 0 && corpo.Length == 0)
-        {
-            StatusText.Text = "nota vazia";
-            return;
-        }
-        if (titulo.Length == 0)
-        {
-            titulo = corpo.Split('\n', 2)[0].Trim();
-            if (titulo.Length > 80) titulo = titulo[..80];
-        }
-
-        try
-        {
-            StatusText.Text = "salvando...";
-            if (_editId is null)
-            {
-                string id = Supa.NewId();
-                await Supa.Insert("notas", new JsonObject
-                {
-                    ["id"] = id,
-                    ["titulo"] = titulo,
-                    ["corpo"] = corpo,
-                    ["data_nota"] = DateTime.Now.ToString("yyyy-MM-dd"),
-                    ["cor"] = _editCor
-                });
-                _selectedId = id;
-            }
-            else
-            {
-                await Supa.Update("notas", "id=eq." + Uri.EscapeDataString(_editId), new JsonObject
-                {
-                    ["titulo"] = titulo,
-                    ["corpo"] = corpo,
-                    ["cor"] = _editCor
-                });
-                _selectedId = _editId;
-            }
-
-            await LoadNotas();
-            _editorDirty = false;
-            StatusText.Text = "salvo";
-        }
-        catch
-        {
-            StatusText.Text = "erro ao salvar";
-        }
-    }
-
-    private async void EditorDelete_Click(object sender, RoutedEventArgs e)
-    {
-        if (_editId is null) return;
-        try
-        {
-            StatusText.Text = "excluindo...";
-            await Supa.Delete("notas", "id=eq." + Uri.EscapeDataString(_editId));
-            _selectedId = null;
-            await LoadNotas();
-            StatusText.Text = "excluido";
-        }
-        catch
-        {
-            StatusText.Text = "erro ao excluir";
-        }
-    }
-
-    // -- Formatacao em texto simples --------------------------------
-
-    private void Bold_Click(object sender, RoutedEventArgs e) => WrapSelection("**", "**");
-    private void Heading_Click(object sender, RoutedEventArgs e) => PrefixCurrentOrSelectedLines("# ");
-    private void Bullet_Click(object sender, RoutedEventArgs e) => PrefixCurrentOrSelectedLines("- ");
-    private void Check_Click(object sender, RoutedEventArgs e) => PrefixCurrentOrSelectedLines("- [ ] ");
-
-    private void Bigger_Click(object sender, RoutedEventArgs e)
-    {
-        EdBody.FontSize = Math.Min(22, EdBody.FontSize + 1);
-        EdBody.Focus();
-    }
-
-    private void Smaller_Click(object sender, RoutedEventArgs e)
-    {
-        EdBody.FontSize = Math.Max(12, EdBody.FontSize - 1);
-        EdBody.Focus();
-    }
-
-    private void WrapSelection(string before, string after)
-    {
-        int start = EdBody.SelectionStart;
-        int length = EdBody.SelectionLength;
-        string selected = EdBody.SelectedText;
-        EdBody.SelectedText = before + selected + after;
-        EdBody.Focus();
-        EdBody.SelectionStart = start + before.Length;
-        EdBody.SelectionLength = length;
-    }
-
-    private void PrefixCurrentOrSelectedLines(string prefix)
-    {
-        if (EdBody.SelectionLength > 0)
-        {
-            int start = EdBody.SelectionStart;
-            string selected = EdBody.SelectedText.Replace("\r\n", "\n");
-            string replaced = string.Join(Environment.NewLine, selected.Split('\n').Select(line =>
-                line.StartsWith(prefix, StringComparison.Ordinal) || line.Length == 0 ? line : prefix + line));
-            EdBody.SelectedText = replaced;
-            EdBody.Focus();
-            EdBody.SelectionStart = start;
-            EdBody.SelectionLength = replaced.Length;
-            return;
-        }
-
-        int oldCaret = EdBody.CaretIndex;
-        int line = EdBody.GetLineIndexFromCharacterIndex(oldCaret);
-        int lineStart = EdBody.GetCharacterIndexFromLineIndex(line);
-        string lineText = EdBody.GetLineText(line);
-        if (!lineText.StartsWith(prefix, StringComparison.Ordinal))
-        {
-            EdBody.Text = EdBody.Text.Insert(lineStart, prefix);
-            EdBody.CaretIndex = oldCaret + prefix.Length;
-        }
-        EdBody.Focus();
     }
 }
