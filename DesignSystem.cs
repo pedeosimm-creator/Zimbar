@@ -110,12 +110,37 @@ public static class Zui
             TextWrapping = TextWrapping.Wrap
         };
 
-    /// <summary>Paleta de alternância (DESIGN.md §2). i cicla; blocos irmãos nunca repetem cor.</summary>
+    /// <summary>Cores SOFT do Acervo pros cards alternarem de fundo. i cicla a paleta.</summary>
     private static readonly string[] TintKeys =
-        { "BlockYellow", "BlockLime", "BlockPink", "BlockPurple", "BlockBlue", "BlockCoral" };
+        { "SunSoft", "LeafSoft", "GrapeSoft", "RoseSoft", "SkySoft", "TangSoft" };
+
+    /// <summary>Versão CHEIA (badges de ícone), mesma ordem.</summary>
+    private static readonly string[] FullKeys =
+        { "Sun", "Leaf", "Grape", "Rose", "Sky", "Tang" };
 
     public static Brush Tint(FrameworkElement owner, int i)
         => (Brush)owner.FindResource(TintKeys[((i % TintKeys.Length) + TintKeys.Length) % TintKeys.Length]);
+
+    public static Brush TintFull(FrameworkElement owner, int i)
+        => (Brush)owner.FindResource(FullKeys[((i % FullKeys.Length) + FullKeys.Length) % FullKeys.Length]);
+
+    /// <summary>Badge de ícone do Acervo: quadrado colorido cheio, borda de tinta, radius 12.</summary>
+    public static Border IconBadge(FrameworkElement owner, string glyph, int tintIndex, double size = 34)
+        => new()
+        {
+            Width = size, Height = size,
+            Background = TintFull(owner, tintIndex),
+            BorderBrush = (Brush)owner.FindResource("Ink"),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(9),
+            Child = new TextBlock
+            {
+                Text = glyph, FontSize = size * 0.5,
+                Foreground = (Brush)owner.FindResource("Ink"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            }
+        };
 
     /// <summary>
     /// BLOCO neobrutal (DESIGN.md §4): sombra dura via BORDA DUPLA — um bloco de
@@ -129,7 +154,7 @@ public static class Zui
         Thickness? padding = null,
         Thickness? margin = null,
         double shadow = 4,
-        double radius = 10)
+        double radius = 14)
     {
         var ink = (Brush)owner.FindResource("Ink");
         var face = new Border
@@ -157,8 +182,11 @@ public static class Zui
         if (onClick is not null)
         {
             host.Cursor = Cursors.Hand;
-            face.MouseEnter += (_, _) => face.BorderBrush = (Brush)owner.FindResource(ZTokens.AccentSoft);
-            face.MouseLeave += (_, _) => face.BorderBrush = ink;
+            // nb-press do Acervo: hover LEVANTA o bloco (sobe/esquerda, sombra cresce)
+            var lift = new TranslateTransform(0, 0);
+            face.RenderTransform = lift;
+            host.MouseEnter += (_, _) => { lift.X = -2; lift.Y = -2; face.Margin = new Thickness(0, 0, shadow + 2, shadow + 2); };
+            host.MouseLeave += (_, _) => { lift.X = 0; lift.Y = 0; face.Margin = new Thickness(0, 0, shadow, shadow); };
             host.MouseLeftButtonUp += (_, e) =>
             {
                 if (e.OriginalSource is FrameworkElement fe && fe.Cursor == Cursors.Hand && !ReferenceEquals(fe, host) && !ReferenceEquals(fe, face)) return;

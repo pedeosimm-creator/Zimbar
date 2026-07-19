@@ -4,36 +4,51 @@
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
 
-        <!-- Fontes (DESIGN.md §3): display GROTESCA pesada, corpo limpo, mono pros rótulos/tags -->
-        <FontFamily x:Key="Body">Segoe UI Variable Text, Segoe UI</FontFamily>
-        <FontFamily x:Key="Display">Bahnschrift, Segoe UI</FontFamily>
-        <FontFamily x:Key="Mono">Cascadia Mono, Cascadia Code, Consolas, Segoe UI</FontFamily>
+        <!-- Fontes do Acervo (embutidas): Archivo Black display + Space Grotesk corpo.
+             Mono aponta pra Space Grotesk tb (Acervo não usa mono; labels são grotesk bold). -->
+        <FontFamily x:Key="Body">pack://application:,,,/assets/fonts/#Space Grotesk, Segoe UI</FontFamily>
+        <FontFamily x:Key="Display">pack://application:,,,/assets/fonts/#Archivo Black, Segoe UI</FontFamily>
+        <FontFamily x:Key="Mono">pack://application:,,,/assets/fonts/#Space Grotesk, Segoe UI</FontFamily>
 
-        <!-- Valores iniciais (neobrutalista Roxo); o ThemeManager troca em runtime -->
-        <SolidColorBrush x:Key="Accent" Color="#A78BFA"/>
-        <SolidColorBrush x:Key="AccentSoft" Color="#8B5CF6"/>
-        <SolidColorBrush x:Key="Ink" Color="#181320"/>
-        <SolidColorBrush x:Key="TextInk" Color="#181320"/>
-        <SolidColorBrush x:Key="TextMain" Color="#181320"/>
-        <SolidColorBrush x:Key="TextDim" Color="#5A5468"/>
-        <SolidColorBrush x:Key="TextDone" Color="#A09AAD"/>
-        <SolidColorBrush x:Key="Surface" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="SurfaceHi" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="ChipBg" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="ChipBgHover" Color="#2EA78BFA"/>
-        <SolidColorBrush x:Key="CardBg" Color="#F5F1FF"/>
-        <SolidColorBrush x:Key="BlockYellow" Color="#FFD84D"/>
-        <SolidColorBrush x:Key="BlockLime" Color="#7DE57C"/>
-        <SolidColorBrush x:Key="BlockPink" Color="#FF90C8"/>
-        <SolidColorBrush x:Key="BlockPurple" Color="#B69CFF"/>
-        <SolidColorBrush x:Key="BlockBlue" Color="#7CC8FF"/>
-        <SolidColorBrush x:Key="BlockCoral" Color="#FF9E7C"/>
-        <SolidColorBrush x:Key="Dificil" Color="#FF6B6B"/>
-        <SolidColorBrush x:Key="DificilBg" Color="#2EFF6B6B"/>
-        <SolidColorBrush x:Key="Media" Color="#FFC94D"/>
-        <SolidColorBrush x:Key="MediaBg" Color="#2EFFC94D"/>
-        <SolidColorBrush x:Key="Facil" Color="#4ADE80"/>
-        <SolidColorBrush x:Key="FacilBg" Color="#2E4ADE80"/>
+        <!-- Valores iniciais (paleta Acervo); o ThemeManager troca em runtime -->
+        <SolidColorBrush x:Key="Accent" Color="#7b61ff"/>
+        <SolidColorBrush x:Key="AccentSoft" Color="#d9d1ff"/>
+        <SolidColorBrush x:Key="Ink" Color="#161613"/>
+        <SolidColorBrush x:Key="TextInk" Color="#161613"/>
+        <SolidColorBrush x:Key="TextMain" Color="#161613"/>
+        <SolidColorBrush x:Key="TextDim" Color="#6f6a5c"/>
+        <SolidColorBrush x:Key="TextDone" Color="#a39b85"/>
+        <SolidColorBrush x:Key="Surface" Color="#fffdf7"/>
+        <SolidColorBrush x:Key="SurfaceHi" Color="#fffdf7"/>
+        <SolidColorBrush x:Key="ChipBg" Color="#fffdf7"/>
+        <SolidColorBrush x:Key="ChipBgHover" Color="#e8e1cf"/>
+        <SolidColorBrush x:Key="Mist" Color="#e8e1cf"/>
+        <SolidColorBrush x:Key="Cream" Color="#f6f2e7"/>
+        <SolidColorBrush x:Key="CardBg" Color="#f6f2e7"/>
+        <SolidColorBrush x:Key="Sun" Color="#ffc940"/>
+        <SolidColorBrush x:Key="SunSoft" Color="#ffe9ac"/>
+        <SolidColorBrush x:Key="Tang" Color="#ff5f35"/>
+        <SolidColorBrush x:Key="TangSoft" Color="#ffd3c4"/>
+        <SolidColorBrush x:Key="Leaf" Color="#3ec46d"/>
+        <SolidColorBrush x:Key="LeafSoft" Color="#c4eed4"/>
+        <SolidColorBrush x:Key="Sky" Color="#4d7cff"/>
+        <SolidColorBrush x:Key="SkySoft" Color="#cdd9ff"/>
+        <SolidColorBrush x:Key="Grape" Color="#7b61ff"/>
+        <SolidColorBrush x:Key="GrapeSoft" Color="#d9d1ff"/>
+        <SolidColorBrush x:Key="Rose" Color="#ff5c8a"/>
+        <SolidColorBrush x:Key="RoseSoft" Color="#ffd0de"/>
+        <SolidColorBrush x:Key="BlockYellow" Color="#ffc940"/>
+        <SolidColorBrush x:Key="BlockLime" Color="#3ec46d"/>
+        <SolidColorBrush x:Key="BlockPink" Color="#ff5c8a"/>
+        <SolidColorBrush x:Key="BlockPurple" Color="#7b61ff"/>
+        <SolidColorBrush x:Key="BlockBlue" Color="#4d7cff"/>
+        <SolidColorBrush x:Key="BlockCoral" Color="#ff5f35"/>
+        <SolidColorBrush x:Key="Dificil" Color="#ff5f35"/>
+        <SolidColorBrush x:Key="DificilBg" Color="#ffd3c4"/>
+        <SolidColorBrush x:Key="Media" Color="#ffc940"/>
+        <SolidColorBrush x:Key="MediaBg" Color="#ffe9ac"/>
+        <SolidColorBrush x:Key="Facil" Color="#3ec46d"/>
+        <SolidColorBrush x:Key="FacilBg" Color="#c4eed4"/>
         <RotateTransform x:Key="RotateRailText" Angle="-90"/>
 
         <!-- Design System aliases: novos componentes devem preferir Zimbar.*.
@@ -69,7 +84,7 @@
                         <Border x:Name="bd"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{DynamicResource Ink}" BorderThickness="2"
-                                CornerRadius="8"
+                                CornerRadius="10"
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter VerticalAlignment="Center"
@@ -102,11 +117,11 @@
                     <ControlTemplate TargetType="Button">
                         <Grid SnapsToDevicePixels="True">
                             <Border x:Name="sh" Background="{DynamicResource Ink}"
-                                    CornerRadius="9" Margin="3,3,0,0"/>
+                                    CornerRadius="11" Margin="3,3,0,0"/>
                             <Border x:Name="bd"
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{DynamicResource Ink}" BorderThickness="2"
-                                    CornerRadius="9"
+                                    CornerRadius="11"
                                     Padding="{TemplateBinding Padding}"
                                     Margin="0,0,3,3">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -145,15 +160,14 @@
                         <Border x:Name="bd"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="Transparent" BorderThickness="2"
-                                CornerRadius="8"
+                                CornerRadius="10"
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource Surface}"/>
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Ink}"/>
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource Mist}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource TextMain}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -185,7 +199,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#10181320"/>
+                                <Setter TargetName="bd" Property="Background" Value="#12161613"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -207,15 +221,14 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8"
-                                BorderBrush="#66181320" BorderThickness="1.5">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="10"
+                                BorderBrush="{DynamicResource Ink}" BorderThickness="2">
                             <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
                                           VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Ink}"/>
-                                <Setter TargetName="bd" Property="BorderThickness" Value="2"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -238,7 +251,7 @@
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
                                                 <Border x:Name="th" CornerRadius="4" Margin="2,2"
-                                                        Background="#40181320"/>
+                                                        Background="#40161613"/>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
                                                         <Setter TargetName="th" Property="Background" Value="{DynamicResource Ink}"/>

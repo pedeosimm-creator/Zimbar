@@ -25,13 +25,18 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <DockPanel Grid.Row="0" Margin="0,0,0,12" MouseLeftButtonDown="Header_MouseDown">
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <DockPanel Grid.Row="0" Margin="0,0,0,12" Background="Transparent"
+                           Cursor="SizeAll" MouseLeftButtonDown="Header_MouseDown"
+                           ToolTip="arrasta aqui pra mover a janela">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Style="{StaticResource PrimaryBtn}" Click="New_Click" Content="+ nota" Padding="12,5"/>
                         <Button Style="{StaticResource Chip}" Click="CloseWin_Click" Content="✕" Margin="7,0,0,0" Padding="10,5"/>
                     </StackPanel>
-                    <StackPanel>
-                        <TextBlock Text="ZimNotes" FontSize="17" FontWeight="Bold"
+                    <TextBlock DockPanel.Dock="Left" Text="⠿" FontSize="16" Margin="0,0,10,0"
+                               VerticalAlignment="Center" Foreground="{DynamicResource TextDone}"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="ZimNotes" FontSize="19"
+                                   FontFamily="{DynamicResource Display}"
                                    Foreground="{DynamicResource TextMain}"/>
                         <StackPanel Orientation="Horizontal" Margin="0,1,0,0">
                             <TextBlock x:Name="CountText" Text="" FontSize="11"

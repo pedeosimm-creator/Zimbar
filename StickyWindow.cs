@@ -161,8 +161,9 @@ public class StickyWindow : Window
 
         var header = new DockPanel
         {
-            Height = 30,
-            Background = new SolidColorBrush(Color.FromArgb(0x22, 0x18, 0x13, 0x20)),
+            Height = 34,
+            Background = new SolidColorBrush(Color.FromArgb(0x22, 0x16, 0x16, 0x13)),
+            Cursor = Cursors.SizeAll,
             LastChildFill = true
         };
         DockPanel.SetDock(topRight, Dock.Right);

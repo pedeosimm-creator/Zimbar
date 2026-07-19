@@ -61,22 +61,17 @@ public static class Config
 /// </summary>
 public static class ThemeManager
 {
-    // Cada tema muda o accent e o tom do "papel"; a tinta é sempre preta. (DESIGN.md §2)
-    public record Palette(string Accent, string AccentDeep, string Paper,
-                          string Ink = "#111111",
-                          string TextDim = "#4A4458",
-                          string TextDone = "#8B8598",
-                          string Dificil = "#FF6B6B",
-                          string Media = "#FFDB58",
-                          string Facil = "#90EE90");
+    // Linguagem do Acervo: fundo cream fixo, tinta quente, cards paper; o tema só
+    // troca o ACCENT (um dos 6 vibrantes do Acervo). (DESIGN.md)
+    public record Palette(string Accent, string AccentSoft);
 
     public static readonly System.Collections.Generic.Dictionary<string, Palette> Themes = new()
     {
-        ["Roxo"] = new("#A78BFA", "#7C3AED", "#E6DBFF"),
-        ["Azul"] = new("#6EC1FF", "#1D9BF0", "#CFE8FF"),
-        ["Verde"] = new("#6EE7A0", "#16A34A", "#D3F5DC"),
-        ["Rosa"] = new("#FF8FC2", "#EC4899", "#FFD9EC"),
-        ["Âmbar"] = new("#FFD34D", "#F59E0B", "#FFEDB8"),
+        ["Roxo"] = new("#7b61ff", "#d9d1ff"),   // grape
+        ["Azul"] = new("#4d7cff", "#cdd9ff"),   // sky
+        ["Verde"] = new("#3ec46d", "#c4eed4"),  // leaf
+        ["Rosa"] = new("#ff5c8a", "#ffd0de"),   // rose
+        ["Âmbar"] = new("#ffc940", "#ffe9ac"),  // sun
     };
 
     public static void Apply(string name)
@@ -91,73 +86,83 @@ public static class ThemeManager
         Config.Theme = name;
 
         var r = Application.Current.Resources;
-        string inkHex = p.Ink;
+        // Tokens fixos do Acervo
+        const string inkHex = "#161613";     // tinta quente
+        const string cream = "#f6f2e7";      // fundo da janela
+        const string paper = "#fffdf7";      // superfície de cards
+        const string mist = "#e8e1cf";       // hover neutro
+        const string dim = "#6f6a5c";        // texto secundário (~ink/60)
+        const string done = "#a39b85";       // texto apagado (placeholder do Acervo)
 
         r["Accent"] = Brush(p.Accent);
-        r["AccentSoft"] = Brush(p.AccentDeep);
+        r["AccentSoft"] = Brush(p.AccentSoft);
         r["AccentColor"] = Col(p.Accent);
         r["GlowColor"] = Col(inkHex);
         r["Zimbar.Brush.Accent"] = Brush(p.Accent);
-        r["Zimbar.Brush.AccentSoft"] = Brush(p.AccentDeep);
+        r["Zimbar.Brush.AccentSoft"] = Brush(p.AccentSoft);
         r["Zimbar.Color.Accent"] = Col(p.Accent);
         r["Zimbar.Color.Glow"] = Col(inkHex);
 
-        // Tinta: texto sobre papel e sobre blocos de accent — sempre quase-preta.
         r["Ink"] = Brush(inkHex);
         r["TextInk"] = Brush(inkHex);
         r["Zimbar.Brush.Text.OnAccent"] = Brush(inkHex);
         r["TextMain"] = Brush(inkHex);
-        r["TextDim"] = Brush(p.TextDim);
-        r["TextDone"] = Brush(p.TextDone);
+        r["TextDim"] = Brush(dim);
+        r["TextDone"] = Brush(done);
         r["Zimbar.Brush.Text.Primary"] = Brush(inkHex);
-        r["Zimbar.Brush.Text.Secondary"] = Brush(p.TextDim);
-        r["Zimbar.Brush.Text.Muted"] = Brush(p.TextDone);
+        r["Zimbar.Brush.Text.Secondary"] = Brush(dim);
+        r["Zimbar.Brush.Text.Muted"] = Brush(done);
 
-        // Superfícies: branco puro sobre papel colorido
-        r["Surface"] = Brush("#FFFFFF");
-        r["SurfaceHi"] = Brush("#FFFFFF");
-        r["ChipBg"] = Brush("#FFFFFF");
-        r["ChipBgHover"] = Brush("#2E" + p.Accent[1..]);
-        r["CardBg"] = Brush(p.Paper);
-        r["Zimbar.Brush.Surface.Glass"] = Brush("#FFFFFF");
-        r["Zimbar.Brush.Surface.GlassStrong"] = Brush("#FFFFFF");
-        r["Zimbar.Brush.Surface.CardFlat"] = Brush(p.Paper);
+        // Superfícies: paper nos cards, cream no fundo, mist no hover neutro
+        r["Surface"] = Brush(paper);
+        r["SurfaceHi"] = Brush(paper);
+        r["ChipBg"] = Brush(paper);
+        r["ChipBgHover"] = Brush(mist);
+        r["Mist"] = Brush(mist);
+        r["Cream"] = Brush(cream);
+        r["CardBg"] = Brush(cream);
+        r["Zimbar.Brush.Surface.Glass"] = Brush(paper);
+        r["Zimbar.Brush.Surface.GlassStrong"] = Brush(paper);
+        r["Zimbar.Brush.Surface.CardFlat"] = Brush(paper);
 
-        // Blocos vibrantes (paleta de alternância do DESIGN.md §2)
-        r["BlockYellow"] = Brush("#FDFD96");
-        r["BlockLime"] = Brush("#90EE90");
-        r["BlockPink"] = Brush("#FFB2EF");
-        r["BlockPurple"] = Brush("#C4A1FF");
-        r["BlockBlue"] = Brush("#87CEEB");
-        r["BlockCoral"] = Brush("#FFA07A");
+        // Paleta vibrante do Acervo (cheia) + soft (fundo de card)
+        r["Sun"] = Brush("#ffc940"); r["SunSoft"] = Brush("#ffe9ac");
+        r["Tang"] = Brush("#ff5f35"); r["TangSoft"] = Brush("#ffd3c4");
+        r["Leaf"] = Brush("#3ec46d"); r["LeafSoft"] = Brush("#c4eed4");
+        r["Sky"] = Brush("#4d7cff"); r["SkySoft"] = Brush("#cdd9ff");
+        r["Grape"] = Brush("#7b61ff"); r["GrapeSoft"] = Brush("#d9d1ff");
+        r["Rose"] = Brush("#ff5c8a"); r["RoseSoft"] = Brush("#ffd0de");
 
-        // Fundo do card principal: papel chapado (nada de gradiente)
-        var bg = Brush(p.Paper);
-        r["CardBgBrush"] = bg;
-        r["Zimbar.Brush.Surface.CardCosmic"] = bg;
+        // Compat: as chaves Block* antigas apontam pros vibrantes do Acervo
+        r["BlockYellow"] = Brush("#ffc940");
+        r["BlockLime"] = Brush("#3ec46d");
+        r["BlockPink"] = Brush("#ff5c8a");
+        r["BlockPurple"] = Brush("#7b61ff");
+        r["BlockBlue"] = Brush("#4d7cff");
+        r["BlockCoral"] = Brush("#ff5f35");
 
-        // Borda: tinta sólida e grossa
+        // Fundo do card principal (a janela) = cream
+        r["CardBgBrush"] = Brush(cream);
+        r["Zimbar.Brush.Surface.CardCosmic"] = Brush(cream);
+
         r["CardBorderBrush"] = Brush(inkHex);
         r["Zimbar.Brush.Border.Card"] = Brush(inkHex);
 
-        // Sombras DURAS (sem blur, deslocadas) — SO pra janela/popups opacos;
-        // dentro de conteudo usar Zui.Block (borda dupla), nunca Effect (DESIGN.md §4)
-        var hard = new DropShadowEffect { BlurRadius = 0, ShadowDepth = 8, Direction = 315, Opacity = 1, Color = Col(inkHex) };
+        // Sombra dura do Acervo: 4px 4px, sem blur — só na janela/popups opacos;
+        // dentro de conteúdo usar Zui.Block (borda dupla), nunca Effect (DESIGN.md)
+        var hard = new DropShadowEffect { BlurRadius = 0, ShadowDepth = 5.6, Direction = 315, Opacity = 1, Color = Col(inkHex) };
         hard.Freeze();
         var none = new DropShadowEffect { BlurRadius = 0, ShadowDepth = 0, Opacity = 0 };
         none.Freeze();
-        r["CardGlow"] = hard;      // card principal: sombra dura grande
-        r["AccentGlow"] = none;    // sem glow em texto/ícone
+        r["CardGlow"] = hard;
+        r["AccentGlow"] = none;
         r["Zimbar.Effect.Glow.Card"] = hard;
         r["Zimbar.Effect.Glow.Accent"] = none;
 
-        // Plano de hoje — três energias, chapadas
-        r["Dificil"] = Brush(p.Dificil);
-        r["DificilBg"] = Brush("#2E" + p.Dificil[1..]);
-        r["Media"] = Brush(p.Media);
-        r["MediaBg"] = Brush("#2E" + p.Media[1..]);
-        r["Facil"] = Brush(p.Facil);
-        r["FacilBg"] = Brush("#2E" + p.Facil[1..]);
+        // Plano de hoje — energias do Acervo (tang/sun/leaf) + soft de fundo
+        r["Dificil"] = Brush("#ff5f35"); r["DificilBg"] = Brush("#ffd3c4");
+        r["Media"] = Brush("#ffc940"); r["MediaBg"] = Brush("#ffe9ac");
+        r["Facil"] = Brush("#3ec46d"); r["FacilBg"] = Brush("#c4eed4");
     }
 
     private static SolidColorBrush Brush(string hex)

@@ -106,13 +106,13 @@
                                      Background="Transparent" BorderThickness="0"
                                      Foreground="{DynamicResource TextMain}"
                                      CaretBrush="{DynamicResource Accent}"
-                                     FontSize="17.5" FontFamily="{DynamicResource Display}"
+                                     FontSize="16" FontWeight="Medium" FontFamily="{DynamicResource Body}"
                                      VerticalAlignment="Center"
                                      TextChanged="Input_TextChanged"
                                      KeyDown="Input_KeyDown"/>
                             <TextBlock x:Name="Hint"
                                        Text="esvazia a cabeça — Enter joga na captura, você decide depois…"
-                                       FontSize="17.5" FontFamily="{DynamicResource Display}"
+                                       FontSize="16" FontWeight="Medium" FontFamily="{DynamicResource Body}"
                                        Foreground="{DynamicResource TextDim}"
                                        VerticalAlignment="Center"
                                        IsHitTestVisible="False"/>
@@ -217,7 +217,7 @@
                     <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
                             BorderThickness="2.5" CornerRadius="12" Padding="6">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="0" ShadowDepth="6" Direction="315" Opacity="1" Color="#181320"/>
+                            <DropShadowEffect BlurRadius="0" ShadowDepth="6" Direction="315" Opacity="1" Color="#161613"/>
                         </Border.Effect>
                         <StackPanel>
                             <Button Style="{StaticResource GhostItem}" Click="PomoStart_Click" Tag="25,5"  Content="🍅  Foco 25 + 5 de pausa"/>
@@ -232,7 +232,7 @@
                     <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
                             BorderThickness="2.5" CornerRadius="12" Padding="14" Width="290">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="0" ShadowDepth="6" Direction="315" Opacity="1" Color="#181320"/>
+                            <DropShadowEffect BlurRadius="0" ShadowDepth="6" Direction="315" Opacity="1" Color="#161613"/>
                         </Border.Effect>
                         <StackPanel x:Name="DateCalHost"/>
                     </Border>
@@ -244,7 +244,7 @@
                     <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
                             BorderThickness="2.5" CornerRadius="12" Padding="8">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="0" ShadowDepth="6" Direction="315" Opacity="1" Color="#181320"/>
+                            <DropShadowEffect BlurRadius="0" ShadowDepth="6" Direction="315" Opacity="1" Color="#161613"/>
                         </Border.Effect>
                         <StackPanel x:Name="ThemeList"/>
                     </Border>
@@ -257,7 +257,7 @@
                     <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorderBrush}"
                             BorderThickness="2.5" CornerRadius="14" Padding="22,18,22,18" Width="430">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="0" ShadowDepth="7" Direction="315" Opacity="1" Color="#181320"/>
+                            <DropShadowEffect BlurRadius="0" ShadowDepth="7" Direction="315" Opacity="1" Color="#161613"/>
                         </Border.Effect>
                         <StackPanel>
                             <DockPanel Margin="0,0,0,14">

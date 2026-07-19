@@ -724,10 +724,9 @@ public partial class BarWindow : Window
                 Columns = ResponsiveColumns(minItemWidth: 390, maxColumns: 3),
                 Margin = new Thickness(0, 0, 0, 12)
             };
-            int capIdx = 0;
             foreach (var node in inbox)
                 if (node is JsonObject item)
-                    capWrap.Children.Add(CapturaItem(item, compact: true, tintIndex: capIdx++));
+                    capWrap.Children.Add(CapturaItem(item, compact: true));
             PainelPanel.Children.Add(capWrap);
         }
 
@@ -925,7 +924,7 @@ public partial class BarWindow : Window
 
     // -- Captura: item da inbox com destinos (vive no Painel) ------
 
-    private Border CapturaItem(JsonObject item, bool compact = false, int tintIndex = 0)
+    private Border CapturaItem(JsonObject item, bool compact = false)
     {
         string id = item["id"]?.GetValue<string>() ?? "";
         string text = item["text"]?.GetValue<string>() ?? "";
@@ -986,15 +985,15 @@ public partial class BarWindow : Window
         });
         sp.Children.Add(acts);
 
-        // Bloco neobrutal com cor alternada
+        // Todas as capturas na MESMA cor (sun-soft), estilo Acervo
         return new Border
         {
-            Background = Zui.Tint(this, tintIndex),
+            Background = (Brush)FindResource("SunSoft"),
             BorderBrush = (Brush)FindResource("Ink"),
             BorderThickness = new Thickness(2),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(11, 8, 10, 7),
-            Margin = compact ? new Thickness(0, 0, 8, 8) : new Thickness(0, 0, 0, 7),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(12, 9, 11, 9),
+            Margin = compact ? new Thickness(0, 0, 8, 8) : new Thickness(0, 0, 0, 8),
             Child = sp
         };
     }
@@ -1735,12 +1734,12 @@ public partial class BarWindow : Window
         var dayBtn = new Button
         {
             Style = (Style)FindResource("Chip"),
-            Content = "data  " + DayLabel(_agendaAddDate) + "  v",
+            Content = "\U0001F4C5  " + DayLabel(_agendaAddDate) + "  ▾",
             FontSize = 11.5, Padding = new Thickness(11, 7, 11, 7),
             Margin = new Thickness(0, 0, 8, 0)
         };
         dayBtn.Click += (_, _) => OpenDatePicker(dayBtn, _agendaAddDate,
-            d => { _agendaAddDate = d; dayBtn.Content = "data  " + DayLabel(d) + "  v"; });
+            d => { _agendaAddDate = d; dayBtn.Content = "\U0001F4C5  " + DayLabel(d) + "  ▾"; });
         DockPanel.SetDock(dayBtn, Dock.Left);
         row.Children.Add(dayBtn);
 
@@ -1905,60 +1904,61 @@ public partial class BarWindow : Window
             var evs = porDia.TryGetValue(d.ToString("yyyy-MM-dd"), out var l) ? l : new List<JsonObject>();
             var recurs = RecurDoDia(d).ToList();
 
+            bool temEvento = evs.Count + recurs.Count > 0;
             var cell = new StackPanel();
             cell.Children.Add(new TextBlock
             {
                 Text = dia.ToString(), FontSize = 12,
-                FontWeight = ehHoje ? FontWeights.Bold : FontWeights.Normal,
-                Foreground = (Brush)FindResource(ehHoje ? "Accent" : "TextDim"),
+                FontWeight = FontWeights.Bold,
+                Foreground = (Brush)FindResource(ehHoje ? "TextInk" : "TextDim"),
                 Margin = new Thickness(1, 0, 0, 3)
             });
 
             int mostrados = 0;
-            foreach (var t in evs)
+            // Eventos = chip SKY com borda de tinta; recorrentes = chip SUN
+            void EventChip(string texto, string bgKey, JsonObject? tarefa)
             {
-                if (mostrados >= 3) break;
-                var tt = t;
                 var chip = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(0x26, 0x8F, 0xD0, 0xFF)),
-                    CornerRadius = new CornerRadius(4), Padding = new Thickness(4, 1, 4, 1),
-                    Margin = new Thickness(0, 0, 0, 2), Cursor = Cursors.Hand,
+                    Background = (Brush)FindResource(bgKey),
+                    BorderBrush = (Brush)FindResource("Ink"), BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(5), Padding = new Thickness(4, 1, 4, 1),
+                    Margin = new Thickness(0, 0, 0, 3), Cursor = tarefa is null ? Cursors.Arrow : Cursors.Hand,
                     Child = new TextBlock
                     {
-                        Text = t["titulo"]?.GetValue<string>() ?? "", FontSize = 9.5,
-                        Foreground = (Brush)FindResource("TextMain"),
+                        Text = texto, FontSize = 9.5, FontWeight = FontWeights.Medium,
+                        Foreground = (Brush)FindResource("Ink"),
                         TextTrimming = TextTrimming.CharacterEllipsis
                     }
                 };
-                chip.MouseLeftButtonUp += (_, ev) => { OpenKbEdit(tt); ev.Handled = true; };
+                if (tarefa is not null) chip.MouseLeftButtonUp += (_, ev) => { OpenKbEdit(tarefa); ev.Handled = true; };
                 cell.Children.Add(chip);
+            }
+            foreach (var t in evs)
+            {
+                if (mostrados >= 3) break;
+                EventChip(t["titulo"]?.GetValue<string>() ?? "", "SkySoft", t);
                 mostrados++;
             }
             foreach (var texto in recurs)
             {
                 if (mostrados >= 3) break;
-                var tb = new TextBlock
-                {
-                    FontSize = 9.5, TextTrimming = TextTrimming.CharacterEllipsis,
-                    Margin = new Thickness(1, 0, 0, 2)
-                };
-                tb.Inlines.Add(new Run("- ") { Foreground = (Brush)FindResource("BlockBlue") });
-                tb.Inlines.Add(new Run(texto) { Foreground = (Brush)FindResource("TextDim") });
-                cell.Children.Add(tb);
+                EventChip(texto, "SunSoft", null);
                 mostrados++;
             }
             int total = evs.Count + recurs.Count;
             if (total > mostrados)
-                cell.Children.Add(new TextBlock { Text = $"+{total - mostrados}", FontSize = 9, Foreground = (Brush)FindResource("Accent"), Margin = new Thickness(1, 0, 0, 0) });
+                cell.Children.Add(new TextBlock { Text = $"+{total - mostrados}", FontSize = 9, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("TextDim"), Margin = new Thickness(1, 0, 0, 0) });
 
+            var ink = (Brush)FindResource("Ink");
             var cellBorder = new Border
             {
-                MinHeight = 66, Margin = new Thickness(1.5),
-                CornerRadius = new CornerRadius(9), Padding = new Thickness(5, 4, 5, 4),
-                Background = ehHoje ? (Brush)FindResource("Surface") : new SolidColorBrush(Color.FromArgb(0x08, 0xFF, 0xFF, 0xFF)),
-                BorderThickness = new Thickness(1),
-                BorderBrush = ehHoje ? (Brush)FindResource("AccentSoft") : Brushes.Transparent,
+                MinHeight = 66, Margin = new Thickness(2),
+                CornerRadius = new CornerRadius(9), Padding = new Thickness(6, 5, 6, 5),
+                Background = ehHoje ? (Brush)FindResource("AccentSoft")
+                    : temEvento ? (Brush)FindResource("Surface") : (Brush)FindResource("Cream"),
+                BorderThickness = new Thickness(2),
+                BorderBrush = ink,
                 Cursor = Cursors.Hand, Child = cell,
                 ToolTip = "clica pra marcar evento neste dia"
             };
@@ -2149,7 +2149,7 @@ public partial class BarWindow : Window
         catch { ShowStatus("nao sincronizou o card", error: true); await LoadKanban(); }
     }
 
-    private Border KanbanCard(JsonObject t)
+    private FrameworkElement KanbanCard(JsonObject t)
     {
         string titulo = t["titulo"]?.GetValue<string>() ?? "";
         string? prazo = t["prazo"]?.GetValue<string>();
@@ -2176,39 +2176,36 @@ public partial class BarWindow : Window
             });
 
         var body = new Grid();
-        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) });
+        body.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        // Bolinha de status colorida com borda de tinta (estilo Acervo)
         body.Children.Add(new Border
         {
+            Width = 12, Height = 12, CornerRadius = new CornerRadius(6),
             Background = accent,
-            CornerRadius = new CornerRadius(2),
-            Opacity = 0.85
+            BorderBrush = (Brush)FindResource("Ink"), BorderThickness = new Thickness(1.5),
+            VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 0, 0)
         });
         Grid.SetColumn(sp, 1);
         body.Children.Add(sp);
 
+        var ink = (Brush)FindResource("Ink");
         var card = new Border
         {
-            Background = (Brush)FindResource("ChipBg"),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x1C, 0xFF, 0xFF, 0xFF)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(14),
+            Background = (Brush)FindResource("Surface"),
+            BorderBrush = ink,
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(12),
             Padding = new Thickness(10, 9, 10, 9),
-            Margin = new Thickness(0, 0, 0, 8),
+            Margin = new Thickness(0, 0, 3, 3),
             Cursor = Cursors.Hand,
             Child = body,
             ToolTip = "clica: editar - arrasta: mover de coluna"
         };
-        card.MouseEnter += (_, _) =>
-        {
-            card.Background = (Brush)FindResource("SurfaceHi");
-            card.BorderBrush = (Brush)FindResource("AccentSoft");
-        };
-        card.MouseLeave += (_, _) =>
-        {
-            card.Background = (Brush)FindResource("ChipBg");
-            card.BorderBrush = new SolidColorBrush(Color.FromArgb(0x1C, 0xFF, 0xFF, 0xFF));
-        };
+        var lift = new TranslateTransform(0, 0);
+        card.RenderTransform = lift;
+        card.MouseEnter += (_, _) => { lift.X = -2; lift.Y = -2; };
+        card.MouseLeave += (_, _) => { lift.X = 0; lift.Y = 0; };
 
         card.PreviewMouseLeftButtonDown += (_, e) =>
         {
@@ -2252,7 +2249,15 @@ public partial class BarWindow : Window
         edit.Click += (_, _) => OpenKbEdit(t);
         menu.Items.Add(edit);
         card.ContextMenu = menu;
-        return card;
+
+        // Sombra dura atrás (estilo Acervo)
+        var sombra = new Border { Background = ink, CornerRadius = new CornerRadius(12), Margin = new Thickness(3, 3, 0, 0) };
+        return new Grid
+        {
+            Margin = new Thickness(0, 0, 0, 9),
+            SnapsToDevicePixels = true,
+            Children = { sombra, card }
+        };
     }
 
     private static void AnimateDragCard(Border card, bool dragging)
@@ -2292,7 +2297,7 @@ public partial class BarWindow : Window
 
     private void UpdateKbDateBtn()
     {
-        KbEdDateBtn.Content = "data  " + (_kbEditDate is DateTime d ? d.ToString("dd/MM/yyyy") : "sem data");
+        KbEdDateBtn.Content = "\U0001F4C5  " + (_kbEditDate is DateTime d ? d.ToString("dd/MM/yyyy") : "sem data") + "  ▾";
         KbEdDateClear.Visibility = _kbEditDate is null ? Visibility.Collapsed : Visibility.Visible;
     }
 
@@ -2574,27 +2579,52 @@ public partial class BarWindow : Window
     }
 
     /// <summary>Favicon do site (via Google), com bolinha de fallback embaixo.</summary>
+    private static readonly string[] FaviconTints = { "SunSoft", "LeafSoft", "GrapeSoft", "RoseSoft", "SkySoft", "TangSoft" };
+
+    /// <summary>Badge do link (estilo Acervo): quadradinho com borda de tinta. Mostra a
+    /// LETRA do site sempre; o favicon (DuckDuckGo) entra por cima quando carrega.</summary>
     private FrameworkElement Favicon(string url, bool ehLink)
     {
-        var host = new Grid { Width = 16, Height = 16, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center };
-        host.Children.Add(new Border
+        string dom = "";
+        try { dom = new Uri(EnsureUrl(url)).Host.Replace("www.", ""); } catch { }
+        string letra = dom.Length > 0 ? dom[0].ToString().ToUpperInvariant() : "•";
+        // Cor do badge estável por domínio (não pisca entre renders)
+        int h = 0; foreach (char c in dom) h = (h * 31 + c) & 0x7fffffff;
+        var tint = (Brush)FindResource(ehLink ? FaviconTints[h % FaviconTints.Length] : "Mist");
+
+        var inner = new Grid { Width = 22, Height = 22 };
+        inner.Children.Add(new TextBlock
         {
-            Width = 7, Height = 7, CornerRadius = new CornerRadius(3.5),
-            Background = (Brush)FindResource(ehLink ? "AccentSoft" : "TextDone"),
+            Text = letra, FontSize = 12, FontWeight = FontWeights.Bold,
+            FontFamily = (FontFamily)FindResource("Display"),
+            Foreground = (Brush)FindResource("Ink"),
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
         });
-        if (ehLink)
+        if (ehLink && dom.Length > 0)
             try
             {
-                var dom = new Uri(EnsureUrl(url)).Host;
+                var img = new Image { Width = 16, Height = 16, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
                 var bmp = new System.Windows.Media.Imaging.BitmapImage();
                 bmp.BeginInit();
-                bmp.UriSource = new Uri("https://www.google.com/s2/favicons?domain=" + Uri.EscapeDataString(dom) + "&sz=32");
+                bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                bmp.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreColorProfile;
+                bmp.UriSource = new Uri("https://icons.duckduckgo.com/ip3/" + Uri.EscapeDataString(dom) + ".ico");
+                bmp.DownloadFailed += (_, _) => inner.Children.Remove(img);   // falhou: fica a letra
                 bmp.EndInit();
-                host.Children.Add(new Image { Width = 16, Height = 16, Source = bmp });
+                img.Source = bmp;
+                inner.Children.Add(img);
             }
             catch { }
-        return host;
+
+        return new Border
+        {
+            Width = 26, Height = 26, Margin = new Thickness(0, 0, 9, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Background = tint,
+            BorderBrush = (Brush)FindResource("Ink"), BorderThickness = new Thickness(1.5),
+            CornerRadius = new CornerRadius(7),
+            Child = inner
+        };
     }
 
     /// <summary>Linha de link: favicon + nome, clique abre. Acoes aparecem no hover.</summary>

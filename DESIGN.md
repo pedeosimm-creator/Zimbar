@@ -1,94 +1,72 @@
-# ZIMBAR DESIGN SYSTEM — NEOBRUTALISMO v1
+# ZIMBAR DESIGN SYSTEM — baseado no ACERVO
 
-> Guideline oficial do visual do Zimbar. Toda UI nova segue ESTE documento.
-> Código: os tokens viram resources no `App.xaml`/`Theme.cs` e helpers em `DesignSystem.cs` (`Zui.*`).
+> Guideline oficial do visual do Zimbar. Derivado do **Acervo** (acervozim.netlify.app,
+> fonte em `D:\acervo`), que é a referência de neobrutalismo que o Pedro validou.
+> Toda UI nova segue ESTE documento.
 
 ---
 
-## 1. Princípios
+## 1. Fontes (o mais importante)
 
-1. **Traço preto em tudo.** Todo bloco, botão, campo e card tem contorno de tinta (`Ink`) de 2–3px. Nada "flutua" sem borda.
-2. **Sombra dura, nunca blur.** Drop shadow preta, opacidade 100%, deslocada em X **e** Y (3–6px), blur **zero**. No WPF isso é feito com **borda dupla** (um bloco de tinta atrás do bloco de cor), nunca com `DropShadowEffect` em container com conteúdo (causa fantasma de texto).
-3. **Cor é estrutura.** Seções e cards se diferenciam por COR CHAPADA, não por tons de cinza. Cores **alternam** (nunca dois blocos vizinhos da mesma cor).
-4. **Sem gradiente. Sem glow. Sem vidro.** Superfícies 100% opacas.
-5. **Tipografia grande e grotesca.** Títulos em display pesada; rótulos em mono maiúscula; o resto em texto normal. Contraste de escala é decoração.
-6. **Formas cruas.** Cantos levemente arredondados (4–12px), nunca pílula (999px), nunca reto demais (0px só em janelas sticky).
-7. **Interação física.** Hover realça; clique **afunda** (o bloco desce sobre a própria sombra).
+| Papel | Fonte | Uso |
+|---|---|---|
+| **Display** | **Archivo Black** | hero, títulos de card/seção, `+ nota`, marca-texto. Peso brutal, impacto. |
+| **Corpo** | **Space Grotesk** | tudo o mais: texto, labels, chips, inputs. Pesos Medium/SemiBold/Bold. |
 
-## 2. Cor
+- Embutidas em `assets/fonts/*.ttf`, referenciadas por `pack://application:,,,/assets/fonts/#Archivo Black` etc.
+- NÃO usar mono (Cascadia). A chave `Mono` aponta pra Space Grotesk por compat.
+- Input de digitação usa Space Grotesk (Archivo Black é pesada demais pra digitar).
 
-### Tinta (fixa, todos os temas)
+## 2. Cor (paleta do Acervo)
+
+**Neutros (fixos):**
 | Token | Hex | Uso |
 |---|---|---|
-| `Ink` | `#111111` | bordas, sombras duras, texto principal, tab ativa |
-| `TextDim` | `#4A4458` | texto secundário |
-| `TextDone` | `#8B8598` | texto apagado/meta |
+| `Ink` | `#161613` | tinta quente: bordas, sombras, texto, tab ativa |
+| `Cream` / `CardBg` | `#f6f2e7` | fundo da janela |
+| `Surface` (paper) | `#fffdf7` | superfície de cards |
+| `Mist` | `#e8e1cf` | hover neutro |
+| `TextDim` | `#6f6a5c` | texto secundário |
+| `TextDone` | `#a39b85` | texto apagado / placeholder |
 
-### Papel (fundo da janela — muda por tema)
-| Tema | Paper | Accent | AccentDeep |
-|---|---|---|---|
-| Roxo | `#E6DBFF` | `#A78BFA` | `#7C3AED` |
-| Azul | `#CFE8FF` | `#6EC1FF` | `#1D9BF0` |
-| Verde | `#D3F5DC` | `#6EE7A0` | `#16A34A` |
-| Rosa | `#FFD9EC` | `#FF8FC2` | `#EC4899` |
-| Âmbar | `#FFEDB8` | `#FFD34D` | `#F59E0B` |
+**Vibrantes (cheio + soft):** sun `#ffc940`/`#ffe9ac` · tang `#ff5f35`/`#ffd3c4` · leaf `#3ec46d`/`#c4eed4` · sky `#4d7cff`/`#cdd9ff` · grape `#7b61ff`/`#d9d1ff` · rose `#ff5c8a`/`#ffd0de`.
 
-### Blocos vibrantes (paleta de alternância — fixa)
-`#FDFD96` amarelo · `#90EE90` lima · `#FFB2EF` rosa · `#C4A1FF` roxo · `#87CEEB` azul · `#FFA07A` coral
+- **Card colorido** usa a versão SOFT de fundo; **badge de ícone** usa a versão CHEIA.
+- Tema (Roxo/Azul/Verde/Rosa/Âmbar) só troca o **Accent** (um dos vibrantes). Cream/paper/ink são fixos.
+- Semáforo do Hoje: difícil = tang, média = sun, fácil = leaf (fundo soft).
 
-- Superfície de conteúdo neutra: **branco** `#FFFFFF`.
-- Semáforo do plano: difícil `#FF6B6B` · média `#FFDB58` · fácil `#90EE90`.
-- Regra de alternância: blocos irmãos ciclam a paleta na ordem acima (`Zui.Tint(i)`).
+## 3. Forma e sombra
 
-## 3. Tipografia
+- **Sombra dura do Acervo: `4px 4px 0` de tinta, sem blur.** No WPF, feita por **borda dupla** (`Zui.Block`: bloco de tinta atrás + bloco de cor na frente deslocado) — NUNCA `DropShadowEffect` em container de conteúdo (fantasma de texto). Effect só na janela/popups opacos.
+- Cantos: card 14–16px, botão 11px, chip/tab 10px, input 10px, badge 7–9px.
+- Borda: **2px `Ink`** em tudo (card, botão, chip, input, badge). Nada de borda fina cinza.
 
-| Papel | Fonte | Peso/Caixa | Tamanho |
-|---|---|---|---|
-| Display (hero, títulos de card) | **Bahnschrift** | Bold | 15–30px |
-| Corpo | Segoe UI Variable Text / Segoe UI | Regular/SemiBold | 12–14px |
-| Rótulo HUD / tag / data | **Cascadia Mono** | Bold, MAIÚSCULA | 9–11px |
+## 4. Componentes (`.nb-*` do Acervo → WPF)
 
-- Hero do Painel: Bahnschrift Bold ~30px, cor `Ink`, com **bloco de accent atrás de uma palavra** (marca-texto).
-- Rótulos de seção são **TAGS**: bloquinho de tinta (fundo `Ink`, texto branco mono) ou bloco de cor com borda.
+- **Card / bloco** (`Zui.Block`): paper ou soft-tint, borda 2px ink, radius 14, sombra 4px. Clicável → **hover levanta** (sobe/esquerda 2px, sombra cresce).
+- **Badge de ícone** (`Zui.IconBadge`): quadrado cor cheia, borda ink, radius 9, glyph/letra no meio.
+- **Botão primário** (`PrimaryBtn`): bloco accent, borda ink, sombra dura; **press AFUNDA** (desce sobre a sombra).
+- **Chip** (`Chip`): paper, borda 2px ink, radius 10, weight bold; hover mist; press accent.
+- **Tab** (`NavBtn`): repouso texto dim; hover bloco mist; **ativa = bloco de TINTA com texto paper** (setado no `SwitchView`).
+- **Input** (`InlineAdd`): paper, borda 2px ink, radius 10; foco borda vira accent.
+- **Badge de data/evento**: soft-tint (sky = evento, sun = recorrente) com borda ink 1px.
 
-## 4. Forma e sombra
+## 5. Layout por tela
 
-| Elemento | Radius | Borda | Sombra (offset) |
-|---|---|---|---|
-| Janela principal | 14 | 3px Ink | 8px |
-| Card / bloco | 10 | 2px Ink | 4px |
-| Botão primário | 9 | 2px Ink | 3px |
-| Chip / tab | 8 | 1.5–2px Ink | 2px (só primário tem) |
-| Campo de texto | 8 | 2px Ink | — (foco: borda vira Accent) |
-| Sticky note | 0 | 2.5px Ink | — |
+- **Painel**: hero Archivo Black com uma palavra em marca-texto (bloco de accent + borda ink). Captura = cards TODOS na MESMA cor (sun-soft). Hoje/Próximos = blocos soft.
+- **Kanban**: colunas = blocos com header em tag de accent; itens = **cards** paper (bolinha de status + título + data), nunca linhas soltas.
+- **Agenda**: cada dia = card com borda ink (contraste real entre dias); hoje = fundo accent-soft; eventos = chips coloridos (sky/sun).
+- **Links**: pastas = cards soft alternados; cada link = **badge** (favicon do DuckDuckGo, com LETRA de fallback — todo link tem badge) + nome, 1 clique abre.
+- **ZimNotes**: biblioteca (cards na cor da nota) + sticky. Header com grip `⠿` + cursor SizeAll = fácil de arrastar.
 
-**Implementação da sombra dura (obrigatória):** `Zui.Block(...)` = Grid com 2 Borders — o de trás é `Ink` deslocado (margin `o,o,0,0`), o da frente é o bloco (margin `0,0,o,o`). Zero `DropShadowEffect` em containers de conteúdo.
+## 6. NUNCA
 
-## 5. Componentes
+- Gradiente, glow, blur, transparência de vidro, tema roxo-cósmico (aposentado).
+- Sombra cinza/suave; `DropShadowEffect` em container com texto.
+- Borda fina cinza; pílula 999px em card; caixa de texto onde um botão-revelar resolve.
+- Duas fileiras de abas; aba escondida por falta de espaço (cai pra ícone).
+- Cores alternadas onde deveria ser uniforme (ex: captura = 1 cor só).
 
-- **Bloco/Card** (`Zui.Block`): fundo branco ou cor da paleta, borda 2px, sombra 4px. Hover (se clicável): borda vira `AccentDeep`.
-- **Botão primário** (`PrimaryBtn`): bloco accent, texto Ink bold, sombra 3px; **press = afunda** (bloco desce sobre a sombra, sombra some).
-- **Chip** (`Chip`): bloco branco, borda 2px, sem sombra; hover pinta de accent claro.
-- **Tab de navegação** (`NavBtn`): repouso = texto tinta sem fundo; hover = bloco branco com borda; **ativa = bloco de TINTA com texto branco** (o "selecionado preto" do neobrutalismo).
-- **Tag de seção** (`Zui.Tag`): mono maiúscula branca em bloquinho `Ink` radius 4 (ou variante colorida com borda).
-- **Campo** (`InlineAdd`): branco, borda 2px `Ink` @40%, foco = borda `AccentDeep` 2px.
-- **Badge de data** (EventoRow): bloquinho de cor com borda 1.5px Ink, texto mono Ink.
-- **Barra de progresso**: trilho branco borda 2px Ink, preenchimento accent chapado, altura ≥ 10px.
-- **Scrollbar**: thumb `Ink` @35%, hover `Ink`, 8px.
-- **Popup**: papel do tema, borda 2.5px Ink, sombra dura 6px (aqui pode `DropShadowEffect` porque o fundo é opaco).
+## 7. Tokens (código)
 
-## 6. NUNCA fazer
-
-- ❌ Gradiente, glow, blur, transparência em superfície.
-- ❌ Sombra cinza ou com opacidade < 100%.
-- ❌ `DropShadowEffect` num container com texto e fundo translúcido (fantasma).
-- ❌ Dois blocos vizinhos da mesma cor.
-- ❌ Borda fina cinza (#EEE) — borda é TINTA ou não existe.
-- ❌ Pílula 999px; caixa de texto visível quando um botão-revelar resolve.
-- ❌ Duas fileiras de abas; aba escondida por falta de espaço (cai pra ícone).
-
-## 7. Mapa de tokens (código)
-
-- `Ink`, `TextMain(=Ink)`, `TextDim`, `TextDone`, `Accent`, `AccentSoft(=AccentDeep)`, `CardBg/CardBgBrush(=Paper)`, `Surface(=branco)`, `BlockYellow/Lime/Pink/Purple/Blue/Coral`, `Dificil/Media/Facil(+Bg)`.
-- Fontes: `Display(=Bahnschrift)`, `Body(=Segoe UI Variable)`, `Mono(=Cascadia Mono)`.
-- Helpers: `Zui.Block`, `Zui.Tag`, `Zui.Tint(i)`, `Zui.HudLabel`, `Zui.Button(kind)`, `Zui.RevealAdd`.
+`Ink`, `Cream`, `Surface`, `Mist`, `TextMain(=Ink)`, `TextDim`, `TextDone`, `Accent`, `AccentSoft`, `Sun/Tang/Leaf/Sky/Grape/Rose` (+`*Soft`), `Dificil/Media/Facil(+Bg)`. Fontes `Display(=Archivo Black)`, `Body(=Space Grotesk)`. Helpers: `Zui.Block`, `Zui.IconBadge`, `Zui.Tag`, `Zui.Tint(i)`/`TintFull(i)`, `Zui.RevealAdd`.
