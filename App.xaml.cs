@@ -100,12 +100,14 @@ public partial class App : Application
         {
             g.SmoothingMode = Drawing.Drawing2D.SmoothingMode.AntiAlias;
             g.TextRenderingHint = Drawing.Text.TextRenderingHint.AntiAlias;
-            using var bg = new Drawing.SolidBrush(Drawing.Color.FromArgb(30, 20, 60));
-            using var path = new Drawing.Drawing2D.GraphicsPath();
-            path.AddEllipse(0, 0, 31, 31);
-            g.FillPath(bg, path);
-            using var font = new Drawing.Font("Segoe UI", 17, Drawing.FontStyle.Bold, Drawing.GraphicsUnit.Pixel);
-            using var fg = new Drawing.SolidBrush(Drawing.Color.FromArgb(201, 166, 255));
+            // Fallback na pegada Acervo: azulejo amarelo, borda e Z de tinta
+            using var bg = new Drawing.SolidBrush(Drawing.Color.FromArgb(0xFF, 0xC9, 0x40));
+            using var ink = new Drawing.SolidBrush(Drawing.Color.FromArgb(0x16, 0x16, 0x13));
+            using var pen = new Drawing.Pen(Drawing.Color.FromArgb(0x16, 0x16, 0x13), 2.5f);
+            g.FillRectangle(bg, 2, 2, 27, 27);
+            g.DrawRectangle(pen, 2, 2, 27, 27);
+            using var font = new Drawing.Font("Segoe UI", 18, Drawing.FontStyle.Bold, Drawing.GraphicsUnit.Pixel);
+            using var fg = ink;
             var fmt = new Drawing.StringFormat
             {
                 Alignment = Drawing.StringAlignment.Center,
