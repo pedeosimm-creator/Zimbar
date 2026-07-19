@@ -129,6 +129,7 @@
                     <!-- Linha ÚNICA de abas + player + funções -->
                     <DockPanel x:Name="NavDock" Margin="0,11,0,0" Background="Transparent">
                         <StackPanel x:Name="ActionItems" DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Style="{StaticResource NavBtn}" Click="Apanhador_Click" Content="⚡" FontSize="16" ToolTip="Apanhador — captura pro Acervo"/>
                             <Button x:Name="NavNotas" Style="{StaticResource NavBtn}" Click="Notas_Click" Content="✎" FontSize="16" ToolTip="ZimNotes"/>
                             <Button Style="{StaticResource NavBtn}" Click="Pomo_Click" Content="◔" FontSize="16" ToolTip="Pomodoro flutuante"/>
                             <Button Style="{StaticResource NavBtn}" Click="Theme_Click" Content="◑" FontSize="16" ToolTip="Cores" Margin="0"/>
@@ -141,6 +142,7 @@
                             <Button x:Name="NavLinks"  Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Links"  Content="⌘ Links"/>
                             <Button x:Name="NavListas" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Listas" Content="☰ Listas"/>
                             <Button x:Name="NavNews"   Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="News"   Content="✷ Notícias"/>
+                            <Button x:Name="NavContas" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Contas" Content="$ Contas"/>
                             <Button x:Name="NavEmail"  Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="Email"  Content="✉ Email"/>
                         </StackPanel>
                     </DockPanel>
@@ -177,6 +179,9 @@
                         </ScrollViewer>
                         <ScrollViewer x:Name="NewsView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
                             <StackPanel x:Name="NewsPanel" Margin="0,6,8,4"/>
+                        </ScrollViewer>
+                        <ScrollViewer x:Name="ContasView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                            <StackPanel x:Name="ContasPanel" Margin="0,6,8,4"/>
                         </ScrollViewer>
                         <ScrollViewer x:Name="EmailView" VerticalScrollBarVisibility="Auto" Visibility="Collapsed"
                                       CanContentScroll="False" PanningMode="VerticalOnly"

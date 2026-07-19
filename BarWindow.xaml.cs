@@ -194,6 +194,7 @@ public partial class BarWindow : Window
             case "Agenda": _ = LoadAgenda(); break;
             case "Links": _ = LoadLinks(); break;
             case "Listas": _ = LoadListas(); break;
+            case "Contas": _ = LoadContas(); break;
             case "Email": LoadEmail(); break;
         }
     }
@@ -210,7 +211,8 @@ public partial class BarWindow : Window
             string? v = e.Key switch
             {
                 Key.D1 => "Painel", Key.D2 => "Hoje", Key.D3 => "Kanban", Key.D4 => "Agenda",
-                Key.D5 => "Links", Key.D6 => "Listas", Key.D7 => "News", Key.D8 => "Email",
+                Key.D5 => "Links", Key.D6 => "Listas", Key.D7 => "News", Key.D8 => "Contas",
+                Key.D9 => "Email",
                 _ => null
             };
             if (v is not null) { SwitchView(v); e.Handled = true; }
@@ -298,7 +300,7 @@ public partial class BarWindow : Window
             ("Painel", PainelView), ("Hoje", HojeView), ("Kanban", KanbanView),
             ("Agenda", AgendaView),
             ("Links", LinksView), ("Listas", ListasView), ("News", NewsView),
-            ("Email", EmailView),
+            ("Contas", ContasView), ("Email", EmailView),
             ("Busca", BuscaView),
         };
         foreach (var (name, el) in views)
@@ -313,7 +315,7 @@ public partial class BarWindow : Window
         foreach (var (btn, name) in new[]
         {
             (NavPainel, "Painel"), (NavHoje, "Hoje"), (NavKanban, "Kanban"), (NavAgenda, "Agenda"),
-            (NavLinks, "Links"), (NavListas, "Listas"), (NavNews, "News"), (NavEmail, "Email")
+            (NavLinks, "Links"), (NavListas, "Listas"), (NavNews, "News"), (NavContas, "Contas"), (NavEmail, "Email")
         })
         {
             bool on = name == view;
@@ -337,6 +339,7 @@ public partial class BarWindow : Window
             case "Links": _ = LoadLinks(); break;
             case "Listas": _ = LoadListas(); break;
             case "News": _ = LoadNews(); break;
+            case "Contas": _ = LoadContas(); break;
             case "Email": LoadEmail(); break;
             case "Busca": _ = LoadBusca(); break;
         }
@@ -397,7 +400,8 @@ public partial class BarWindow : Window
             (NavLinks, "⌘ Links", "⌘", "05 LNK"),
             (NavListas, "☰ Listas", "☰", "06 LST"),
             (NavNews, "✷ Noticias", "✷", "07 NEW"),
-            (NavEmail, "✉ Email", "✉", "08 EML"),
+            (NavContas, "$ Contas", "$", "08 CTS"),
+            (NavEmail, "✉ Email", "✉", "09 EML"),
         };
 
         foreach (var (btn, longText, compact, orb) in items)
@@ -693,6 +697,11 @@ public partial class BarWindow : Window
             Foreground = (Brush)FindResource("TextDim"), Margin = new Thickness(2, 6, 0, 0)
         });
         PainelPanel.Children.Add(hero);
+
+        // -- Faixa "pode gastar hoje" (do contas.pedro), preenchida async --
+        var contasHost = new ContentControl { Margin = new Thickness(0, 0, 0, 4) };
+        PainelPanel.Children.Add(contasHost);
+        _ = FillContasHome(contasHost);
 
         // -- TOPO: CAPTURA R�PIDA (o principal) --
         var capHead = new DockPanel { Margin = new Thickness(2, 0, 0, 8) };
@@ -2896,6 +2905,169 @@ public partial class BarWindow : Window
         return row;
     }
 
+    // -- CONTAS: painel de meta do contas.pedro (quanto pode gastar hoje) ---
+
+    private Contas.Snapshot? _contasCache;
+
+    /// <summary>Faixa compacta no Painel: "pode gastar hoje R$ X", clica pra abrir a aba Contas.</summary>
+    private async Task FillContasHome(ContentControl host)
+    {
+        var s = _contasCache ?? await Contas.Carregar();
+        _contasCache = s;
+        if (!s.Ok || !s.TemMeta) { host.Content = null; return; }   // silencioso se offline/sem meta
+
+        var row = new DockPanel();
+        var esq = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        esq.Children.Add(new TextBlock { Text = "PODE GASTAR HOJE", FontSize = 10, FontWeight = FontWeights.Bold, FontFamily = (FontFamily)FindResource("Mono"), Foreground = (Brush)FindResource("Ink"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) });
+        esq.Children.Add(new TextBlock { Text = Contas.Fmt(s.DispHoje), FontSize = 22, FontFamily = (FontFamily)FindResource("Display"), Foreground = (Brush)FindResource(s.DispHoje >= 0 ? "Ink" : "Tang"), VerticalAlignment = VerticalAlignment.Center });
+        row.Children.Add(esq);
+        var dir = new TextBlock { Text = $"{s.DiasRestantes} dia{(s.DiasRestantes == 1 ? "" : "s")} p/ meta →", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("TextDim"), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
+        DockPanel.SetDock(dir, Dock.Right);
+        row.Children.Add(dir);
+
+        host.Content = Zui.Block(this, row,
+            background: (Brush)FindResource(s.DispHoje >= 0 ? "LeafSoft" : "TangSoft"),
+            onClick: () => SwitchView("Contas"),
+            padding: new Thickness(14, 9, 14, 9),
+            margin: new Thickness(0, 0, 0, 6));
+    }
+
+    private async Task LoadContas()
+    {
+        if (_contasCache is null)
+        {
+            ContasPanel.Children.Clear();
+            ContasPanel.Children.Add(DimText("carregando o contas..."));
+        }
+        var snap = await Contas.Carregar();
+        _contasCache = snap;
+        RenderContas(snap);
+    }
+
+    private void RenderContas(Contas.Snapshot s)
+    {
+        ContasPanel.Children.Clear();
+        ContasPanel.Children.Add(HudLabel("CONTAS - do contas.pedro"));
+
+        if (!s.Ok)
+        {
+            ContasPanel.Children.Add(DimText("sem conexao com o contas agora"));
+            return;
+        }
+        if (!s.TemMeta)
+        {
+            ContasPanel.Children.Add(DimText("nenhuma meta definida no contas ainda - abre o contaspedro1.netlify.app e cria a meta."));
+            return;
+        }
+
+        // Hero: quanto ainda pode gastar hoje (grande)
+        var heroBody = new StackPanel();
+        heroBody.Children.Add(HudLabel(s.PeriodoEncerrado ? "PERIODO ENCERRADO" : "PODE GASTAR HOJE"));
+        var valColor = s.DispHoje >= 0 ? "Leaf" : "Tang";
+        heroBody.Children.Add(new TextBlock
+        {
+            Text = Contas.Fmt(s.DispHoje),
+            FontSize = 34, FontFamily = (FontFamily)FindResource("Display"),
+            Foreground = (Brush)FindResource(valColor),
+            Margin = new Thickness(0, 2, 0, 0)
+        });
+        var sub = new TextBlock
+        {
+            FontSize = 12, Foreground = (Brush)FindResource("TextDim"),
+            Margin = new Thickness(1, 4, 0, 0), TextWrapping = TextWrapping.Wrap
+        };
+        sub.Inlines.Add(new Run($"orcamento do dia {Contas.Fmt(s.OrcHoje)}"));
+        if (s.GastoHoje > 0) sub.Inlines.Add(new Run($"  ·  ja gastou {Contas.Fmt(s.GastoHoje)} hoje"));
+        heroBody.Children.Add(sub);
+        ContasPanel.Children.Add(Zui.Block(this, heroBody,
+            background: (Brush)FindResource(s.DispHoje >= 0 ? "LeafSoft" : "TangSoft"),
+            margin: new Thickness(0, 8, 4, 10)));
+
+        if (s.Inviavel)
+            ContasPanel.Children.Add(Zui.Block(this,
+                new TextBlock { Text = "⚠ mesmo sem gastar nada, a meta nao fecha. ajuste no contas.", FontSize = 12.5, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Tang"), TextWrapping = TextWrapping.Wrap },
+                background: (Brush)FindResource("TangSoft"), margin: new Thickness(0, 0, 4, 10)));
+
+        // Métricas: dias restantes, livre até a meta, meta
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        void Metric(int col, string label, string valor, string tint)
+        {
+            var b = new StackPanel();
+            b.Children.Add(HudLabel(label));
+            b.Children.Add(new TextBlock { Text = valor, FontSize = 17, FontFamily = (FontFamily)FindResource("Display"), Foreground = (Brush)FindResource("Ink"), Margin = new Thickness(0, 2, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis });
+            var card = Zui.Block(this, b, background: (Brush)FindResource(tint), margin: new Thickness(col == 0 ? 0 : 5, 0, col == 2 ? 4 : 5, 0));
+            Grid.SetColumn(card, col);
+            grid.Children.Add(card);
+        }
+        Metric(0, "dias ate a meta", s.DiasRestantes.ToString(), "SkySoft");
+        Metric(1, "livre ate a meta", Contas.Fmt(s.Restante), "GrapeSoft");
+        Metric(2, "meta", s.Alvo.ToString("dd/MM"), "SunSoft");
+        ContasPanel.Children.Add(grid);
+
+        // Registrar gasto rápido
+        ContasPanel.Children.Add(GastoAddRow());
+
+        // Últimos gastos
+        if (s.UltimosGastos.Count > 0)
+        {
+            var lista = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
+            lista.Children.Add(HudLabel("ULTIMOS GASTOS"));
+            foreach (var (dia, valor, nota) in s.UltimosGastos)
+            {
+                var row = new DockPanel { Margin = new Thickness(2, 4, 2, 0) };
+                row.Children.Add(new TextBlock { Text = Contas.Fmt(valor), FontSize = 13, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink"), MinWidth = 92 });
+                row.Children.Add(new TextBlock { Text = dia.ToString("dd/MM"), FontSize = 10.5, FontFamily = (FontFamily)FindResource("Mono"), Foreground = (Brush)FindResource("TextDone"), Margin = new Thickness(8, 1, 10, 0), VerticalAlignment = VerticalAlignment.Center });
+                row.Children.Add(new TextBlock { Text = nota, FontSize = 12, Foreground = (Brush)FindResource("TextDim"), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
+                lista.Children.Add(row);
+            }
+            ContasPanel.Children.Add(Zui.Block(this, lista, margin: new Thickness(0, 6, 4, 4)));
+        }
+        AnimateIn(ContasPanel, fromY: 0, ms: 130);
+    }
+
+    private FrameworkElement GastoAddRow()
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 4, 0, 4) };
+        var btn = Zui.Button(this, "＋ registrar gasto");
+        btn.HorizontalAlignment = HorizontalAlignment.Left;
+        btn.FontSize = 12; btn.Background = (Brush)FindResource("Surface");
+        panel.Children.Add(btn);
+
+        var editor = new DockPanel { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 6, 0, 0) };
+        var valBox = new TextBox { Style = (Style)FindResource("InlineAdd"), Width = 110, FontSize = 13, ToolTip = "valor R$" };
+        var notaBox = new TextBox { Style = (Style)FindResource("InlineAdd"), FontSize = 13, Margin = new Thickness(8, 0, 8, 0), ToolTip = "nota (opcional)" };
+        var salvar = Zui.Button(this, "ok"); salvar.Background = (Brush)FindResource("Leaf");
+        DockPanel.SetDock(valBox, Dock.Left);
+        DockPanel.SetDock(salvar, Dock.Right);
+        editor.Children.Add(valBox);
+        editor.Children.Add(salvar);
+        editor.Children.Add(notaBox);
+        panel.Children.Add(editor);
+
+        btn.Click += (_, _) => { btn.Visibility = Visibility.Collapsed; editor.Visibility = Visibility.Visible; valBox.Focus(); };
+        async Task Salvar()
+        {
+            var raw = valBox.Text.Trim().Replace("R$", "").Replace(",", ".").Trim();
+            if (!double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out var valor) || valor <= 0)
+            { ShowStatus("valor invalido", error: true); return; }
+            try
+            {
+                await Contas.RegistrarGasto(valor, notaBox.Text.Trim());
+                ShowStatus($"gasto de {Contas.Fmt(valor)} registrado");
+                _contasCache = null;
+                await LoadContas();
+            }
+            catch (Exception ex) { ShowStatus("nao registrou: " + ex.Message, error: true); }
+        }
+        salvar.Click += async (_, _) => await Salvar();
+        valBox.KeyDown += async (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; await Salvar(); } };
+        notaBox.KeyDown += async (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; await Salvar(); } };
+        return panel;
+    }
+
     // -- NOT�CIAS ---------------------------------------------------
 
     private async Task LoadNews(bool force = false)
@@ -3544,6 +3716,12 @@ public partial class BarWindow : Window
     {
         HideBar();
         NotesWindow.Open();
+    }
+
+    private void Apanhador_Click(object sender, RoutedEventArgs e)
+    {
+        HideBar();
+        ApanhadorWindow.Open();
     }
 
     private void Pomo_Click(object sender, RoutedEventArgs e) => PomoPopup.IsOpen = true;
