@@ -973,8 +973,6 @@ public partial class BarWindow : Window
         Act("tarefa", () => AddTarefa(text));
         Act("norte", () => PushKvList("me2_sparks", new JsonObject
         { ["id"] = Supa.NewId(), ["text"] = text, ["cat"] = "criativa", ["ts"] = Ms() }));
-        Act("ideia", () => PushKvList("me2_ideias", new JsonObject
-        { ["id"] = Supa.NewId(), ["text"] = text, ["ts"] = Ms() }));
 
         var del = new Button
         {
@@ -3007,64 +3005,107 @@ public partial class BarWindow : Window
         Metric(2, "meta", s.Alvo.ToString("dd/MM"), "SunSoft");
         ContasPanel.Children.Add(grid);
 
-        // Registrar gasto rápido
-        ContasPanel.Children.Add(GastoAddRow());
+        // Atualizar conta (saldo + fatura)
+        ContasPanel.Children.Add(ContaUpdateRow(s));
 
-        // Últimos gastos
-        if (s.UltimosGastos.Count > 0)
-        {
-            var lista = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
-            lista.Children.Add(HudLabel("ULTIMOS GASTOS"));
-            foreach (var (dia, valor, nota) in s.UltimosGastos)
-            {
-                var row = new DockPanel { Margin = new Thickness(2, 4, 2, 0) };
-                row.Children.Add(new TextBlock { Text = Contas.Fmt(valor), FontSize = 13, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink"), MinWidth = 92 });
-                row.Children.Add(new TextBlock { Text = dia.ToString("dd/MM"), FontSize = 10.5, FontFamily = (FontFamily)FindResource("Mono"), Foreground = (Brush)FindResource("TextDone"), Margin = new Thickness(8, 1, 10, 0), VerticalAlignment = VerticalAlignment.Center });
-                row.Children.Add(new TextBlock { Text = nota, FontSize = 12, Foreground = (Brush)FindResource("TextDim"), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
-                lista.Children.Add(row);
-            }
-            ContasPanel.Children.Add(Zui.Block(this, lista, margin: new Thickness(0, 6, 4, 4)));
-        }
+        // Próximos 6 meses da planilha
+        if (s.Proximos6.Count > 0)
+            ContasPanel.Children.Add(ProximosMesesPanel(s));
+
         AnimateIn(ContasPanel, fromY: 0, ms: 130);
     }
 
-    private FrameworkElement GastoAddRow()
+    private FrameworkElement ProximosMesesPanel(Contas.Snapshot s)
     {
-        var panel = new StackPanel { Margin = new Thickness(0, 4, 0, 4) };
-        var btn = Zui.Button(this, "＋ registrar gasto");
+        var wrap = new StackPanel { Margin = new Thickness(0, 8, 4, 4) };
+        wrap.Children.Add(HudLabel("PRÓXIMOS 6 MESES - da planilha"));
+        var ptbr = new CultureInfo("pt-BR");
+        double maxTot = Math.Max(1, s.Proximos6.Max(m => m.Total));
+
+        foreach (var mes in s.Proximos6)
+        {
+            var nome = new DateTime(mes.Ano, mes.Mes, 1).ToString("MMM/yy", ptbr);
+            var head = new DockPanel { Margin = new Thickness(0, 0, 0, 5) };
+            head.Children.Add(new TextBlock { Text = nome, FontSize = 13, FontFamily = (FontFamily)FindResource("Display"), Foreground = (Brush)FindResource("Ink"), VerticalAlignment = VerticalAlignment.Center });
+            var tot = new TextBlock { Text = Contas.Fmt(mes.Total), FontSize = 13, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink"), HorizontalAlignment = HorizontalAlignment.Right };
+            DockPanel.SetDock(tot, Dock.Right);
+            head.Children.Add(tot);
+
+            var body = new StackPanel();
+            body.Children.Add(head);
+
+            // barrinha proporcional
+            var track = new Border { Height = 7, CornerRadius = new CornerRadius(4), Background = (Brush)FindResource("Mist"), Margin = new Thickness(0, 0, 0, mes.Itens.Count > 0 ? 7 : 0) };
+            var fill = new Border { Height = 7, CornerRadius = new CornerRadius(4), Background = (Brush)FindResource("Accent"), HorizontalAlignment = HorizontalAlignment.Left, Width = Math.Max(6, 224 * (mes.Total / maxTot)) };
+            var tg = new Grid(); tg.Children.Add(track); tg.Children.Add(fill);
+            body.Children.Add(tg);
+
+            // itens do mês
+            foreach (var (item, valor) in mes.Itens.Take(6))
+            {
+                var r = new DockPanel { Margin = new Thickness(2, 2, 2, 0) };
+                var v = new TextBlock { Text = Contas.Fmt(valor), FontSize = 11.5, FontWeight = FontWeights.Bold, FontFamily = (FontFamily)FindResource("Mono"), Foreground = (Brush)FindResource("TextDim"), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
+                DockPanel.SetDock(v, Dock.Right);
+                r.Children.Add(v);
+                r.Children.Add(new TextBlock { Text = item, FontSize = 12, Foreground = (Brush)FindResource("TextMain"), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
+                body.Children.Add(r);
+            }
+            if (mes.Itens.Count > 6)
+                body.Children.Add(new TextBlock { Text = $"+{mes.Itens.Count - 6} outros", FontSize = 11, Foreground = (Brush)FindResource("TextDone"), Margin = new Thickness(2, 3, 0, 0) });
+            if (mes.Itens.Count == 0)
+                body.Children.Add(new TextBlock { Text = "nada comprometido", FontSize = 11.5, Foreground = (Brush)FindResource("TextDone"), Margin = new Thickness(2, 0, 0, 0) });
+
+            wrap.Children.Add(Zui.Block(this, body, background: (Brush)FindResource("CardBg"), padding: new Thickness(13), margin: new Thickness(0, 0, 0, 8)));
+        }
+        return wrap;
+    }
+
+    private FrameworkElement ContaUpdateRow(Contas.Snapshot s)
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 8, 0, 4) };
+        var btn = Zui.Button(this, "✎ atualizar conta");
         btn.HorizontalAlignment = HorizontalAlignment.Left;
         btn.FontSize = 12; btn.Background = (Brush)FindResource("Surface");
         panel.Children.Add(btn);
 
-        var editor = new DockPanel { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 6, 0, 0) };
-        var valBox = new TextBox { Style = (Style)FindResource("InlineAdd"), Width = 110, FontSize = 13, ToolTip = "valor R$" };
-        var notaBox = new TextBox { Style = (Style)FindResource("InlineAdd"), FontSize = 13, Margin = new Thickness(8, 0, 8, 0), ToolTip = "nota (opcional)" };
-        var salvar = Zui.Button(this, "ok"); salvar.Background = (Brush)FindResource("Leaf");
-        DockPanel.SetDock(valBox, Dock.Left);
-        DockPanel.SetDock(salvar, Dock.Right);
-        editor.Children.Add(valBox);
-        editor.Children.Add(salvar);
-        editor.Children.Add(notaBox);
+        var editor = new StackPanel { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 8, 4, 0) };
+
+        TextBox Field(string label, double val)
+        {
+            editor.Children.Add(HudLabel(label));
+            var tb = new TextBox { Style = (Style)FindResource("InlineAdd"), FontSize = 14, Margin = new Thickness(0, 2, 0, 8), Text = val.ToString("0.##", CultureInfo.InvariantCulture) };
+            editor.Children.Add(tb);
+            return tb;
+        }
+        var contaBox = Field("EM CONTA", s.SaldoConta);
+        var faturaBox = Field("FATURA", s.Fatura);
+
+        var acts = new DockPanel();
+        var salvar = Zui.Button(this, "atualizar valores"); salvar.Background = (Brush)FindResource("Accent"); salvar.HorizontalAlignment = HorizontalAlignment.Stretch; salvar.HorizontalContentAlignment = HorizontalAlignment.Center;
+        acts.Children.Add(salvar);
+        editor.Children.Add(acts);
         panel.Children.Add(editor);
 
-        btn.Click += (_, _) => { btn.Visibility = Visibility.Collapsed; editor.Visibility = Visibility.Visible; valBox.Focus(); };
+        btn.Click += (_, _) => { btn.Visibility = Visibility.Collapsed; editor.Visibility = Visibility.Visible; contaBox.Focus(); contaBox.SelectAll(); };
+
         async Task Salvar()
         {
-            var raw = valBox.Text.Trim().Replace("R$", "").Replace(",", ".").Trim();
-            if (!double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out var valor) || valor <= 0)
-            { ShowStatus("valor invalido", error: true); return; }
+            double P(string t) => double.TryParse(t.Trim().Replace("R$", "").Replace(",", ".").Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : double.NaN;
+            double saldo = P(contaBox.Text), fatura = P(faturaBox.Text);
+            if (double.IsNaN(saldo) || double.IsNaN(fatura)) { ShowStatus("valores invalidos", error: true); return; }
             try
             {
-                await Contas.RegistrarGasto(valor, notaBox.Text.Trim());
-                ShowStatus($"gasto de {Contas.Fmt(valor)} registrado");
+                salvar.IsEnabled = false;
+                await Contas.AtualizarConta(saldo, fatura);
+                ShowStatus("conta atualizada");
                 _contasCache = null;
                 await LoadContas();
             }
-            catch (Exception ex) { ShowStatus("nao registrou: " + ex.Message, error: true); }
+            catch (Exception ex) { salvar.IsEnabled = true; ShowStatus("nao atualizou: " + ex.Message, error: true); }
         }
         salvar.Click += async (_, _) => await Salvar();
-        valBox.KeyDown += async (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; await Salvar(); } };
-        notaBox.KeyDown += async (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; await Salvar(); } };
+        faturaBox.KeyDown += async (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; await Salvar(); } };
+        contaBox.KeyDown += async (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; faturaBox.Focus(); faturaBox.SelectAll(); } };
         return panel;
     }
 
@@ -3716,12 +3757,6 @@ public partial class BarWindow : Window
     {
         HideBar();
         NotesWindow.Open();
-    }
-
-    private void Apanhador_Click(object sender, RoutedEventArgs e)
-    {
-        HideBar();
-        ApanhadorWindow.Open();
     }
 
     private void Pomo_Click(object sender, RoutedEventArgs e) => PomoPopup.IsOpen = true;

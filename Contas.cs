@@ -35,6 +35,9 @@ public static class Contas
         return JsonNode.Parse(await r.Content.ReadAsStringAsync()) as JsonArray ?? new JsonArray();
     }
 
+    /// <summary>Um mês da projeção da planilha: total comprometido + itens.</summary>
+    public record MesResumo(int Ano, int Mes, double Total, List<(string Nome, double Valor)> Itens);
+
     /// <summary>Resultado do painel de meta: quanto ainda pode gastar hoje, etc.</summary>
     public record Snapshot(
         bool Ok, bool TemMeta,
@@ -47,7 +50,10 @@ public static class Contas
         double Objetivo,
         bool Inviavel,        // nem sem gastar dá pra bater a meta
         bool PeriodoEncerrado,
-        List<(DateTime Dia, double Valor, string Nota)> UltimosGastos);
+        List<(DateTime Dia, double Valor, string Nota)> UltimosGastos,
+        double SaldoConta,    // saldo atual em conta (pra pré-preencher "atualizar conta")
+        double Fatura,        // fatura atual
+        List<MesResumo> Proximos6);   // projeção dos próximos 6 meses da planilha
 
     public static async Task<Snapshot> Carregar()
     {
@@ -61,7 +67,7 @@ public static class Contas
 
             var meta = metaT.Result.OfType<JsonObject>().FirstOrDefault();
             if (meta is null)
-                return new Snapshot(true, false, 0, 0, 0, 0, 0, DateTime.Now, 0, false, false, new());
+                return new Snapshot(true, false, 0, 0, 0, 0, 0, DateTime.Now, 0, false, false, new(), 0, 0, new());
 
             double D(JsonObject o, string k) => o[k] is JsonNode n && double.TryParse(n.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0;
             DateTime Dt(string? s) => DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var d) ? d.ToLocalTime() : DateTime.Now;
@@ -101,12 +107,22 @@ public static class Contas
 
             var ultimos = gastos.Take(6).Select(g => (g.Dia, g.Valor, g.Nota)).ToList();
 
+            // projeção da planilha: próximos 6 meses (a partir do mês atual)
+            var proximos = new List<MesResumo>();
+            int py = hoje.Year, pm = hoje.Month;
+            for (int i = 0; i < 6; i++)
+            {
+                var itens = ItensMes(comprasT.Result, fixosT.Result, py, pm);
+                proximos.Add(new MesResumo(py, pm, itens.Sum(x => x.Valor), itens));
+                pm++; if (pm > 12) { pm = 1; py++; }
+            }
+
             return new Snapshot(true, true, dispHoje, orcHoje, gastoHoje, restante, n, alvo,
-                objetivo, disponivelTotal < 0, encerrado, ultimos);
+                objetivo, disponivelTotal < 0, encerrado, ultimos, saldoConta, fatura, proximos);
         }
         catch
         {
-            return new Snapshot(false, false, 0, 0, 0, 0, 0, DateTime.Now, 0, false, false, new());
+            return new Snapshot(false, false, 0, 0, 0, 0, 0, DateTime.Now, 0, false, false, new(), 0, 0, new());
         }
     }
 
@@ -163,6 +179,46 @@ public static class Contas
         return t;
     }
 
+    // itens (parcelas + fixos) que caem no ano/mês — espelha ParcelasMes/FixosMes com nome
+    private static List<(string Nome, double Valor)> ItensMes(JsonArray compras, JsonArray fixos, int y, int mo)
+    {
+        double D(JsonObject o, string k) => o[k] is JsonNode n && double.TryParse(n.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0;
+        int mIdx = mo - 1;
+        var itens = new List<(string, double)>();
+        foreach (var node in compras)
+        {
+            if (node is not JsonObject c) continue;
+            string ds = c["d"]?.GetValue<string>() ?? "";
+            var parts = ds.Split('-');
+            if (parts.Length < 3 || !int.TryParse(parts[0], out int cy) || !int.TryParse(parts[1], out int cm)) continue;
+            int parcelas = (int)D(c, "parcelas");
+            double vp = D(c, "vp");
+            string nome = c["nome"]?.GetValue<string>() ?? "compra";
+            for (int i = 0; i < parcelas; i++)
+            {
+                int nm = cm - 1 + i;
+                int ny = cy + (int)Math.Floor(nm / 12.0);
+                nm = ((nm % 12) + 12) % 12;
+                if (ny == y && nm == mIdx)
+                {
+                    string rot = parcelas > 1 ? $"{nome} ({i + 1}/{parcelas})" : nome;
+                    itens.Add((rot, vp));
+                }
+            }
+        }
+        string fk = $"{y}-{mo:00}";
+        foreach (var node in fixos)
+        {
+            if (node is not JsonObject f) continue;
+            string nome = f["nome"]?.GetValue<string>() ?? "fixo";
+            double v = D(f, "valor");
+            if (f["overrides"] is JsonObject ov && ov[fk] is JsonNode on && double.TryParse(on.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var vo))
+                v = vo;
+            if (v != 0) itens.Add((nome, v));
+        }
+        return itens.OrderByDescending(x => x.Item2).ToList();
+    }
+
     private static double FixosMes(JsonArray fixos, int y, int mo)
     {
         double D(JsonObject o, string k) => o[k] is JsonNode n && double.TryParse(n.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0;
@@ -179,18 +235,22 @@ public static class Contas
         return t;
     }
 
-    /// <summary>Registra um gasto do dia (aparece no contas na hora).</summary>
-    public static async Task RegistrarGasto(double valor, string nota)
+    /// <summary>
+    /// Atualiza o saldo em conta e a fatura na meta (igual o "atualizar valores" do site).
+    /// Move atualizado_em pra agora, o que zera o período de gastos — o saldo informado
+    /// passa a ser o novo ponto de partida do cálculo.
+    /// </summary>
+    public static async Task AtualizarConta(double saldoConta, double fatura)
     {
-        var row = new JsonObject
+        var patch = new JsonObject
         {
-            ["id"] = DateTimeOffset.Now.ToUnixTimeMilliseconds(),
-            ["dia"] = DateTime.Now.ToString("yyyy-MM-dd"),
-            ["valor"] = valor,
-            ["nota"] = string.IsNullOrWhiteSpace(nota) ? null : nota
+            ["saldo_conta"] = saldoConta,
+            ["fatura"] = fatura,
+            ["atualizado_em"] = DateTime.UtcNow.ToString("o")
         };
-        var content = new StringContent(row.ToJsonString(), Encoding.UTF8, "application/json");
-        var r = await Http.PostAsync("/rest/v1/gastos_dia", content);
+        var content = new StringContent(patch.ToJsonString(), Encoding.UTF8, "application/json");
+        var req = new HttpRequestMessage(new HttpMethod("PATCH"), "/rest/v1/meta?id=eq.1") { Content = content };
+        var r = await Http.SendAsync(req);
         r.EnsureSuccessStatusCode();
     }
 
