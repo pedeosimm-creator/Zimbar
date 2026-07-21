@@ -70,8 +70,9 @@ public class StickyWindow : Window
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.CanResize;
         ShowInTaskbar = true;
-        UseLayoutRounding = true;
         SnapsToDevicePixels = true;
+        // A barra do Zimbar e Topmost; sem isso a nota some atras dela ao trocar de aba.
+        Topmost = true;
 
         // Resize nativo pelas bordas, sem moldura do Windows
         WindowChrome.SetWindowChrome(this, new WindowChrome
@@ -127,7 +128,9 @@ public class StickyWindow : Window
                 BorderBrush = key == _cor ? ink : new SolidColorBrush(Color.FromArgb(0x50, 0x18, 0x13, 0x20)),
                 Tag = key
             };
-            dot.MouseLeftButtonUp += (_, e) =>
+            // No DOWN e marcando Handled: senao o DragMove() do cabecalho engole o clique
+            // (era por isso que trocar de cor nao fazia nada).
+            dot.MouseLeftButtonDown += (_, e) =>
             {
                 _cor = (string)dot.Tag;
                 _root!.Background = CorFundo(_cor);
@@ -152,11 +155,14 @@ public class StickyWindow : Window
         }
         var delBtn = TopBtn("🗑", "excluir a nota");
         delBtn.Click += async (_, _) => await DeleteNote();
+        var minBtn = TopBtn("—", "minimizar a nota");
+        minBtn.Click += (_, _) => WindowState = WindowState.Minimized;
         var closeBtn = TopBtn("✕", "fechar (a nota fica salva)");
         closeBtn.Click += (_, _) => Close();
 
         var topRight = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         topRight.Children.Add(delBtn);
+        topRight.Children.Add(minBtn);
         topRight.Children.Add(closeBtn);
 
         var header = new DockPanel
@@ -202,7 +208,33 @@ public class StickyWindow : Window
             { _saveTimer.Stop(); _ = SaveNote(); e.Handled = true; }
         };
 
-        Loaded += (_, _) => { _body.Focus(); _body.CaretIndex = _body.Text.Length; };
+        // Layout interno acompanha o tamanho da janela: fonte, respiro e cabecalho
+        // encolhem/crescem junto, em vez de ficar tudo fixo em nota grande.
+        SizeChanged += (_, _) => AdaptLayout(header);
+        Loaded += (_, _) => { AdaptLayout(header); _body.Focus(); _body.CaretIndex = _body.Text.Length; };
+    }
+
+    /// <summary>Ajusta fonte/respiro/cabecalho conforme a nota e esticada ou encolhida.</summary>
+    private void AdaptLayout(DockPanel header)
+    {
+        double w = ActualWidth > 0 ? ActualWidth : Width;
+        double h = ActualHeight > 0 ? ActualHeight : Height;
+        double menor = Math.Min(w, h);
+
+        // fonte: 12.5 numa nota minima (200) ate 19 numa bem grande (620)
+        double f = 12.5 + (Math.Clamp(w, 200, 620) - 200) * (19 - 12.5) / 420.0;
+        _body.FontSize = Math.Round(f, 1);
+
+        // respiro proporcional
+        double pad = Math.Round(8 + (Math.Clamp(menor, 160, 560) - 160) * 12.0 / 400.0);
+        _body.Padding = new Thickness(pad + 4, pad, pad + 2, pad + 2);
+
+        // cabecalho e borda encolhem em notas pequenas
+        header.Height = w < 260 ? 28 : w < 420 ? 34 : 40;
+        _root.BorderThickness = new Thickness(w < 260 ? 2 : 2.5);
+
+        // em nota muito estreita, esconde as bolinhas de cor pra sobrar arrasto
+        _dots.Visibility = w < 235 ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void MarkDots(Brush ink)

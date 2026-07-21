@@ -171,7 +171,11 @@ public partial class NotesWindow : Window
                 FontSize = 11.8,
                 Foreground = (Brush)FindResource("TextDim"),
                 TextWrapping = TextWrapping.Wrap,
-                MaxHeight = 36,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                // 2 linhas exatas: com MaxHeight solto a 3a linha ficava cortada no meio
+                LineHeight = 16,
+                LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
+                MaxHeight = 32,
                 Margin = new Thickness(0, 4, 0, 0)
             });
         sp.Children.Add(new TextBlock

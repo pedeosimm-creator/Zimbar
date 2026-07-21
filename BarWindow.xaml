@@ -8,7 +8,6 @@
         Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize"
         ShowActivated="True"
         FontFamily="{DynamicResource Body}"
-        UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Ideal"
         TextOptions.TextRenderingMode="Auto"

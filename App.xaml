@@ -223,8 +223,9 @@
                     <ControlTemplate TargetType="TextBox">
                         <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="10"
                                 BorderBrush="{DynamicResource Ink}" BorderThickness="2">
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
-                                          VerticalAlignment="Center"/>
+                            <!-- sem VerticalAlignment=Center: centralizado a caixa fica do tamanho
+                                 exato da linha e come o topo das letras (ex.: "BRe") -->
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocused" Value="True">
@@ -236,6 +237,32 @@
             </Setter>
         </Style>
         <Style x:Key="Zimbar.TextBox.InlineAdd" TargetType="TextBox" BasedOn="{StaticResource InlineAdd}"/>
+
+        <!-- ══ Só o X: sem bolinha, sem moldura — apagar item de lista ══ -->
+        <Style x:Key="IconX" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="5,1"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextDone}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter x:Name="cp" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              Opacity="0.5"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="cp" Property="Opacity" Value="1"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Tang}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <!-- ══ Scrollbar fina e luminosa ══ -->
         <Style x:Key="NeoScroll" TargetType="ScrollBar">

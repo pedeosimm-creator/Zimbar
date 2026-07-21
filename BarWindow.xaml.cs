@@ -31,7 +31,7 @@ public partial class BarWindow : Window
     private JsonObject? _foco;
     private JsonObject? _ritmo;
     private string _hojeTarget = "med"; // big | med | small
-    private bool _agendaSemana = true;
+    private bool _agendaSemana = false;   // abre no MES; semana e opcional
     private DateTime _agendaRef = DateTime.Now.Date;
     private JsonArray _tarefasCache = new();
     private string _inputMode = "captura"; // captura | busca | web
@@ -1821,9 +1821,11 @@ public partial class BarWindow : Window
                     bool feito = t["status"]?.GetValue<string>() == "feito";
                     var pill = new Border
                     {
-                        Background = (Brush)FindResource("ChipBg"),
-                        CornerRadius = new CornerRadius(8),
-                        Padding = new Thickness(10, 5, 10, 5),
+                        Background = (Brush)FindResource(feito ? "Mist" : "SkySoft"),
+                        BorderBrush = (Brush)FindResource("Ink"),
+                        BorderThickness = new Thickness(1.5),
+                        CornerRadius = new CornerRadius(7),
+                        Padding = new Thickness(9, 4, 9, 4),
                         Margin = new Thickness(0, 2, 6, 2),
                         Cursor = Cursors.Hand,
                         ToolTip = "clica pra editar",
@@ -1832,7 +1834,7 @@ public partial class BarWindow : Window
                             Text = t["titulo"]?.GetValue<string>() ?? "",
                             FontSize = 12,
                             TextDecorations = feito ? TextDecorations.Strikethrough : null,
-                            Foreground = (Brush)FindResource(feito ? "TextDone" : "TextMain"),
+                            Foreground = (Brush)FindResource(feito ? "TextDone" : "Ink"),
                             MaxWidth = 320,
                             TextTrimming = TextTrimming.CharacterEllipsis
                         }
@@ -1844,15 +1846,17 @@ public partial class BarWindow : Window
             foreach (var texto in RecurDoDia(d))
                 pills.Children.Add(new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF)),
-                    CornerRadius = new CornerRadius(8),
-                    Padding = new Thickness(10, 5, 10, 5),
+                    Background = (Brush)FindResource("SunSoft"),
+                    BorderBrush = (Brush)FindResource("Ink"),
+                    BorderThickness = new Thickness(1.5),
+                    CornerRadius = new CornerRadius(7),
+                    Padding = new Thickness(9, 4, 9, 4),
                     Margin = new Thickness(0, 2, 6, 2),
                     Child = new TextBlock
                     {
                         Text = texto,
                         FontSize = 12,
-                        Foreground = (Brush)FindResource("AccentSoft")
+                        Foreground = (Brush)FindResource("Ink")
                     }
                 });
             if (pills.Children.Count == 0)
@@ -1865,16 +1869,21 @@ public partial class BarWindow : Window
                 });
             row.Children.Add(pills);
 
+            // Contraste de verdade entre os dias: card de papel com borda de tinta,
+            // fim de semana em creme, hoje no acento. Nada de branco 5% invisivel.
+            bool fds = d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+            var sombra = new System.Windows.Media.Effects.DropShadowEffect
+            { BlurRadius = 0, ShadowDepth = 3, Direction = 315, Opacity = 1, Color = Color.FromRgb(0x16, 0x16, 0x13) };
+            sombra.Freeze();
             AgendaPanel.Children.Add(new Border
             {
-                Background = new SolidColorBrush(ehHoje
-                    ? Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)
-                    : Color.FromArgb(0x0C, 0xFF, 0xFF, 0xFF)),
-                BorderBrush = ehHoje ? (Brush)FindResource("Accent") : Brushes.Transparent,
-                BorderThickness = new Thickness(3, 0, 0, 0),
-                CornerRadius = new CornerRadius(9),
-                Padding = new Thickness(12, 6, 10, 6),
-                Margin = new Thickness(0, 0, 0, 5),
+                Background = (Brush)FindResource(ehHoje ? "AccentSoft" : fds ? "Mist" : "CardBg"),
+                BorderBrush = (Brush)FindResource("Ink"),
+                BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(12, 8, 10, 8),
+                Margin = new Thickness(0, 0, 4, 7),
+                Effect = sombra,
                 Child = row
             });
         }
@@ -2441,7 +2450,7 @@ public partial class BarWindow : Window
             l.Add(r);
         }
 
-        LinksPanel.Children.Add(HudLabel("LINKS - sua barra de favoritos: 1 clique abre"));
+        LinksPanel.Children.Add(HudLabel("LINKS - 1 clique abre - arrasta um link de fora pra dentro da pasta"));
 
         var board = new UniformGrid
         {
@@ -2556,7 +2565,79 @@ public partial class BarWindow : Window
         };
         card.MouseEnter += (_, _) => del.Visibility = Visibility.Visible;
         card.MouseLeave += (_, _) => del.Visibility = Visibility.Hidden;
+        HookLinkDrop(card, id, name);
         return card;
+    }
+
+    /// <summary>
+    /// Deixa a pasta aceitar link arrastado de fora (navegador, atalho .url, texto).
+    /// Solta em cima do card e o link entra naquela pasta.
+    /// </summary>
+    private void HookLinkDrop(Border card, string folderId, string folderName)
+    {
+        var ink = (Brush)FindResource("Ink");
+        card.AllowDrop = true;
+
+        static string? UrlFromData(IDataObject d)
+        {
+            // navegadores mandam a URL como texto; alguns mandam UnicodeText
+            foreach (var fmt in new[] { DataFormats.UnicodeText, DataFormats.Text })
+                if (d.GetDataPresent(fmt) && d.GetData(fmt) is string s && s.Trim().Length > 0)
+                    return s.Trim();
+            // atalho .url arrastado da area de trabalho
+            if (d.GetDataPresent(DataFormats.FileDrop) && d.GetData(DataFormats.FileDrop) is string[] fs)
+                foreach (var f in fs)
+                    if (f.EndsWith(".url", StringComparison.OrdinalIgnoreCase))
+                        try
+                        {
+                            foreach (var line in System.IO.File.ReadAllLines(f))
+                                if (line.StartsWith("URL=", StringComparison.OrdinalIgnoreCase))
+                                    return line[4..].Trim();
+                        }
+                        catch { }
+            return null;
+        }
+
+        void Over(object s, DragEventArgs e)
+        {
+            bool ok = UrlFromData(e.Data) is not null;
+            e.Effects = ok ? DragDropEffects.Copy : DragDropEffects.None;
+            if (ok) { card.BorderBrush = (Brush)FindResource("Accent"); card.BorderThickness = new Thickness(3); }
+            e.Handled = true;
+        }
+        void Reset() { card.BorderBrush = ink; card.BorderThickness = new Thickness(2); }
+
+        card.DragEnter += Over;
+        card.DragOver += Over;
+        card.DragLeave += (_, _) => Reset();
+        card.Drop += async (_, e) =>
+        {
+            Reset();
+            e.Handled = true;
+            if (UrlFromData(e.Data) is not string raw) return;
+            // varias linhas = varios links de uma vez
+            var linhas = raw.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(x => x.Trim()).Where(x => x.Length > 0).Take(20).ToList();
+            int n = 0;
+            try
+            {
+                foreach (var linha in linhas)
+                {
+                    var parsed = ParseLinkInput(linha);
+                    await Supa.Insert("zimbar_refs", new JsonObject
+                    {
+                        ["kind"] = parsed.Kind,
+                        ["title"] = parsed.Title,
+                        ["content"] = parsed.Content,
+                        ["folder_id"] = folderId
+                    });
+                    n++;
+                }
+                ShowStatus(n == 1 ? $"link salvo em {folderName}" : $"{n} links salvos em {folderName}");
+                await LoadLinks();
+            }
+            catch { ShowStatus("nao salvou o link", error: true); }
+        };
     }
 
     private List<JsonObject> OrderedLinks(List<JsonObject> refs, string folderId)
@@ -2868,13 +2949,12 @@ public partial class BarWindow : Window
             return new Border { Height = 0 };
 
         var row = new DockPanel { Margin = new Thickness(0, 0, 0, 3) };
+        // So o X: sem Chip (a borda arredondada virava uma "bolinha" feia na lista)
         var del = new Button
         {
-            Style = (Style)FindResource("Chip"),
+            Style = (Style)FindResource("IconX"),
             Content = "✕",
-            FontSize = 9.5,
-            Padding = new Thickness(6, 2, 6, 2),
-            Background = Brushes.Transparent,
+            Margin = new Thickness(6, 0, 0, 0),
             ToolTip = "apagar item"
         };
         DockPanel.SetDock(del, Dock.Right);
