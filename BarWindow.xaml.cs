@@ -329,7 +329,7 @@ public partial class BarWindow : Window
         }
 
         var visivel = views.FirstOrDefault(v => v.Name == view).El;
-        if (visivel is not null) AnimateIn(visivel, fromY: 0, ms: 130);   // s� fade: sem "tiltada" na troca
+        if (visivel is not null) AnimateIn(visivel, fromY: 6, ms: 260);   // unico fade da troca, macio
 
         switch (view)
         {
@@ -837,7 +837,8 @@ public partial class BarWindow : Window
         Grid.SetColumn(GlassCardInto(grid, 1, proxBody, "Agenda", tintIndex: 4), 1);
 
         PainelPanel.Children.Add(grid);
-        AnimateIn(PainelPanel);
+        // sem AnimateIn aqui: o fade da troca de aba ja cobre; re-animar o painel
+        // quando o dado chega jogava a opacidade a zero de novo = piscada
     }
 
     /// <summary>Linha de evento com selo de data. Recorrentes ganham cor pr�pria + ?.</summary>
@@ -1662,12 +1663,13 @@ public partial class BarWindow : Window
     {
         var tt = new TranslateTransform(0, fromY);
         el.RenderTransform = tt;
+        // Quintic + partir de 0.12 (nao de zero): entrada macia, sem "apagar" a tela
         el.BeginAnimation(UIElement.OpacityProperty,
-            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(ms))
-            { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            new DoubleAnimation(0.12, 1, TimeSpan.FromMilliseconds(ms))
+            { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } });
         tt.BeginAnimation(TranslateTransform.YProperty,
-            new DoubleAnimation(fromY, 0, TimeSpan.FromMilliseconds(ms + 30))
-            { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
+            new DoubleAnimation(fromY, 0, TimeSpan.FromMilliseconds(ms + 60))
+            { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } });
     }
 
     // -- AGENDA: semana em lista fluida + m�s -----------------------
@@ -2143,7 +2145,7 @@ public partial class BarWindow : Window
             await AddTarefa(text);
             await LoadKanban();
         }));
-        AnimateIn(KanbanPanel, fromY: 6, ms: 160);
+        // (sem re-fade aqui: causava piscada quando o dado chegava)
     }
 
     private void SetKanbanDropVisual(Border lane, bool active)
@@ -3132,7 +3134,7 @@ public partial class BarWindow : Window
         if (s.Proximos6.Count > 0)
             ContasPanel.Children.Add(ProximosMesesPanel(s));
 
-        AnimateIn(ContasPanel, fromY: 0, ms: 130);
+        // (sem re-fade aqui: causava piscada quando o dado chegava)
     }
 
     private FrameworkElement ProximosMesesPanel(Contas.Snapshot s)
@@ -3291,7 +3293,6 @@ public partial class BarWindow : Window
             grid.SizeChanged += (_, e) => UpdateColumns(e.NewSize.Width);
             foreach (var n in items) grid.Children.Add(NewsCard(n));
             NewsPanel.Children.Add(grid);
-            AnimateIn(grid, fromY: 8, ms: 200);
         }
         catch
         {
