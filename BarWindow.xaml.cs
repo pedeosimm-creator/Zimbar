@@ -333,16 +333,35 @@ public partial class BarWindow : Window
 
         switch (view)
         {
-            case "Painel": _ = LoadPainel(); break;
-            case "Hoje": _ = LoadHoje(); break;
-            case "Kanban": _ = LoadKanban(); break;
-            case "Agenda": _ = LoadAgenda(); break;
-            case "Links": _ = LoadLinks(); break;
-            case "Listas": _ = LoadListas(); break;
-            case "News": _ = LoadNews(); break;
-            case "Contas": _ = LoadContas(); break;
+            case "Painel": _ = SemPiscada(LoadPainel()); break;
+            case "Hoje": _ = SemPiscada(LoadHoje()); break;
+            case "Kanban": _ = SemPiscada(LoadKanban()); break;
+            case "Agenda": _ = SemPiscada(LoadAgenda()); break;
+            case "Links": _ = SemPiscada(LoadLinks()); break;
+            case "Listas": _ = SemPiscada(LoadListas()); break;
+            case "News": _ = SemPiscada(LoadNews()); break;
+            case "Contas": _ = SemPiscada(LoadContas()); break;
             case "Email": LoadEmail(); break;
-            case "Busca": _ = LoadBusca(); break;
+            case "Busca": _ = SemPiscada(LoadBusca()); break;
+        }
+    }
+
+    /// <summary>
+    /// Segura a altura atual enquanto a aba busca os dados. Sem isso o painel e
+    /// esvaziado (altura despenca), o dado chega e a altura volta — dois resizes
+    /// seguidos, que numa janela AllowsTransparency aparecem como uma piscada.
+    /// </summary>
+    private async Task SemPiscada(Task carga)
+    {
+        double atual = ViewHost.ActualHeight;
+        if (atual > ViewHost.MinHeight)
+            ViewHost.MinHeight = Math.Min(atual, ViewHost.MaxHeight);
+        try { await carga; }
+        catch { }
+        finally
+        {
+            // solta so depois do novo conteudo assentar no layout
+            await Dispatcher.InvokeAsync(() => ViewHost.MinHeight = 90, DispatcherPriority.Loaded);
         }
     }
 
