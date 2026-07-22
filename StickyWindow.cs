@@ -208,33 +208,7 @@ public class StickyWindow : Window
             { _saveTimer.Stop(); _ = SaveNote(); e.Handled = true; }
         };
 
-        // Layout interno acompanha o tamanho da janela: fonte, respiro e cabecalho
-        // encolhem/crescem junto, em vez de ficar tudo fixo em nota grande.
-        SizeChanged += (_, _) => AdaptLayout(header);
-        Loaded += (_, _) => { AdaptLayout(header); _body.Focus(); _body.CaretIndex = _body.Text.Length; };
-    }
-
-    /// <summary>Ajusta fonte/respiro/cabecalho conforme a nota e esticada ou encolhida.</summary>
-    private void AdaptLayout(DockPanel header)
-    {
-        double w = ActualWidth > 0 ? ActualWidth : Width;
-        double h = ActualHeight > 0 ? ActualHeight : Height;
-        double menor = Math.Min(w, h);
-
-        // fonte: 12.5 numa nota minima (200) ate 19 numa bem grande (620)
-        double f = 12.5 + (Math.Clamp(w, 200, 620) - 200) * (19 - 12.5) / 420.0;
-        _body.FontSize = Math.Round(f, 1);
-
-        // respiro proporcional
-        double pad = Math.Round(8 + (Math.Clamp(menor, 160, 560) - 160) * 12.0 / 400.0);
-        _body.Padding = new Thickness(pad + 4, pad, pad + 2, pad + 2);
-
-        // cabecalho e borda encolhem em notas pequenas
-        header.Height = w < 260 ? 28 : w < 420 ? 34 : 40;
-        _root.BorderThickness = new Thickness(w < 260 ? 2 : 2.5);
-
-        // em nota muito estreita, esconde as bolinhas de cor pra sobrar arrasto
-        _dots.Visibility = w < 235 ? Visibility.Collapsed : Visibility.Visible;
+        Loaded += (_, _) => { _body.Focus(); _body.CaretIndex = _body.Text.Length; };
     }
 
     private void MarkDots(Brush ink)

@@ -59,7 +59,7 @@ public partial class BarWindow : Window
         InitializeComponent();
         Width = Config.BarWidth ?? 1160;
         ViewHost.Height = Config.ViewMax ?? 430;
-        SizeChanged += (_, _) => FitNav();
+        SizeChanged += (_, _) => { FitNav(); RelayoutLinks(); };
         Loaded += (_, _) => FitNav();
         _statusTimer.Tick += (_, _) => { StatusText.Visibility = Visibility.Collapsed; _statusTimer.Stop(); };
         _playerTimer.Tick += (_, _) => _ = RenderTopPlayer();
@@ -282,6 +282,7 @@ public partial class BarWindow : Window
         Config.BarWidth = _pendW;
         Config.ViewMax = _pendV;
         Config.Save();
+        RelayoutLinks();     // colunas/altura do quadro de links no tamanho novo
         e.Handled = true;
     }
 
@@ -2416,6 +2417,8 @@ public partial class BarWindow : Window
                 catch { }
             }
 
+            _linksFolders = foldersT.Result;
+            _linksRefs = refsT.Result;
             RenderLinksBoard(foldersT.Result, refsT.Result);
         }
         catch
@@ -2423,6 +2426,16 @@ public partial class BarWindow : Window
             LinksPanel.Children.Clear();
             LinksPanel.Children.Add(DimText("sem conexao com o banco agora"));
         }
+    }
+
+    private JsonArray? _linksFolders, _linksRefs;
+
+    /// <summary>Redesenha o quadro de links no tamanho novo, sem ir no banco de novo.</summary>
+    private void RelayoutLinks()
+    {
+        if (_currentView != "Links") return;
+        if (_linksFolders is null || _linksRefs is null) return;
+        RenderLinksBoard(_linksFolders, _linksRefs);
     }
 
     private void RenderLinksBoard(JsonArray folders, JsonArray refs)
@@ -2454,6 +2467,8 @@ public partial class BarWindow : Window
 
         LinksPanel.Children.Add(HudLabel("LINKS - 1 clique abre - arrasta um link de fora pra dentro da pasta"));
 
+        // Colunas acompanham a largura; o UniformGrid deixa todas as pastas do
+        // mesmo tamanho (nenhuma menor que a outra) e os links aparecem inteiros.
         var board = new UniformGrid
         {
             Columns = ResponsiveColumns(minItemWidth: 252, maxColumns: 4),
@@ -2503,11 +2518,13 @@ public partial class BarWindow : Window
         });
         col.Children.Add(head);
 
+        var miolo = new StackPanel();
+
         void AddLinks(string folderId)
         {
             var lista = OrderedLinks(porPasta.TryGetValue(folderId, out var l) ? l : new(), folderId);
             var ids = lista.Select(x => x["id"]?.GetValue<string>() ?? "").Where(x => x.Length > 0).ToList();
-            foreach (var r in lista) col.Children.Add(LinkRow(r, folderId, ids));
+            foreach (var r in lista) miolo.Children.Add(LinkRow(r, folderId, ids));
         }
 
         AddLinks(id);
@@ -2534,9 +2551,11 @@ public partial class BarWindow : Window
                 sub.Children.Add(catDel);
                 sub.MouseEnter += (_, _) => catDel.Opacity = 1;
                 sub.MouseLeave += (_, _) => catDel.Opacity = 0;
-                col.Children.Add(sub);
+                miolo.Children.Add(sub);
                 AddLinks(cid);
             }
+
+        col.Children.Add(miolo);
 
         col.Children.Add(RevealAdd("+ link", "nome | url  (ou so a url)", async text =>
         {
