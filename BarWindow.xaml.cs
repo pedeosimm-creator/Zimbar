@@ -407,7 +407,9 @@ public partial class BarWindow : Window
         foreach (var (btn, longText, compact, orb) in items)
         {
             btn.Content = orbital ? orb : full ? longText : compact;
-            btn.ToolTip = longText;
+            // So poe tooltip quando o rotulo esta abreviado; com o nome inteiro
+            // na aba o balao virava eco do proprio botao.
+            btn.ToolTip = full ? null : longText;
             btn.Padding = full ? new Thickness(12, 7, 12, 7) : orbital ? new Thickness(9, 7, 9, 7) : new Thickness(10, 7, 10, 7);
             btn.MinWidth = full ? 0 : orbital ? 58 : 34;
         }

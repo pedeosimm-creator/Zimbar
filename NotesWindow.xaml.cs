@@ -45,6 +45,12 @@ public partial class NotesWindow : Window
         InitializeComponent();
         Closed += (_, _) => { _syncTimer.Stop(); _instance = null; };
         Activated += (_, _) => _ = LoadNotasIfSafe();
+        // Layout acompanha o tamanho: mais largura = mais colunas de nota.
+        SizeChanged += (_, _) =>
+        {
+            int c = ColsForWidth();
+            if (c != _cols) { _cols = c; RenderNotesList(); }
+        };
         _syncTimer.Tick += (_, _) => _ = LoadNotasIfSafe();
         _syncTimer.Start();
         PreviewKeyDown += Window_PreviewKeyDown;
@@ -119,6 +125,15 @@ public partial class NotesWindow : Window
         await LoadNotas();
     }
 
+    private int _cols = 1;
+
+    /// <summary>Quantas colunas de nota cabem na largura atual da janela.</summary>
+    private int ColsForWidth()
+    {
+        double avail = (ActualWidth > 0 ? ActualWidth : Width) - (14 * 2) - (16 * 2) - 10;
+        return Math.Max(1, Math.Min(4, (int)Math.Floor(avail / 250.0)));
+    }
+
     private void RenderNotesList()
     {
         NotesListPanel.Children.Clear();
@@ -142,8 +157,18 @@ public partial class NotesWindow : Window
             return;
         }
 
+        _cols = ColsForWidth();
+        if (_cols <= 1)
+        {
+            foreach (var n in filtered)
+                NotesListPanel.Children.Add(NoteCard(n));
+            return;
+        }
+        // Janela larga: as notas se espalham em colunas em vez de uma fila so.
+        var grade = new UniformGrid { Columns = _cols };
         foreach (var n in filtered)
-            NotesListPanel.Children.Add(NoteCard(n));
+            grade.Children.Add(NoteCard(n));
+        NotesListPanel.Children.Add(grade);
     }
 
     /// <summary>Bloco neobrutal na cor da nota; clique abre a autoadesiva.</summary>
