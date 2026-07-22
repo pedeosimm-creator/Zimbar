@@ -8,6 +8,7 @@
         Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize"
         ShowActivated="True"
         FontFamily="{DynamicResource Body}"
+        UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Ideal"
         TextOptions.TextRenderingMode="Auto"
@@ -156,7 +157,10 @@
                     </Rectangle>
 
                     <!-- Miolo: altura fixa pra janela não "pular" ao trocar de aba -->
-                    <Grid x:Name="ViewHost" Height="430">
+                    <!-- MaxHeight (nao Height): a aba encolhe ate o tamanho do
+                         conteudo e so rola quando passa do teto, em vez de deixar
+                         um vazio enorme nas abas curtas -->
+                    <Grid x:Name="ViewHost" MaxHeight="430" MinHeight="90">
                         <ScrollViewer x:Name="PainelView" VerticalScrollBarVisibility="Auto">
                             <StackPanel x:Name="PainelPanel" Margin="0,8,8,4"/>
                         </ScrollViewer>
@@ -274,7 +278,7 @@
                             </DockPanel>
 
                             <TextBlock Text="TÍTULO" FontSize="9.5" FontFamily="{DynamicResource Mono}"
-                                       Foreground="{DynamicResource TextDim}" Margin="3,0,0,5"/>
+                                       Foreground="{DynamicResource TextDim}" Padding="0,1,0,1" Margin="3,0,0,5"/>
                             <TextBox x:Name="KbEdTitle" Style="{StaticResource InlineAdd}" FontSize="13"/>
 
                             <Grid Margin="0,13,0,15">
@@ -284,7 +288,7 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Margin="0,0,14,0">
                                     <TextBlock Text="DATA" FontSize="9.5" FontFamily="{DynamicResource Mono}"
-                                               Foreground="{DynamicResource TextDim}" Margin="3,0,0,5"/>
+                                               Foreground="{DynamicResource TextDim}" Padding="0,1,0,1" Margin="3,0,0,5"/>
                                     <DockPanel>
                                         <Button x:Name="KbEdDateClear" DockPanel.Dock="Right" Style="{StaticResource Chip}"
                                                 Click="KbEdDateClear_Click" Content="✕" FontSize="10" Padding="6,4"
@@ -296,7 +300,7 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="1">
                                     <TextBlock x:Name="KbEdStatusLabel" Text="STATUS" FontSize="9.5" FontFamily="{DynamicResource Mono}"
-                                               Foreground="{DynamicResource TextDim}" Margin="3,0,0,5"/>
+                                               Foreground="{DynamicResource TextDim}" Padding="0,1,0,1" Margin="3,0,0,5"/>
                                     <StackPanel x:Name="KbEdStatusRow" Orientation="Horizontal"/>
                                 </StackPanel>
                             </Grid>

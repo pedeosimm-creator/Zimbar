@@ -58,7 +58,7 @@ public partial class BarWindow : Window
     {
         InitializeComponent();
         Width = Config.BarWidth ?? 1160;
-        ViewHost.Height = Config.ViewMax ?? 430;
+        ViewHost.MaxHeight = Config.ViewMax ?? 430;
         SizeChanged += (_, _) => { FitNav(); RelayoutLinks(); };
         Loaded += (_, _) => FitNav();
         _statusTimer.Tick += (_, _) => { StatusText.Visibility = Visibility.Collapsed; _statusTimer.Stop(); };
@@ -247,7 +247,7 @@ public partial class BarWindow : Window
         _sizing = true;
         _sizeStart = e.GetPosition(this);
         _w0 = _pendW = ActualWidth;
-        _v0 = _pendV = ViewHost.Height;
+        _v0 = _pendV = ViewHost.MaxHeight;
         ((UIElement)sender).CaptureMouse();
         CompositionTarget.Rendering += Sizing_Rendering;
         e.Handled = true;
@@ -268,7 +268,7 @@ public partial class BarWindow : Window
         if (!_sizePending) return;
         _sizePending = false;
         Width = _pendW;
-        ViewHost.Height = _pendV;
+        ViewHost.MaxHeight = _pendV;
     }
 
     private void Grip_MouseUp(object sender, MouseButtonEventArgs e)
@@ -278,7 +278,7 @@ public partial class BarWindow : Window
         CompositionTarget.Rendering -= Sizing_Rendering;
         ((UIElement)sender).ReleaseMouseCapture();
         Width = _pendW;
-        ViewHost.Height = _pendV;
+        ViewHost.MaxHeight = _pendV;
         Config.BarWidth = _pendW;
         Config.ViewMax = _pendV;
         Config.Save();

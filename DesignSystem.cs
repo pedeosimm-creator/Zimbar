@@ -77,6 +77,9 @@ public static class Zui
             Foreground = (Brush)owner.FindResource("Ink"),
             VerticalAlignment = VerticalAlignment.Center,
             Margin = margin ?? ZTokens.SpaceNone,
+            // folga de 1px: com UseLayoutRounding a altura arredonda pra baixo e
+            // come o topo das maiusculas nessas fontes pequenas
+            Padding = new Thickness(0, 1, 0, 1),
             TextWrapping = TextWrapping.Wrap
         };
 
@@ -295,23 +298,39 @@ public static class Zui
         editor.Visibility = Visibility.Collapsed;
         editor.Margin = ZTokens.SpaceNone;
 
+        void Fechar()
+        {
+            editor.Visibility = Visibility.Collapsed;
+            btn.Visibility = Visibility.Visible;
+        }
+
+        // Handlers presos UMA vez: antes eram reanexados a cada clique no botao.
+        var caixa = editor is Grid g && g.Children.Count > 0 ? g.Children[0] as TextBox : null;
+        if (caixa is not null)
+        {
+            caixa.PreviewKeyDown += (_, e2) =>
+            {
+                if (e2.Key == Key.Escape || (e2.Key == Key.Enter && caixa.Text.Trim().Length == 0))
+                {
+                    caixa.Text = "";
+                    Fechar();
+                    e2.Handled = true;
+                }
+            };
+            // Clicou fora: a barra se recolhe em vez de ficar aberta pra sempre.
+            caixa.LostKeyboardFocus += (_, _) =>
+            {
+                if (editor.Visibility != Visibility.Visible) return;
+                caixa.Text = "";
+                Fechar();
+            };
+        }
+
         btn.Click += (_, _) =>
         {
             btn.Visibility = Visibility.Collapsed;
             editor.Visibility = Visibility.Visible;
-            if (editor is Grid g && g.Children.Count > 0 && g.Children[0] is TextBox tb)
-            {
-                tb.Focus();
-                tb.PreviewKeyDown += (_, e2) =>
-                {
-                    if (e2.Key == Key.Escape || (e2.Key == Key.Enter && tb.Text.Trim().Length == 0))
-                    {
-                        editor.Visibility = Visibility.Collapsed;
-                        btn.Visibility = Visibility.Visible;
-                        e2.Handled = true;
-                    }
-                };
-            }
+            caixa?.Focus();
         };
 
         host.Children.Add(btn);
