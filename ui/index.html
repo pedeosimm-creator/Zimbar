@@ -127,8 +127,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
    enxuto: uma linha por hábito, sete quadradinhos, e acabou. Sem a régua
    de letras dos dias em cima (o de hoje é o que está circulado) e sem o
    bloco de números embaixo — a conta virou uma linha no cabeçalho. */
-.card.simples{padding:15px 17px;min-height:128px}
+/* Este cartão tem altura de conteúdo: ele cresce com o número de hábitos
+   em vez de cortar o último. Sem overflow:hidden aqui de propósito — era
+   ele que fazia a grade achar que o cartão podia encolher até zero. */
+.card.simples{padding:15px 17px;overflow:visible;min-height:min-content}
 .card.simples .ttl{margin-bottom:11px}
+.simples .hmbox{flex:none;overflow:visible;min-height:auto}
 
 .hmbox{flex:1;min-height:0}
 .hm{display:grid;grid-template-columns:auto repeat(7,1fr);gap:5px;align-items:center;margin-top:2px}
