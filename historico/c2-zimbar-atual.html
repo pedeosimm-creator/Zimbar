@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Zimbar · Protótipo C2 Neobrutal</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{font-family:'Space Grotesk',sans-serif;background:#cfc8b4;display:flex;align-items:center;justify-content:center}
+  .app{width:min(1240px,96vw);height:min(800px,94vh);background:#f6f2e7;border-radius:18px;display:flex;overflow:hidden;
+    border:3px solid #161613;box-shadow:10px 10px 0 #161613;color:#161613}
+  /* ── trilho ── */
+  .rail{width:80px;background:#efe9d8;border-right:2px solid #161613;display:flex;flex-direction:column;align-items:center;padding:16px 0;flex-shrink:0}
+  .logo{width:40px;height:40px;border-radius:10px;background:#ffc940;border:2px solid #161613;box-shadow:3px 3px 0 #161613;
+    display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:18px;margin-bottom:20px}
+  .ric{width:50px;height:46px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:#161613;font-size:14px;margin-bottom:7px;cursor:pointer;border:2px solid transparent;background:transparent;font-family:inherit;transition:transform .1s}
+  .ric span{font-size:8px;letter-spacing:.05em;margin-top:1px;font-weight:700;font-family:'JetBrains Mono',monospace}
+  .ric:hover{border-color:#161613;background:#fffdf7}
+  .ric.on{background:#3ec46d;border-color:#161613;box-shadow:3px 3px 0 #161613}
+  .ric:active{transform:translate(1px,1px)}
+  .rsp{flex:1}
+  /* ── main ── */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .top{display:flex;align-items:center;gap:16px;padding:22px 28px 0;flex-wrap:wrap}
+  .h1{font-family:'Archivo Black',sans-serif;font-size:22px}
+  .h1 em{font-style:normal;background:#ffc940;padding:0 6px;border-radius:6px;border:2px solid #161613}
+  .date{font-family:'JetBrains Mono',monospace;font-size:10px;color:#6f6a58;letter-spacing:.08em;font-weight:700}
+  .tsp{flex:1}
+  .cap{width:320px;background:#fffdf7;border:2px solid #161613;border-radius:12px;padding:9px 13px;font-size:13px;
+    font-family:'Space Grotesk',sans-serif;color:#161613;outline:none;box-shadow:3px 3px 0 #161613}
+  .cap::placeholder{color:#8d8776}
+  .cap:focus{border-color:#3ec46d}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#161613;color:#f6f2e7;font-size:12.5px;font-weight:700;
+    padding:10px 18px;border-radius:10px;border:2px solid #161613;opacity:0;transition:opacity .25s;pointer-events:none}
+  .toast.show{opacity:1}
+  /* views */
+  .view{display:none;flex:1;overflow:auto;padding:20px 28px 10px;animation:fin .22s ease-out}
+  .view.on{display:block}
+  @keyframes fin{from{opacity:.2;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .cols{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:16px;align-items:start}
+  .card{background:#fffdf7;border:2px solid #161613;border-radius:14px;box-shadow:4px 4px 0 #161613;padding:15px 17px;margin-bottom:14px}
+  .card.leafs{background:#c4eed4}.card.skys{background:#cdd9ff}.card.suns{background:#ffe9ac}.card.roses{background:#ffd0de}.card.grapes{background:#d9d1ff}
+  .lab{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.14em;font-weight:700;margin-bottom:11px;display:flex;align-items:center;gap:8px}
+  .lab i{width:9px;height:9px;border-radius:3px;border:1.5px solid #161613;display:inline-block;flex-shrink:0}
+  .item{display:flex;gap:10px;padding:9px 0;border-bottom:1.5px solid rgba(22,22,19,.14);font-size:14px;align-items:baseline;cursor:pointer}
+  .item:last-child{border-bottom:none}
+  .item .n{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#8d8776;min-width:22px;font-weight:700}
+  .item .sub{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#6f6a58;font-weight:700;white-space:nowrap;padding-left:10px}
+  .item.done{color:#a49d8a;text-decoration:line-through}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .chip{border:2px solid #161613;border-radius:100px;padding:5px 12px;font-size:12px;font-weight:700;background:#fffdf7;cursor:pointer;font-family:inherit;color:#161613}
+  .chip.on{background:#3ec46d;box-shadow:2.5px 2.5px 0 #161613}
+  .chip:active{transform:translate(1px,1px);box-shadow:none}
+  .big{font-family:'Archivo Black',sans-serif;font-size:42px;line-height:1;margin:2px 0 4px}
+  .big small{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.14em;margin-top:6px}
+  .meter{height:9px;background:#fffdf7;border:2px solid #161613;border-radius:5px;margin-top:10px;position:relative;overflow:hidden}
+  .meter i{position:absolute;left:0;top:0;bottom:0;width:38%;background:#3ec46d;border-right:2px solid #161613}
+  .meterrow{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:9px;margin-top:7px;font-weight:700}
+  .foot{display:flex;gap:24px;padding:13px 28px;border-top:2px solid #161613;background:#efe9d8;
+    font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.06em;font-weight:700;flex-wrap:wrap}
+  .foot .sp{flex:1}
+  .hint{font-size:11px;color:#8d8776;margin-top:10px;font-family:'JetBrains Mono',monospace;font-weight:700}
+  /* kanban */
+  .kb{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .kbcol{background:#fffdf7;border:2px solid #161613;border-radius:12px;padding:12px;box-shadow:4px 4px 0 #161613}
+  .kbcol .kl{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+  .kbcol .kl b{background:#ffc940;border:1.5px solid #161613;border-radius:100px;padding:0 6px;font-size:9px}
+  .kbcol[data-col="0"] .kl u{background:#c4eed4;border:1.5px solid #161613;border-radius:100px;padding:2px 8px;text-decoration:none}
+  .kbcol[data-col="1"] .kl u{background:#ffe9ac;border:1.5px solid #161613;border-radius:100px;padding:2px 8px;text-decoration:none}
+  .kbcol[data-col="2"] .kl u{background:#cdd9ff;border:1.5px solid #161613;border-radius:100px;padding:2px 8px;text-decoration:none}
+  .kcard{background:#f6f2e7;border:2px solid #161613;border-radius:9px;padding:8px 10px;font-size:12.5px;margin-bottom:7px;cursor:pointer;
+    box-shadow:2.5px 2.5px 0 #161613;font-weight:500;transition:transform .1s}
+  .kcard small{display:block;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6f6a58;margin-top:3px;font-weight:700}
+  .kcard:hover{border-color:#3ec46d}
+  .kcard:active{transform:translate(1.5px,1.5px);box-shadow:none}
+  /* agenda */
+  .agtog{display:flex;gap:8px;margin-bottom:14px}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cwd{font-family:'JetBrains Mono',monospace;font-size:9px;color:#8d8776;text-align:center;padding:4px 0;font-weight:700}
+  .cd{min-height:72px;border:2px solid #161613;border-radius:9px;padding:6px 7px;font-size:10px;background:#fffdf7;cursor:pointer}
+  .cd b{font-size:11px;display:block;margin-bottom:3px;font-weight:700}
+  .cd:hover{background:#ffe9ac}
+  .cd.hoje{background:#c4eed4;box-shadow:3px 3px 0 #161613}
+  .cd .ev{background:#cdd9ff;border:1.5px solid #161613;color:#161613;font-size:8.5px;border-radius:4px;padding:1px 4px;margin-top:2px;display:block;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+  .wk .item .d{font-weight:700;min-width:78px;font-size:13px}
+  .wk .item .d small{display:block;font-family:'JetBrains Mono',monospace;font-size:8.5px;color:#6f6a58;font-weight:700}
+  /* links */
+  .lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+  .lfold{border:2px solid #161613;border-radius:12px;padding:13px 15px;box-shadow:4px 4px 0 #161613}
+  .lfold h3{font-size:13.5px;font-weight:700;margin-bottom:8px}
+  .lf0{background:#ffe9ac}.lf1{background:#c4eed4}.lf2{background:#ffd0de}.lf3{background:#cdd9ff}.lf4{background:#ffd3c4}.lf5{background:#d9d1ff}
+  .lrow{display:flex;gap:9px;align-items:center;padding:6px 0;font-size:13px;border-bottom:1.5px solid rgba(22,22,19,.14);cursor:pointer;font-weight:500}
+  .lrow:last-child{border-bottom:none}
+  .lrow:hover{font-weight:700}
+  .lrow i{width:9px;height:9px;border-radius:50%;border:1.5px solid #161613;background:#fffdf7;flex-shrink:0}
+  /* listas */
+  .mural{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+  .mcard{border:2px solid #161613;border-radius:12px;padding:13px 15px;box-shadow:4px 4px 0 #161613}
+  .mcard h3{font-size:13.5px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .mcard h3 i{width:10px;height:10px;border-radius:3px;border:1.5px solid #161613;display:inline-block}
+  .mrow{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;font-weight:500}
+  .mrow .x{margin-left:auto;color:#8d8776;cursor:pointer;font-size:12px;background:none;border:none;font-family:inherit;font-weight:700}
+  .mrow .x:hover{color:#ff5f35}
+  /* contas */
+  .ctgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .mes{padding:9px 0;border-bottom:1.5px solid rgba(22,22,19,.14)}
+  .mes:last-child{border-bottom:none}
+  .mes .mh{display:flex;justify-content:space-between;font-size:13.5px;font-weight:700}
+  .mes .bar{height:8px;background:#f6f2e7;border:1.5px solid #161613;border-radius:4px;margin:7px 0 5px;position:relative;overflow:hidden}
+  .mes .bar i{position:absolute;left:0;top:0;bottom:0;background:#3ec46d}
+  .mes .mi{display:flex;justify-content:space-between;font-size:11.5px;color:#55524a;padding:2px 0}
+  /* email */
+  .em{border:2px solid #161613;border-radius:12px;background:#fffdf7;box-shadow:3px 3px 0 #161613;padding:12px 15px;margin-bottom:10px;cursor:pointer}
+  .em:hover{background:#ffe9ac}
+  .em .ef{font-size:13.5px;font-weight:700}
+  .em .es{font-size:12.5px;color:#55524a;margin-top:2px}
+  .em .et{float:right;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#8d8776;font-weight:700}
+</style></head><body>
+<div class="app">
+  <div class="rail">
+    <div class="logo">Z</div>
+    <button class="ric on" data-v="hoje" title="1">◈<span>HOJE</span></button>
+    <button class="ric" data-v="kanban" title="2">◱<span>KAN</span></button>
+    <button class="ric" data-v="agenda" title="3">◷<span>AGD</span></button>
+    <button class="ric" data-v="links" title="4">⌘<span>LNK</span></button>
+    <button class="ric" data-v="listas" title="5">☰<span>LST</span></button>
+    <button class="ric" data-v="contas" title="6">$<span>CTS</span></button>
+    <button class="ric" data-v="email" title="7">✉<span>EML</span></button>
+    <div class="rsp"></div>
+    <button class="ric" onclick="toast('pomodoro é decorativo no protótipo :)')">◔<span>25:00</span></button>
+    <button class="ric" onclick="toast('ZimNotes fica de fora deste teste')">✎<span>NOTAS</span></button>
+  </div>
+  <div class="main">
+    <div class="top">
+      <div class="h1">Terça, o dia <em>rende.</em></div>
+      <div class="date">21 JUL 2026</div>
+      <div class="tsp"></div>
+      <input class="cap" id="capInput" placeholder="+ esvazia a cabeça — Enter captura…">
+    </div>
+
+    <!-- HOJE -->
+    <div class="view on" id="v-hoje">
+      <div class="cols">
+        <div>
+          <div class="card">
+            <div class="lab"><i style="background:#ff5f35"></i>PLANO DE HOJE · CLICA PRA MARCAR</div>
+            <div class="item" onclick="tog(this)"><span class="n">01</span>Editar vídeo Conce: ÚLTIMO<span class="sub">DIFÍCIL</span></div>
+            <div class="item" onclick="tog(this)"><span class="n">02</span>Responder e-mail da Lindes<span class="sub">MÉDIA</span></div>
+            <div class="item done" onclick="tog(this)"><span class="n">03</span>Academia<span class="sub">FEITO</span></div>
+            <div class="item" onclick="tog(this)"><span class="n">04</span>Ler 20 páginas<span class="sub">FÁCIL</span></div>
+            <div class="chips">
+              <button class="chip on" onclick="chip(this)">✓ Academia</button>
+              <button class="chip" onclick="chip(this)">Skincare</button>
+              <button class="chip" onclick="chip(this)">Fono</button>
+              <button class="chip" onclick="chip(this)">Ler</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card leafs">
+            <div class="lab"><i style="background:#3ec46d"></i>CONTAS</div>
+            <div class="big">R$ 4,67<small>PODE GASTAR HOJE</small></div>
+            <div class="meter"><i></i></div>
+            <div class="meterrow"><span>141 DIAS</span><span>LIVRE R$ 658,95</span></div>
+          </div>
+          <div class="card skys">
+            <div class="lab"><i style="background:#4d7cff"></i>AGENDA · PRÓXIMOS</div>
+            <div class="item"><span class="n">QUI</span>18h Gravar com Breno<span class="sub">23/07</span></div>
+            <div class="item"><span class="n">SEX</span>19h Gravação Festival<span class="sub">24/07</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="card roses">
+            <div class="lab"><i style="background:#ff5c8a"></i>CAPTURA RÁPIDA</div>
+            <div id="capList">
+              <div class="item" style="cursor:default"><span class="n">·</span>"ideia: abrir o vídeo com o drone reverso"</div>
+            </div>
+            <div class="hint">digita lá em cima e dá Enter</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KANBAN -->
+    <div class="view" id="v-kanban">
+      <div class="lab"><i style="background:#ff5f35"></i>KANBAN · CLICA NUM CARD PRA AVANÇAR DE COLUNA</div>
+      <div class="kb" id="kb">
+        <div class="kbcol" data-col="0"><div class="kl"><u>A FAZER</u><b id="k0"></b></div></div>
+        <div class="kbcol" data-col="1"><div class="kl"><u>FAZENDO</u><b id="k1"></b></div></div>
+        <div class="kbcol" data-col="2"><div class="kl"><u>FEITO</u><b id="k2"></b></div></div>
+      </div>
+    </div>
+
+    <!-- AGENDA -->
+    <div class="view" id="v-agenda">
+      <div class="agtog">
+        <button class="chip on" id="tgMes" onclick="agmode('mes')">mês</button>
+        <button class="chip" id="tgSem" onclick="agmode('semana')">semana</button>
+      </div>
+      <div id="agMes">
+        <div class="cal">
+          <div class="cwd">SEG</div><div class="cwd">TER</div><div class="cwd">QUA</div><div class="cwd">QUI</div><div class="cwd">SEX</div><div class="cwd">SÁB</div><div class="cwd">DOM</div>
+        </div>
+        <div class="cal" id="calDays" style="margin-top:6px"></div>
+      </div>
+      <div id="agSem" class="wk" style="display:none">
+        <div class="card">
+        <div class="item"><span class="d">seg <small>20/07</small></span>—</div>
+        <div class="item"><span class="d">ter <small>21/07</small></span>hoje · nada marcado</div>
+        <div class="item"><span class="d">qua <small>22/07</small></span>—</div>
+        <div class="item"><span class="d">qui <small>23/07</small></span>18h Gravar com Breno</div>
+        <div class="item"><span class="d">sex <small>24/07</small></span>19h Gravação Festival de Dança</div>
+        <div class="item"><span class="d">sáb <small>25/07</small></span>18h Gravação Festival</div>
+        <div class="item"><span class="d">dom <small>26/07</small></span>—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINKS -->
+    <div class="view" id="v-links">
+      <div class="lab"><i style="background:#ff5f35"></i>LINKS · 1 CLIQUE ABRE (AQUI, SÓ AVISA)</div>
+      <div class="lgrid">
+        <div class="lfold lf0"><h3>Banco de coisas</h3>
+          <div class="lrow" onclick="toast('abriria: Invertexto')"><i></i>Invertexto</div></div>
+        <div class="lfold lf1"><h3>Concept</h3>
+          <div class="lrow" onclick="toast('abriria: Listas Concept')"><i></i>Listas Concept</div>
+          <div class="lrow" onclick="toast('abriria: Vendas FDC')"><i></i>Vendas FDC</div></div>
+        <div class="lfold lf2"><h3>Estudos</h3>
+          <div class="lrow" onclick="toast('abriria: Figuras de Linguagem')"><i></i>Figuras de Linguagem</div>
+          <div class="lrow" onclick="toast('abriria: Manual do Cinema')"><i></i>Manual do Cinema</div>
+          <div class="lrow" onclick="toast('abriria: Estante de Refs')"><i></i>Estante de Refs</div></div>
+        <div class="lfold lf3"><h3>Meus sites</h3>
+          <div class="lrow" onclick="toast('abriria: Pedro&#39;s Hub')"><i></i>Pedro's Hub</div>
+          <div class="lrow" onclick="toast('abriria: Dieta')"><i></i>Dieta</div>
+          <div class="lrow" onclick="toast('abriria: Contas')"><i></i>Contas</div>
+          <div class="lrow" onclick="toast('abriria: Frame')"><i></i>Frame</div></div>
+        <div class="lfold lf4"><h3>Lê</h3>
+          <div class="lrow" onclick="toast('abriria: Nossos Lugares')"><i></i>Nossos Lugares</div>
+          <div class="lrow" onclick="toast('abriria: O Que Veremos')"><i></i>O Que Veremos</div></div>
+        <div class="lfold lf5"><h3>Vídeo</h3><div class="lrow" style="cursor:default;color:#55524a">vazia — arrastaria um link aqui</div></div>
+      </div>
+    </div>
+
+    <!-- LISTAS -->
+    <div class="view" id="v-listas">
+      <div class="lab"><i style="background:#ff5f35"></i>LISTAS · DO MURAL</div>
+      <div class="mural">
+        <div class="mcard" style="background:#cdd9ff"><h3><i style="background:#4d7cff"></i>ler/assistir</h3>
+          <div class="mrow">Dune part 2<button class="x" onclick="delrow(this)">✕</button></div></div>
+        <div class="mcard" style="background:#ffe9ac"><h3><i style="background:#ffc940"></i>comprar</h3>
+          <div class="mrow">filtro nd<button class="x" onclick="delrow(this)">✕</button></div>
+          <div class="mrow">arm magic<button class="x" onclick="delrow(this)">✕</button></div>
+          <div class="mrow">suporte celular cam e tripé mini<button class="x" onclick="delrow(this)">✕</button></div></div>
+        <div class="mcard" style="background:#c4eed4"><h3><i style="background:#3ec46d"></i>estudos</h3>
+          <div class="mrow">inglês/espanhol<button class="x" onclick="delrow(this)">✕</button></div>
+          <div class="mrow">guitarra/teoria musical<button class="x" onclick="delrow(this)">✕</button></div></div>
+        <div class="mcard" style="background:#ffd0de"><h3><i style="background:#ff5c8a"></i>exames</h3>
+          <div class="mrow">proctologista<button class="x" onclick="delrow(this)">✕</button></div></div>
+      </div>
+    </div>
+
+    <!-- CONTAS -->
+    <div class="view" id="v-contas">
+      <div class="ctgrid">
+        <div class="card leafs" style="margin-bottom:0">
+          <div class="lab"><i style="background:#3ec46d"></i>PODE GASTAR HOJE</div>
+          <div class="big" style="font-size:56px">R$ 4,67</div>
+          <div class="meter"><i></i></div>
+          <div class="meterrow"><span>141 DIAS P/ META 06/12</span><span>LIVRE R$ 658,95</span></div>
+          <div class="chips" style="margin-top:16px">
+            <button class="chip" onclick="toast('abriria o form de atualizar conta')">✎ atualizar conta</button>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <div class="lab"><i style="background:#161613"></i>PRÓXIMOS 6 MESES · DA PLANILHA</div>
+          <div class="mes"><div class="mh"><span>jul/26</span><span>R$ 1.038,78</span></div><div class="bar"><i style="width:100%"></i></div>
+            <div class="mi"><span>Iphone (6/10)</span><span>R$ 250,00</span></div><div class="mi"><span>Placa de vídeo (4/12)</span><span>R$ 165,00</span></div></div>
+          <div class="mes"><div class="mh"><span>ago/26</span><span>R$ 986,12</span></div><div class="bar"><i style="width:95%"></i></div>
+            <div class="mi"><span>Iphone (7/10)</span><span>R$ 250,00</span></div><div class="mi"><span>Skin (1/3)</span><span>R$ 25,30</span></div></div>
+          <div class="mes"><div class="mh"><span>set/26</span><span>R$ 1.874,45</span></div><div class="bar"><i style="width:100%"></i></div>
+            <div class="mi"><span>Fatura</span><span>R$ 903,00</span></div></div>
+          <div class="mes"><div class="mh"><span>out/26</span><span>R$ 1.652,90</span></div><div class="bar"><i style="width:88%"></i></div>
+            <div class="mi"><span>Fatura</span><span>R$ 792,00</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMAIL -->
+    <div class="view" id="v-email">
+      <div class="lab"><i style="background:#ff5f35"></i>EMAIL · CAIXA DE ENTRADA</div>
+      <div class="em" onclick="toast('abriria o e-mail')"><span class="et">21:04</span><div class="ef">Lindes Company</div><div class="es">Re: cronograma dos vídeos de agosto</div></div>
+      <div class="em" onclick="toast('abriria o e-mail')"><span class="et">18:37</span><div class="ef">Festival de Dança</div><div class="es">Credenciais de gravação — sexta 19h</div></div>
+      <div class="em" onclick="toast('abriria o e-mail')"><span class="et">15:12</span><div class="ef">Supabase</div><div class="es">Your project usage summary</div></div>
+    </div>
+
+    <div class="foot">CTRL+ALT+Z ABRE/FECHA<span class="sp"></span>TECLAS 1–7 TROCAM DE MÓDULO<span class="sp"></span>PROTÓTIPO · SEM SINCRONIA</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  const ORDEM=['hoje','kanban','agenda','links','listas','contas','email'];
+  function go(v){
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+    document.getElementById('v-'+v).classList.add('on');
+    document.querySelectorAll('.ric[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  }
+  document.querySelectorAll('.ric[data-v]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v)));
+  document.addEventListener('keydown',e=>{
+    if(e.target.tagName==='INPUT')return;
+    const i=parseInt(e.key)-1;
+    if(i>=0&&i<ORDEM.length)go(ORDEM[i]);
+  });
+  function tog(el){el.classList.toggle('done');}
+  function chip(el){el.classList.toggle('on');}
+  function delrow(btn){btn.parentElement.remove();}
+  let tT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('show'),1600);}
+  document.getElementById('capInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&e.target.value.trim()){
+      const d=document.createElement('div');d.className='item';d.style.cursor='default';
+      d.innerHTML='<span class="n">·</span>'+e.target.value.trim().replace(/</g,'&lt;');
+      document.getElementById('capList').prepend(d);
+      e.target.value='';toast('capturado ✓');go('hoje');
+    }
+  });
+  const KDATA=[["18h: Gravar com Breno|23/07","Editar reels DKAH|","18h: Gravação Festival|25/07","19h: Grav. Festival de Dança|24/07","Aftermovie|","Clipe Manske|"],[],["Absolute|","aftermovie fdc|","Vídeo DKAH|","Casamento Ana|"]];
+  function kbrender(){
+    document.querySelectorAll('.kbcol').forEach((c,ci)=>{
+      c.querySelectorAll('.kcard').forEach(x=>x.remove());
+      KDATA[ci].forEach((t,ti)=>{
+        const[tt,dd]=t.split('|');
+        const el=document.createElement('div');el.className='kcard';
+        el.innerHTML=tt+(dd?'<small>'+dd+'</small>':'');
+        el.onclick=()=>{KDATA[ci].splice(ti,1);KDATA[(ci+1)%3].push(t);kbrender();};
+        c.appendChild(el);
+      });
+      document.getElementById('k'+ci).textContent=KDATA[ci].length;
+    });
+  }
+  kbrender();
+  const EV={23:'18h Breno',24:'19h Festival',25:'18h Festival'};
+  (function(){
+    const c=document.getElementById('calDays');
+    for(let i=0;i<2;i++){const d=document.createElement('div');c.appendChild(d);}
+    for(let d=1;d<=31;d++){
+      const el=document.createElement('div');el.className='cd'+(d===21?' hoje':'');
+      el.innerHTML='<b>'+d+'</b>'+(EV[d]?'<span class="ev">'+EV[d]+'</span>':'');
+      el.onclick=()=>toast('marcaria evento no dia '+d+'/07');
+      c.appendChild(el);
+    }
+  })();
+  function agmode(m){
+    document.getElementById('agMes').style.display=m==='mes'?'':'none';
+    document.getElementById('agSem').style.display=m==='semana'?'':'none';
+    document.getElementById('tgMes').classList.toggle('on',m==='mes');
+    document.getElementById('tgSem').classList.toggle('on',m==='semana');
+  }
+</script>
+</body></html>
