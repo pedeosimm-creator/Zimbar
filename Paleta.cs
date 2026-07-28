@@ -18,6 +18,9 @@ public static class Paleta
         return b;
     }
 
+    /// <summary>O papel da nota: cinza claríssimo, pra o cartão branco da
+    /// lista ter de quem se destacar. Branco sobre branco não separa nada.</summary>
+    public static readonly Brush Papel    = B("#F4F5F9");
     public static readonly Brush Fundo    = B("#F3F4F8");
     public static readonly Brush FundoBaixo = B("#E7EAF0");
     public static readonly Brush Cartao   = B("#FFFFFF");

@@ -120,7 +120,7 @@ function categorias(){
 }
 
 /* ═══ NAVEGAÇÃO ═══ */
-const ORDEM=['hoje','kanban','agenda','listas','noticias','contas','trabalho'];
+const ORDEM=['hoje','kanban','agenda','listas','noticias','contas'];
 function go(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('v-'+v).classList.add('on');
@@ -771,6 +771,29 @@ function renderKanban(){
         aoAbrir:()=>abrirCard(it.id)});
       box.appendChild(k);
     });
+    // ── e, no mesmo quadro, o que vem do ConceWay ──
+    // Mesma coluna, mesma altura de olhar: separar em duas abas era
+    // exatamente o que fazia esquecer de uma delas.
+    trabalhoDe(Dados.COLUNAS_TRABALHO[ci].k).forEach((it,ti)=>{
+      const k=document.createElement('div'); k.className='kcard trab';
+      const atrasada = it.deadline && it.deadline < chave(new Date()) && ci!==2;
+      k.innerHTML=`<span class="selo-tb">trabalho</span>`+esc(it.title||'sem título')+
+        `<small>${it.area?esc(it.area):''}${it.area&&it.deadline?' · ':''}`+
+        `${it.deadline?(atrasada?'⚠ ':'')+dLabel(it.deadline):''}</small>`;
+      if(atrasada) k.classList.add('atrasada');
+      k.title='do ConceWay — arrasta pra mover lá também';
+      arrastavel(k,{zona:'kb'+ci,indice:1000+ti,
+        carga:{texto:it.title||''},
+        aoSoltar:(zona)=>{
+          if(!zona.startsWith('kb')) return;
+          const dest=parseInt(zona.slice(2));
+          if(dest===ci) return;
+          moverTrabalho(it, Dados.COLUNAS_TRABALHO[dest]);
+        },
+        aoAbrir:()=>abrirCardTrabalho(it)});
+      box.appendChild(k);
+    });
+
     c.querySelector('input').onkeydown=e=>{
       if(e.key==='Enter'&&e.target.value.trim()){
         S.tarefas.unshift({id:Dados.novoId('t'),t:e.target.value.trim(),status,prazo:null,criado:new Date().toISOString()});
@@ -779,7 +802,8 @@ function renderKanban(){
     };
     g.appendChild(c);
   });
-  document.getElementById('ct-kanban').textContent=tarefasDa('a fazer').length||'';
+  const abertas=tarefasDa('a fazer').length+trabalhoDe('todo').length;
+  document.getElementById('ct-kanban').textContent=abertas||'';
 }
 /* tira a tarefa de onde está e põe logo antes de `antesDe` (ou no fim) */
 function recolocar(item, antesDe){
@@ -826,6 +850,15 @@ function renderAgenda(){
     if(key===diaSel) el.style.borderColor='var(--acc)';
     el.innerHTML='<b>'+d+'</b>';
     zonaSoltar(el,'dia:'+key);       // soltar aqui muda o prazo da tarefa
+    // prazo do ConceWay no calendário; não arrasta, porque a data é da
+    // equipe — remarcar prazo do trabalho é decisão que se toma lá
+    trabalhoDoDia(key).slice(0,2).forEach(tb=>{
+      const ch=document.createElement('span');
+      ch.className='ev tb';
+      ch.textContent=tb.title||'trabalho';
+      ch.title='ConceWay'+(tb.area?' · '+tb.area:'');
+      el.appendChild(ch);
+    });
     tarefasDoDia(key).slice(0,2).forEach((ev,ei)=>{
       const ch=document.createElement('span'); ch.className='ev'; ch.textContent=ev.t;
       arrastavel(ch,{zona:'dia:'+key,indice:ei,
@@ -851,8 +884,20 @@ function renderEventos(){
   cab.style.cssText='font-size:13px;font-weight:600;margin-bottom:8px';
   cab.textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
   box.appendChild(cab);
+  // o que o ConceWay marcou pra esse dia, antes do que é seu
+  trabalhoDoDia(diaSel).forEach(tb=>{
+    const el=document.createElement('div'); el.className='tk trab';
+    el.innerHTML=`<div class="tx">${esc(tb.title||'sem título')}</div>`+
+      `<span class="selo-tb">trabalho</span>`;
+    el.title='do ConceWay'+(tb.area?' · '+tb.area:'')+' — clica pra ver';
+    el.style.cursor='pointer';
+    el.onclick=()=>abrirCardTrabalho(tb);
+    box.appendChild(el);
+  });
+
   const evs=tarefasDoDia(diaSel);
-  if(!evs.length){const e=document.createElement('div');e.className='empty';e.textContent='nada nesse dia';box.appendChild(e);}
+  if(!evs.length&&!trabalhoDoDia(diaSel).length){
+    const e=document.createElement('div');e.className='empty';e.textContent='nada nesse dia';box.appendChild(e);}
   const lista=document.createElement('div'); zonaSoltar(lista,'evdia'); box.appendChild(lista);
   evs.forEach((ev,i)=>{
     const el=document.createElement('div'); el.className='tk'+(ev.status==='feito'?' done':'');
@@ -1371,69 +1416,31 @@ async function recarregar(){
 async function carregarTrabalho(){
   try{
     S.trabalho = await Dados.trabalho();
-    renderTrabalho(); renderProximos();
+    renderKanban(); renderProximos(); renderAgenda(); renderEventos();
   }catch(e){
     console.error('trabalho',e);
-    const g=document.getElementById('tbGrid');
-    if(g) g.innerHTML='<div class="empty">não deu pra falar com o ConceWay agora</div>';
+    toast('não deu pra falar com o ConceWay agora');
   }
 }
 
-const trabalhoDe = (status) => S.trabalho.filter(t=>(t.status||'todo')===status);
-
-function renderTrabalho(){
-  const g=document.getElementById('tbGrid'); if(!g) return;
-  g.innerHTML='';
-  Dados.COLUNAS_TRABALHO.forEach((col,ci)=>{
-    const itens=trabalhoDe(col.k);
-    const c=document.createElement('div'); c.className='card kcol'; c.dataset.col=ci;
-    c.innerHTML=`<div class="ttl" style="padding-top:5px">
-      <h2>${col.rot}</h2><span class="sp"></span><span class="cnt">${itens.length}</span></div>
-      <div class="scrollbox"></div>`;
-    const box=c.querySelector('.scrollbox');
-    zonaSoltar(c,'tb'+ci);
-    if(!itens.length) box.innerHTML='<div class="empty">nada aqui</div>';
-    itens.forEach((it,ii)=>{
-      const k=document.createElement('div'); k.className='kcard';
-      const atrasada = it.deadline && it.deadline < chave(new Date()) && col.k!=='done';
-      k.innerHTML=esc(it.title||'sem título')+
-        `<small>${it.area?esc(it.area):''}${it.area&&it.deadline?' · ':''}` +
-        `${it.deadline?(atrasada?'⚠ ':'')+dLabel(it.deadline):''}</small>`;
-      if(atrasada) k.style.borderColor='var(--acc)';
-      k.title='arrasta pra mover — muda aqui e no ConceWay';
-      arrastavel(k,{zona:'tb'+ci,indice:ii,
-        carga:{texto:it.title||''},   // o card fica; pro resto do Zimbar vai uma cópia
-        aoSoltar:(zona)=>{
-          if(!zona.startsWith('tb')) return;
-          const dest=parseInt(zona.slice(2));
-          if(dest===ci) return;
-          moverTrabalho(it, Dados.COLUNAS_TRABALHO[dest]);
-        },
-        aoAbrir:()=>abrirCardTrabalho(it)});
-      box.appendChild(k);
-    });
-    g.appendChild(c);
-  });
-  const abertas=trabalhoDe('todo').length+trabalhoDe('doing').length;
-  const ct=document.getElementById('ct-trabalho');
-  if(ct) ct.textContent=abertas||'';
-}
+const trabalhoDe   = (status) => S.trabalho.filter(t=>(t.status||'todo')===status);
+const trabalhoDoDia= (k)      => S.trabalho.filter(t=>t.deadline===k && t.status!=='done');
 
 /* grava na hora: o ConceWay é de outra gente também, não dá pra
    deixar a mudança esperando um debounce que pode nem chegar */
 async function moverTrabalho(it, col){
   const antes=it.status;
   it.status=col.k;
-  renderTrabalho();
+  renderKanban();
   sinal('salvando');
   try{
     await Dados.moverTask(it.id, col.k);
     sinal('');
     toast('foi pra '+col.rot.toLowerCase()+' — no ConceWay também');
-    renderProximos();
+    renderProximos(); renderAgenda(); renderEventos();
   }catch(e){
     console.error('moverTask',e);
-    it.status=antes; renderTrabalho();       // desfaz: o banco é a verdade
+    it.status=antes; renderKanban();          // desfaz: o banco é a verdade
     sinal('não salvou', true);
     toast('não deu pra mover no ConceWay');
   }

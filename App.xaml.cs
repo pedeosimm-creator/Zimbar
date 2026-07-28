@@ -55,12 +55,20 @@ public partial class App : Application
         };
         TaskScheduler.UnobservedTaskException += (_, ev) => Log.Erro("tarefa solta", ev.Exception);
 
+        bool querNotas = Array.Exists(e.Args, a => a == "--notas");
+
         _singleInstance = new Mutex(true, "Zimbar.SingleInstance", out bool isNew);
         if (!isNew)
         {
+            // Já tem um Zimbar de pé. Se este atalho pediu o ZimNotes, avisa
+            // aquele e sai — é isso que faz o atalho da área de trabalho abrir
+            // as notas em vez de simplesmente não fazer nada.
+            if (querNotas)
+                try { EventWaitHandle.OpenExisting(SinalNotas).Set(); } catch { }
             Shutdown();
             return;
         }
+        EscutarPedidoDeNotas();
 
         // NÃO definir um AppUserModelID explícito: os atalhos (área de trabalho/inicializar/
         // fixado) usam a identidade derivada do caminho do exe. Se o processo usasse uma
@@ -71,14 +79,43 @@ public partial class App : Application
         SetupTray();
         SetupHotkey();
 
+        // Atalho do ZimNotes: abre só a biblioteca de notas, sem a barra.
+        if (querNotas)
+            NotesWindow.Open();
         // Modo de teste: abre a barra direto na inicialização.
-        if (Array.Exists(e.Args, a => a == "--show"))
+        else if (Array.Exists(e.Args, a => a == "--show"))
             ToggleBar();
         else
             // Subiu pra bandeja: esquenta a interface enquanto ninguém olha.
             Dispatcher.BeginInvoke(new Action(PrepararBarra),
                                    System.Windows.Threading.DispatcherPriority.ApplicationIdle);
 
+    }
+
+    /// <summary>Nome do sinal que o atalho do ZimNotes usa pra falar com a instância viva.</summary>
+    private const string SinalNotas = "Zimbar.AbrirNotas";
+
+    /// <summary>
+    /// Fica de ouvido num evento nomeado: quem clicar no atalho do ZimNotes
+    /// com o Zimbar já aberto acorda a biblioteca em vez de abrir um segundo
+    /// processo, que o mutex mataria em seguida.
+    /// </summary>
+    private void EscutarPedidoDeNotas()
+    {
+        var sinal = new EventWaitHandle(false, EventResetMode.AutoReset, SinalNotas);
+        var t = new Thread(() =>
+        {
+            while (true)
+            {
+                sinal.WaitOne();
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    try { NotesWindow.Open(); } catch (Exception ex) { Log.Erro("abrir notas", ex); }
+                }));
+            }
+        })
+        { IsBackground = true, Name = "sinal-notas" };
+        t.Start();
     }
 
     private void SetupTray()

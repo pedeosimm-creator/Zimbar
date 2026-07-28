@@ -253,10 +253,12 @@ public class StickyWindow : Window
         {
             Child = _itensBox,
             Background = Paleta.Cartao,
+            BorderBrush = Paleta.Linha,
+            BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(14),
             Padding = new Thickness(12, 8, 10, 8),
             Margin = new Thickness(11, 2, 11, 9),
-            Effect = Paleta.Sombra(14, 0.10),
+            Effect = Paleta.Sombra(14, 0.13),
             Visibility = Visibility.Collapsed
         };
 
@@ -272,7 +274,7 @@ public class StickyWindow : Window
         // Sem moldura grossa: a curva do Windows 11 já dá o recorte
         _root = new Border
         {
-            Background = Paleta.Cartao,
+            Background = Paleta.Papel,
             CornerRadius = new CornerRadius(12),
             ClipToBounds = true,          // a faixa do topo respeita a curva
             Child = layout
