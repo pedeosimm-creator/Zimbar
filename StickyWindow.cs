@@ -44,6 +44,17 @@ public class StickyWindow : Window
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(1100) };
     private bool _dirty;
 
+    // ── o que veio do ZimNotes do celular ──
+    // A ponte só manda titulo/corpo/cor, então estes a janela busca sozinha.
+    // Enquanto não chegam, SaveNote não os inclui: gravar uma lista vazia
+    // por não ter carregado ainda apagaria o checklist feito no celular.
+    private JsonArray _itens = new();
+    private bool _fixada;
+    private bool _extrasProntos;
+    private readonly StackPanel _itensBox;
+    private readonly Border _itensWrap;
+    private readonly Button _pinBtn;
+
     public static void OpenNote(string id, string titulo, string corpo, string cor)
     {
         if (Abertas.TryGetValue(id, out var w))
@@ -157,6 +168,16 @@ public class StickyWindow : Window
                 Foreground = new SolidColorBrush(Color.FromArgb(0x99, 0x18, 0x13, 0x20))
             };
         }
+        _pinBtn = TopBtn("📌", "fixar no topo da lista");
+        _pinBtn.Opacity = 0.35;
+        _pinBtn.Click += (_, _) =>
+        {
+            _fixada = !_fixada;
+            _pinBtn.Opacity = _fixada ? 1 : 0.35;
+            _pinBtn.ToolTip = _fixada ? "fixada — clique pra soltar" : "fixar no topo da lista";
+            _dirty = true; _saveTimer.Stop(); _saveTimer.Start();
+        };
+
         var delBtn = TopBtn("🗑", "excluir a nota");
         delBtn.Click += async (_, _) => await DeleteNote();
         var minBtn = TopBtn("—", "minimizar a nota");
@@ -165,6 +186,7 @@ public class StickyWindow : Window
         closeBtn.Click += (_, _) => Close();
 
         var topRight = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        topRight.Children.Add(_pinBtn);
         topRight.Children.Add(delBtn);
         topRight.Children.Add(minBtn);
         topRight.Children.Add(closeBtn);
@@ -201,11 +223,19 @@ public class StickyWindow : Window
         pe.MouseEnter += (_, _) => _dots.Opacity = 1;
         pe.MouseLeave += (_, _) => _dots.Opacity = 0.75;
 
+        // Checklist: fica entre o texto e a fita de cores, e só aparece quando
+        // a nota tem itens. Quem cria item é o celular; aqui você marca e
+        // desmarca, que é o que se faz com uma lista no computador.
+        _itensBox = new StackPanel { Margin = new Thickness(11, 2, 11, 8) };
+        _itensWrap = new Border { Child = _itensBox, Visibility = Visibility.Collapsed };
+
         var layout = new DockPanel();
         DockPanel.SetDock(header, Dock.Top);
         DockPanel.SetDock(pe, Dock.Bottom);
+        DockPanel.SetDock(_itensWrap, Dock.Bottom);
         layout.Children.Add(header);
         layout.Children.Add(pe);
+        layout.Children.Add(_itensWrap);
         layout.Children.Add(_body);
 
         // Sem moldura grossa: a curva do Windows 11 já dá o recorte
@@ -232,6 +262,68 @@ public class StickyWindow : Window
         };
 
         Loaded += (_, _) => { _body.Focus(); _body.CaretIndex = _body.Text.Length; };
+        _ = CarregarExtras();
+    }
+
+    /// <summary>Busca checklist e alfinete direto do banco, sem passar pela ponte.</summary>
+    private async Task CarregarExtras()
+    {
+        try
+        {
+            var linhas = await Supa.Select(
+                "notas?id=eq." + Uri.EscapeDataString(_id) + "&select=itens,fixada");
+            if (linhas.Count > 0 && linhas[0] is JsonObject o)
+            {
+                _itens = o["itens"] as JsonArray ?? new JsonArray();
+                _fixada = o["fixada"]?.GetValue<bool>() ?? false;
+            }
+        }
+        catch (Exception ex) { Log.Escrever("nota — extras: " + ex.Message); }
+
+        _extrasProntos = true;
+        _pinBtn.Opacity = _fixada ? 1 : 0.35;
+        if (_fixada) _pinBtn.ToolTip = "fixada — clique pra soltar";
+        DesenharItens();
+    }
+
+    private void DesenharItens()
+    {
+        _itensBox.Children.Clear();
+        if (_itens.Count == 0) { _itensWrap.Visibility = Visibility.Collapsed; return; }
+        _itensWrap.Visibility = Visibility.Visible;
+
+        var ink = new SolidColorBrush(Color.FromRgb(0x18, 0x13, 0x20));
+        for (int i = 0; i < _itens.Count; i++)
+        {
+            if (_itens[i] is not JsonObject item) continue;
+            int indice = i;
+            bool feito = item["f"]?.GetValue<bool>() ?? false;
+            string texto = item["t"]?.GetValue<string>() ?? "";
+
+            var caixa = new CheckBox
+            {
+                Content = texto,
+                IsChecked = feito,
+                Foreground = ink,
+                FontSize = 12.5,
+                Margin = new Thickness(0, 2, 0, 2),
+                Opacity = feito ? 0.5 : 1,
+                Cursor = Cursors.Hand
+            };
+            caixa.Checked += (_, _) => MarcarItem(indice, true);
+            caixa.Unchecked += (_, _) => MarcarItem(indice, false);
+            _itensBox.Children.Add(caixa);
+        }
+    }
+
+    private void MarcarItem(int i, bool feito)
+    {
+        if (_itens[i] is not JsonObject item) return;
+        item["f"] = feito;
+        if (_itensBox.Children.Count > i && _itensBox.Children[i] is CheckBox c) c.Opacity = feito ? 0.5 : 1;
+        _dirty = true;
+        _saveTimer.Stop();
+        _saveTimer.Start();
     }
 
     private void MarkDots(Brush ink)
@@ -258,13 +350,21 @@ public class StickyWindow : Window
         if (titulo.Length > 80) titulo = titulo[..80];
         try
         {
-            await Supa.Update("notas", "id=eq." + Uri.EscapeDataString(_id), new JsonObject
+            var patch = new JsonObject
             {
                 ["titulo"] = titulo,
                 ["corpo"] = texto,
                 ["cor"] = _cor,
                 ["data_nota"] = DateTime.Now.ToString("yyyy-MM-dd")
-            });
+            };
+            // Só depois de carregar: mandar antes gravaria lista vazia por cima
+            // do checklist que veio do celular.
+            if (_extrasProntos)
+            {
+                patch["fixada"] = _fixada;
+                patch["itens"] = _itens.DeepClone();
+            }
+            await Supa.Update("notas", "id=eq." + Uri.EscapeDataString(_id), patch);
             _dirty = false;
             Title = titulo.Length > 0 ? titulo : "nota";
             NotesWindow.RefreshIfOpen();
