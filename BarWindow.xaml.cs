@@ -171,4 +171,18 @@ public partial class BarWindow : Window
 
     /// <summary>Some da tela mas continua viva: o WebView2 não recarrega à toa.</summary>
     public void CollapseBar() => Hide();
+
+    /// <summary>Só o "Sair" da bandeja liga isto; aí a janela pode morrer.</summary>
+    public static bool Saindo;
+
+    /// <summary>
+    /// Alt+F4 esconde em vez de fechar. Fechando de verdade o WebView2 morre
+    /// junto, e o próximo Ctrl+Alt+Z não tinha mais o que mostrar — a janela
+    /// ficava "aberta" sem nunca aparecer.
+    /// </summary>
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        if (!Saindo) { e.Cancel = true; Hide(); return; }
+        base.OnClosing(e);
+    }
 }

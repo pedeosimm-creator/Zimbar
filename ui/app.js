@@ -554,7 +554,8 @@ function renderRitmo(){
   const box=document.getElementById('ritmoHm'); box.innerHTML='';
   const hi=hojeIdx(), semana=semanaAtual();
   const itens=(S.ritmo&&S.ritmo.items)||[];
-  box.appendChild(document.createElement('div'));
+  // a régua de dias é toda .hd — assim o modo simples esconde a linha inteira
+  box.appendChild(Object.assign(document.createElement('div'),{className:'hd'}));
   DIAS.forEach((d,i)=>{ const e=document.createElement('div'); e.className='hd';
     e.textContent=d; if(i===hi) e.style.color='var(--acc)'; box.appendChild(e); });
   itens.forEach(r=>{
@@ -579,9 +580,9 @@ function renderRitmo(){
     if(itens.some(r=>r.days&&r.days[chave(d)])) seq++;
     else if(i>0) break;            // hoje ainda pode estar em branco
   }
-  // resumo curto, no cabeçalho do cartão: "2/4 hoje · 5d seguidos"
+  // no cabeçalho fica só a conta do dia; a sequência mora no tooltip
   const el=document.getElementById('streakBox');
-  el.innerHTML=`<b>${feitosHoje}/${itens.length}</b> hoje · <b>${seq}</b>d seguidos`;
+  el.innerHTML=`<b>${feitosHoje}/${itens.length}</b> hoje`;
   el.title=`${feitosHoje} de ${itens.length} hábitos feitos hoje · `+
            `${seq} ${seq===1?'dia seguido':'dias seguidos'}`;
 }

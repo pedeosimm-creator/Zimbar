@@ -7,7 +7,7 @@
         Icon="assets/Zimbar.png"
         Width="1340" Height="860" MinWidth="900" MinHeight="560"
         WindowStyle="None" ResizeMode="CanResize"
-        Background="#15171C"
+        Background="#F8F6F1"
         Topmost="False" ShowInTaskbar="True"
         WindowStartupLocation="CenterScreen">
 

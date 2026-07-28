@@ -123,19 +123,20 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
 .card.destaque .ttl .dot{background:var(--acc)}
 .atalho{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.1em;color:var(--faint);
   border:1px solid var(--line);padding:2px 5px;border-radius:4px;margin-right:2px}
-.card.discreto{background:transparent;box-shadow:none;border-style:dashed;padding:12px 15px;min-height:112px}
-.card.discreto .ttl{margin-bottom:8px}
-.card.discreto .ttl h2{font-size:8.5px;color:var(--faint)}
-.card.discreto .ttl .dot{width:5px;height:5px;opacity:.6}
+/* RITMO — cartão igual aos outros; o que mudou foi o conteúdo, que ficou
+   enxuto: uma linha por hábito, sete quadradinhos, e acabou. Sem a régua
+   de letras dos dias em cima (o de hoje é o que está circulado) e sem o
+   bloco de números embaixo — a conta virou uma linha no cabeçalho. */
+.card.simples{padding:15px 17px;min-height:128px}
+.card.simples .ttl{margin-bottom:11px}
 
-/* heatmap do ritmo — em modo discreto, quadradinhos pequenos */
 .hmbox{flex:1;min-height:0}
 .hm{display:grid;grid-template-columns:auto repeat(7,1fr);gap:5px;align-items:center;margin-top:2px}
 .hm .cell{max-height:30px}
-.discreto .hm{gap:3px}
-.discreto .hm .cell{max-height:15px;border-radius:3px}
-.discreto .hm .hn{font-size:10.5px;color:var(--faint)}
-.discreto .hm .hd{font-size:7px}
+.simples .hm{grid-template-columns:minmax(0,1fr) repeat(7,15px);gap:7px 5px}
+.simples .hm .hd{display:none}
+.simples .hm .hn{font-size:12px;color:var(--ink);padding-right:10px}
+.simples .hm .cell{aspect-ratio:auto;height:15px;max-height:15px;border-radius:4px}
 .hm .hn{font-size:11.5px;color:var(--dim);padding-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hm .hd{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--faint);text-align:center}
 .hm .cell{aspect-ratio:1;border-radius:5px;background:var(--sunk);border:1px solid var(--line-soft);cursor:pointer;transition:.13s}
@@ -617,8 +618,8 @@ html.nativo .jbtn{display:flex}
                 <button class="act" onclick="go('agenda')">agenda →</button></div>
               <div class="scrollbox" id="proximos"></div>
             </div>
-            <div class="card discreto">
-              <div class="ttl"><span class="dot" style="background:var(--ok)"></span><h2>RITMO</h2><span class="sp"></span>
+            <div class="card simples">
+              <div class="ttl"><span class="dot" style="background:var(--ok)"></span><h2>RITMO DA SEMANA</h2><span class="sp"></span>
                 <span class="streak" id="streakBox"></span></div>
               <div class="scrollbox hmbox"><div class="hm" id="ritmoHm"></div></div>
             </div>

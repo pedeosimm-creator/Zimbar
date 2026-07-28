@@ -74,6 +74,10 @@ public partial class App : Application
         // Modo de teste: abre a barra direto na inicialização.
         if (Array.Exists(e.Args, a => a == "--show"))
             ToggleBar();
+        else
+            // Subiu pra bandeja: esquenta a interface enquanto ninguém olha.
+            Dispatcher.BeginInvoke(new Action(PrepararBarra),
+                                   System.Windows.Threading.DispatcherPriority.ApplicationIdle);
 
     }
 
@@ -91,7 +95,7 @@ public partial class App : Application
         menu.Items.Add("Abrir ZimNotes  (Ctrl+Alt+D)", null, (_, _) => NotesWindow.Open());
         menu.Items.Add("Pomodoro", null, (_, _) => PomoWindow.Abrir());
         menu.Items.Add(new WinForms.ToolStripSeparator());
-        menu.Items.Add("Sair", null, (_, _) => Shutdown());
+        menu.Items.Add("Sair", null, (_, _) => { BarWindow.Saindo = true; Shutdown(); });
         _tray.ContextMenuStrip = menu;
         _tray.DoubleClick += (_, _) => ToggleBar();
 
@@ -168,15 +172,32 @@ public partial class App : Application
         return IntPtr.Zero;
     }
 
+    /// <summary>
+    /// Deixa a barra pronta antes de alguém pedir. O WebView2 leva alguns
+    /// segundos pra subir e a interface ainda busca os dados no Supabase —
+    /// esse custo é pago aqui, com o app parado na bandeja, e não no
+    /// primeiro Ctrl+Alt+Z. EnsureHandle dá o HWND que o WebView2 precisa
+    /// sem que a janela apareça.
+    /// </summary>
+    private void PrepararBarra()
+    {
+        if (_bar is not null) return;
+        _bar = new BarWindow();
+        // Se um dia ela fechar de verdade, esquecemos a referência: Show()
+        // numa janela já fechada estoura, e o hotkey ficava morto até
+        // reiniciar o app.
+        _bar.Closed += (_, _) => _bar = null;
+        try { new WindowInteropHelper(_bar).EnsureHandle(); }
+        catch (Exception ex) { Log.Erro("preparar barra", ex); }
+    }
+
     private void ToggleBar()
     {
-        _bar ??= new BarWindow();
-        if (!_bar.IsVisible)
-            _bar.ShowBar();
-        else if (_bar.IsCollapsed)
-            _bar.ExpandBar();     // minimizada: o hotkey restaura
+        PrepararBarra();
+        if (_bar!.IsVisible)
+            _bar.CollapseBar();   // aberta: o hotkey esconde (Esc faz o mesmo)
         else
-            _bar.CollapseBar();   // aberta: o hotkey minimiza (Esc é quem fecha)
+            _bar.ShowBar();
     }
 
     /// <summary>Balão de notificação da bandeja (usado pelo pomodoro).</summary>
