@@ -98,22 +98,37 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
 /* HOJE */
 .grid-hoje{display:grid;height:100%;gap:16px;
   grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);
-  grid-template-rows:auto minmax(0,1fr)}
+  grid-template-rows:auto minmax(0,1fr);
+  grid-template-areas:"foco  grana grana"
+                      "plano lado  cap"}
+.grid-hoje>.focus{grid-area:foco}
+.grid-hoje>.money{grid-area:grana}
+.grid-hoje>.card{grid-area:plano}
+.grid-hoje>.stack{grid-area:lado}
+.grid-hoje>.stack.um{grid-area:cap}
 .stack{display:grid;gap:16px;min-height:0;grid-template-rows:auto minmax(0,1fr)}
 .stack.um{grid-template-rows:minmax(0,1fr)}
 
 /* ══ JANELA PEQUENA — as grades desmontam em vez de espremer ══ */
-@media (max-width:1180px){
-  .grid-hoje{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);
-    grid-template-rows:auto auto minmax(0,1fr)}
-  .grid-hoje>.hero-money{grid-column:2}
-  .grid-ct{grid-template-columns:minmax(0,1fr)}
+@media (max-width:1280px){
+  .grid-hoje{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1.1fr) minmax(0,.9fr);
+    grid-template-areas:"foco  grana"
+                        "plano lado"
+                        "plano cap"}
+  .grid-ct,.grid-ag{grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1fr)}
+  .stack{grid-template-rows:auto minmax(130px,1fr)}
 }
-@media (max-width:900px){
-  .grid-hoje,.grid-kb,.grid-ag{grid-template-columns:minmax(0,1fr);
-    grid-template-rows:none;grid-auto-rows:minmax(210px,auto);height:auto}
+@media (max-width:1020px){
+  .grid-hoje,.grid-kb,.grid-ag,.grid-ct,.stack{
+    display:flex;flex-direction:column;height:auto;gap:16px}
+  .grid-hoje>*,.grid-kb>*,.grid-ag>*,.grid-ct>*,.stack>*{
+    grid-area:auto;grid-column:auto;flex:none;min-height:190px}
+  .grid-hoje>.focus,.grid-hoje>.money{min-height:0}
   .view{height:auto}
-  .stage{overflow-y:auto}
+  .masonry{height:auto;grid-auto-rows:minmax(170px,auto)}
+  .kcol{min-height:260px}
 }
 @media (max-height:700px){
   .head{padding:12px 26px 10px}
@@ -533,7 +548,7 @@ html.nativo .jbtn{display:flex}
             </div>
           </div>
 
-          <div class="card" style="grid-column:1/2">
+          <div class="card">
             <div class="ttl"><span class="dot"></span><h2>PLANO DE HOJE</h2><span class="sp"></span>
               <span class="ct" id="planoCount" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint)"></span></div>
             <div class="scrollbox" id="listaHoje"></div>
