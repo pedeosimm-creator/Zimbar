@@ -88,7 +88,10 @@ public partial class NotesWindow : Window
         _loadingNotas = true;
         try
         {
-            var rows = await Supa.Select("notas?select=id,titulo,corpo,data_nota,cor&order=created_at.desc&limit=160");
+            // fixadas primeiro, como no celular
+            var rows = await Supa.Select(
+                "notas?select=id,titulo,corpo,data_nota,cor,created_at,fixada,itens" +
+                "&order=fixada.desc,created_at.desc&limit=160");
             _notas.Clear();
             foreach (var node in rows)
                 if (node is JsonObject n)
@@ -133,12 +136,12 @@ public partial class NotesWindow : Window
 
         if (_notas.Count == 0)
         {
-            NotesListPanel.Children.Add(EmptyText("nenhuma nota ainda - cria com + nota"));
+            NotesListPanel.Children.Add(EmptyText("Ainda não tem nota nenhuma.\nToca em + nota pra escrever a primeira."));
             return;
         }
         if (filtered.Count == 0)
         {
-            NotesListPanel.Children.Add(EmptyText("nada encontrado"));
+            NotesListPanel.Children.Add(EmptyText("Nada com essa palavra.\nTenta outra."));
             return;
         }
 
@@ -146,68 +149,132 @@ public partial class NotesWindow : Window
             NotesListPanel.Children.Add(NoteCard(n));
     }
 
-    /// <summary>Bloco neobrutal na cor da nota; clique abre a autoadesiva.</summary>
+    /// <summary>Cartão na cor da nota, no desenho do ZimNotes de celular.</summary>
     private Border NoteCard(JsonObject n)
     {
         string titulo = TitleOf(n);
         string corpo = BodyPreview(n);
-        string data = n["data_nota"]?.GetValue<string>() ?? "";
         string cor = n["cor"]?.GetValue<string>() ?? "";
+        bool fixada = n["fixada"]?.GetValue<bool>() ?? false;
+        var itens = n["itens"] as JsonArray ?? new JsonArray();
 
         var sp = new StackPanel();
-        sp.Children.Add(new TextBlock
+
+        // título com o alfinete à direita, se estiver fixada
+        var linhaTitulo = new DockPanel { LastChildFill = true };
+        if (fixada)
         {
-            Text = titulo.Length == 0 ? "sem titulo" : titulo,
-            FontSize = 13.5,
+            var pin = new TextBlock
+            {
+                Text = "📌",
+                FontSize = 11,
+                Opacity = 0.55,
+                Margin = new Thickness(6, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Top
+            };
+            DockPanel.SetDock(pin, Dock.Right);
+            linhaTitulo.Children.Add(pin);
+        }
+        linhaTitulo.Children.Add(new TextBlock
+        {
+            Text = titulo.Length == 0 ? "Sem título" : titulo,
+            FontSize = 14,
             FontWeight = FontWeights.Bold,
-            Foreground = (Brush)FindResource("TextMain"),
+            Foreground = Paleta.TintaNota,
             TextWrapping = TextWrapping.NoWrap,
             TextTrimming = TextTrimming.CharacterEllipsis
         });
+        sp.Children.Add(linhaTitulo);
+
         if (corpo.Length > 0)
             sp.Children.Add(new TextBlock
             {
-                Text = corpo.Length > 110 ? corpo[..110] + "..." : corpo,
-                FontSize = 11.8,
-                Foreground = (Brush)FindResource("TextDim"),
+                Text = corpo.Length > 120 ? corpo[..120] + "…" : corpo,
+                FontSize = 12,
+                Foreground = Paleta.TintaNota,
+                Opacity = 0.72,
                 TextWrapping = TextWrapping.Wrap,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 // 2 linhas exatas: com MaxHeight solto a 3a linha ficava cortada no meio
-                LineHeight = 16,
+                LineHeight = 17,
                 LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
-                MaxHeight = 32,
-                Margin = new Thickness(0, 4, 0, 0)
+                MaxHeight = 34,
+                Margin = new Thickness(0, 5, 0, 0)
             });
+
+        // prévia do checklist: os que faltam primeiro, que é o que interessa
+        if (itens.Count > 0)
+        {
+            var abertos = itens.OfType<JsonObject>().Where(i => !(i["f"]?.GetValue<bool>() ?? false)).ToList();
+            var mostra = (abertos.Count > 0 ? abertos : itens.OfType<JsonObject>().ToList()).Take(2);
+            foreach (var it in mostra)
+            {
+                bool feito = it["f"]?.GetValue<bool>() ?? false;
+                sp.Children.Add(new TextBlock
+                {
+                    Text = (feito ? "☑  " : "☐  ") + (it["t"]?.GetValue<string>() ?? ""),
+                    FontSize = 11.5,
+                    Foreground = Paleta.TintaNota,
+                    Opacity = feito ? 0.45 : 0.78,
+                    TextWrapping = TextWrapping.NoWrap,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    Margin = new Thickness(0, 4, 0, 0)
+                });
+            }
+            int restantes = itens.Count - mostra.Count();
+            if (restantes > 0)
+                sp.Children.Add(new TextBlock
+                {
+                    Text = $"+{restantes}",
+                    FontSize = 11,
+                    Foreground = Paleta.TintaNota,
+                    Opacity = 0.45,
+                    Margin = new Thickness(0, 3, 0, 0)
+                });
+        }
+
         sp.Children.Add(new TextBlock
         {
-            Text = data,
-            FontSize = 9.5,
-            FontFamily = (FontFamily)FindResource("Mono"),
-            Foreground = (Brush)FindResource("TextDone"),
-            Margin = new Thickness(0, 6, 0, 0)
+            Text = Quando(n),
+            FontSize = 10.5,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Paleta.TintaNota,
+            Opacity = 0.5,
+            Margin = new Thickness(0, 9, 0, 0)
         });
 
-        var ink = (Brush)FindResource("Ink");
-        var shadow = new System.Windows.Media.Effects.DropShadowEffect
-        { BlurRadius = 0, ShadowDepth = 3, Direction = 315, Opacity = 1, Color = Color.FromRgb(0x18, 0x13, 0x20) };
-        shadow.Freeze();
         var card = new Border
         {
             Background = StickyWindow.CorFundo(cor),
-            BorderBrush = ink,
-            BorderThickness = new Thickness(2),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12, 10, 12, 10),
-            Margin = new Thickness(0, 0, 4, 9),
+            CornerRadius = new CornerRadius(Paleta.Raio),
+            Padding = new Thickness(15, 13, 15, 12),
+            Margin = new Thickness(0, 0, 3, 10),
             Cursor = Cursors.Hand,
             ToolTip = "clica pra abrir a autoadesiva",
-            Effect = shadow,
+            Effect = Paleta.Sombra(16, 0.10),
             Child = sp
         };
-        card.MouseEnter += (_, _) => card.BorderBrush = (Brush)FindResource("AccentSoft");
-        card.MouseLeave += (_, _) => card.BorderBrush = ink;
+        card.MouseEnter += (_, _) => card.Effect = Paleta.Sombra(22, 0.17);
+        card.MouseLeave += (_, _) => card.Effect = Paleta.Sombra(16, 0.10);
         card.MouseLeftButtonUp += (_, _) => OpenSticky(n);
         return card;
+    }
+
+    /// <summary>"hoje", "ontem", "há 3 dias" — a mesma conversa do celular.</summary>
+    private static string Quando(JsonObject n)
+    {
+        var bruto = n["created_at"]?.GetValue<string>();
+        if (!DateTime.TryParse(bruto, out var d)) return n["data_nota"]?.GetValue<string>() ?? "";
+        int dias = (DateTime.Now.Date - d.ToLocalTime().Date).Days;
+        return dias switch
+        {
+            <= 0 => "hoje",
+            1 => "ontem",
+            < 7 => $"há {dias} dias",
+            < 14 => "semana passada",
+            < 60 => $"há {dias / 7} semanas",
+            _ => d.ToLocalTime().ToString("d 'de' MMM")
+        };
     }
 
     private static void OpenSticky(JsonObject n)
@@ -216,9 +283,11 @@ public partial class NotesWindow : Window
     private TextBlock EmptyText(string text) => new()
     {
         Text = text,
-        Foreground = (Brush)FindResource("TextDim"),
+        Foreground = Paleta.Fraca,
         FontSize = 12.5,
-        Margin = new Thickness(4, 4, 0, 0)
+        TextAlignment = TextAlignment.Center,
+        TextWrapping = TextWrapping.Wrap,
+        Margin = new Thickness(10, 34, 10, 0)
     };
 
     /// <summary>Cria a nota no banco na hora e ja abre a autoadesiva dela.</summary>

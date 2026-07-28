@@ -216,18 +216,45 @@ public class StickyWindow : Window
         dragZone.MouseLeftButtonDown += (_, e) => { if (e.ButtonState == MouseButtonState.Pressed) DragMove(); };
         header.Children.Add(dragZone);
 
-        // Fita de cores no pé, sempre visível mas leve
-        _dots.Margin = new Thickness(11, 0, 11, 9);
+        // Fita de cores no pé, sempre visível mas leve, com o atalho de lista
+        // à direita — é o mesmo par de ferramentas que o celular tem embaixo.
+        var btLista = new Button
+        {
+            Content = "☑ lista",
+            FontSize = 11,
+            Cursor = Cursors.Hand,
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Foreground = new SolidColorBrush(Color.FromArgb(0x99, 0x18, 0x13, 0x20)),
+            Padding = new Thickness(6, 0, 0, 0),
+            ToolTip = "adicionar item de lista"
+        };
+        btLista.Click += (_, _) => NovoItem(_itens.Count);
+
+        var peLinha = new DockPanel { LastChildFill = true, Margin = new Thickness(11, 0, 11, 9) };
+        DockPanel.SetDock(btLista, Dock.Right);
+        peLinha.Children.Add(btLista);
+        _dots.Margin = new Thickness(0);
         _dots.Opacity = 0.75;
-        var pe = new Border { Child = _dots, Background = Brushes.Transparent };
+        peLinha.Children.Add(_dots);
+        var pe = new Border { Child = peLinha, Background = Brushes.Transparent };
         pe.MouseEnter += (_, _) => _dots.Opacity = 1;
         pe.MouseLeave += (_, _) => _dots.Opacity = 0.75;
 
         // Checklist: fica entre o texto e a fita de cores, e só aparece quando
         // a nota tem itens. Quem cria item é o celular; aqui você marca e
         // desmarca, que é o que se faz com uma lista no computador.
-        _itensBox = new StackPanel { Margin = new Thickness(11, 2, 11, 8) };
-        _itensWrap = new Border { Child = _itensBox, Visibility = Visibility.Collapsed };
+        _itensBox = new StackPanel();
+        _itensWrap = new Border
+        {
+            Child = _itensBox,
+            Background = Paleta.Cartao,
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(12, 8, 10, 8),
+            Margin = new Thickness(11, 2, 11, 9),
+            Effect = Paleta.Sombra(14, 0.10),
+            Visibility = Visibility.Collapsed
+        };
 
         var layout = new DockPanel();
         DockPanel.SetDock(header, Dock.Top);
@@ -286,41 +313,161 @@ public class StickyWindow : Window
         DesenharItens();
     }
 
+    /// <summary>
+    /// O checklist no mesmo desenho do ZimNotes de celular: cartão branco,
+    /// caixinha arredondada que fica terracota quando marcada, texto riscado
+    /// quando feito, e uma linha "novo item" no pé. Enter cria o próximo,
+    /// Backspace no item vazio remove — igual lá.
+    /// </summary>
     private void DesenharItens()
     {
         _itensBox.Children.Clear();
         if (_itens.Count == 0) { _itensWrap.Visibility = Visibility.Collapsed; return; }
         _itensWrap.Visibility = Visibility.Visible;
 
-        var ink = new SolidColorBrush(Color.FromRgb(0x18, 0x13, 0x20));
         for (int i = 0; i < _itens.Count; i++)
         {
             if (_itens[i] is not JsonObject item) continue;
-            int indice = i;
-            bool feito = item["f"]?.GetValue<bool>() ?? false;
-            string texto = item["t"]?.GetValue<string>() ?? "";
-
-            var caixa = new CheckBox
-            {
-                Content = texto,
-                IsChecked = feito,
-                Foreground = ink,
-                FontSize = 12.5,
-                Margin = new Thickness(0, 2, 0, 2),
-                Opacity = feito ? 0.5 : 1,
-                Cursor = Cursors.Hand
-            };
-            caixa.Checked += (_, _) => MarcarItem(indice, true);
-            caixa.Unchecked += (_, _) => MarcarItem(indice, false);
-            _itensBox.Children.Add(caixa);
+            _itensBox.Children.Add(LinhaDoItem(item, i));
         }
+        _itensBox.Children.Add(LinhaDeAdicionar());
+    }
+
+    private UIElement LinhaDoItem(JsonObject item, int indice)
+    {
+        bool feito = item["f"]?.GetValue<bool>() ?? false;
+
+        var visto = new System.Windows.Shapes.Path
+        {
+            Data = Geometry.Parse("M 3,7.5 L 6.2,10.7 L 12,4.4"),
+            Stroke = Brushes.White,
+            StrokeThickness = 2.2,
+            StrokeEndLineCap = PenLineCap.Round,
+            StrokeStartLineCap = PenLineCap.Round,
+            Visibility = feito ? Visibility.Visible : Visibility.Hidden,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var caixa = new Border
+        {
+            Width = 19,
+            Height = 19,
+            CornerRadius = new CornerRadius(6),
+            Background = feito ? Paleta.Acento : Brushes.Transparent,
+            BorderBrush = feito ? Paleta.Acento : new SolidColorBrush(Color.FromArgb(0x40, 0x22, 0x26, 0x2E)),
+            BorderThickness = new Thickness(1.8),
+            Cursor = Cursors.Hand,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 3, 10, 0),
+            Child = visto
+        };
+        caixa.MouseLeftButtonDown += (_, e) => { MarcarItem(indice, !feito); e.Handled = true; };
+
+        var texto = new TextBox
+        {
+            Text = item["t"]?.GetValue<string>() ?? "",
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Foreground = Paleta.TintaNota,
+            CaretBrush = Paleta.TintaNota,
+            FontSize = 12.5,
+            FontFamily = Paleta.Fonte,
+            TextWrapping = TextWrapping.Wrap,
+            AcceptsReturn = false,
+            Opacity = feito ? 0.5 : 1,
+            TextDecorations = feito ? TextDecorations.Strikethrough : null,
+            Padding = new Thickness(0, 1, 0, 1)
+        };
+        texto.TextChanged += (_, _) =>
+        {
+            item["t"] = texto.Text;
+            _dirty = true; _saveTimer.Stop(); _saveTimer.Start();
+        };
+        texto.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter) { NovoItem(indice + 1); e.Handled = true; }
+            else if (e.Key == Key.Back && texto.Text.Length == 0 && _itens.Count > 1)
+            { RemoverItem(indice, true); e.Handled = true; }
+        };
+
+        var lixo = new Button
+        {
+            Content = "✕",
+            FontSize = 10,
+            Cursor = Cursors.Hand,
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Foreground = Paleta.Fraquinha,
+            Padding = new Thickness(5, 0, 2, 0),
+            VerticalAlignment = VerticalAlignment.Top,
+            Opacity = 0
+        };
+        lixo.Click += (_, _) => RemoverItem(indice, false);
+
+        var linha = new DockPanel { Margin = new Thickness(0, 3, 0, 3), LastChildFill = true };
+        DockPanel.SetDock(caixa, Dock.Left);
+        DockPanel.SetDock(lixo, Dock.Right);
+        linha.Children.Add(caixa);
+        linha.Children.Add(lixo);
+        linha.Children.Add(texto);
+        linha.MouseEnter += (_, _) => lixo.Opacity = 1;
+        linha.MouseLeave += (_, _) => lixo.Opacity = 0;
+        return linha;
+    }
+
+    private UIElement LinhaDeAdicionar()
+    {
+        var b = new Button
+        {
+            Content = "+  novo item",
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            FontSize = 12,
+            Cursor = Cursors.Hand,
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Foreground = Paleta.Fraca,
+            Padding = new Thickness(1, 5, 0, 2)
+        };
+        b.Click += (_, _) => NovoItem(_itens.Count);
+        return b;
+    }
+
+    private void NovoItem(int posicao)
+    {
+        var novo = new JsonObject { ["id"] = Supa.NewId(), ["t"] = "", ["f"] = false };
+        posicao = Math.Clamp(posicao, 0, _itens.Count);
+        _itens.Insert(posicao, novo);
+        DesenharItens();
+        FocarItem(posicao);
+        _dirty = true; _saveTimer.Stop(); _saveTimer.Start();
+    }
+
+    private void RemoverItem(int i, bool focarAnterior)
+    {
+        if (i < 0 || i >= _itens.Count) return;
+        _itens.RemoveAt(i);
+        DesenharItens();
+        if (focarAnterior) FocarItem(Math.Max(0, i - 1));
+        _dirty = true; _saveTimer.Stop(); _saveTimer.Start();
+    }
+
+    private void FocarItem(int i)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (i < 0 || i >= _itensBox.Children.Count) return;
+            if (_itensBox.Children[i] is DockPanel d)
+                foreach (var filho in d.Children)
+                    if (filho is TextBox tb) { tb.Focus(); tb.CaretIndex = tb.Text.Length; return; }
+        }), DispatcherPriority.Input);
     }
 
     private void MarcarItem(int i, bool feito)
     {
+        if (i < 0 || i >= _itens.Count) return;
         if (_itens[i] is not JsonObject item) return;
         item["f"] = feito;
-        if (_itensBox.Children.Count > i && _itensBox.Children[i] is CheckBox c) c.Opacity = feito ? 0.5 : 1;
+        DesenharItens();
         _dirty = true;
         _saveTimer.Stop();
         _saveTimer.Start();
