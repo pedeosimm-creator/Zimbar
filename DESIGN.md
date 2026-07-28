@@ -1,3 +1,8 @@
+> **Nota (Zimbar 1.0):** este documento descreve a linguagem visual da
+> barra ANTIGA, feita em WPF. A interface hoje é a pasta `ui/` (HTML/CSS/JS)
+> e o desenho que vale está lá. Fica aqui como referência das cores e da
+> tipografia, que continuam as mesmas.
+
 # ZIMBAR DESIGN SYSTEM — baseado no ACERVO
 
 > Guideline oficial do visual do Zimbar. Derivado do **Acervo** (acervozim.netlify.app,
