@@ -63,7 +63,7 @@ public class StickyWindow : Window
         _cor = cor;
 
         Title = titulo.Length > 0 ? titulo : "nota";
-        Marca.Vestir(this);
+        Marca.VestirNotas(this);
         Width = 268;
         Height = 268;
         MinWidth = 200;

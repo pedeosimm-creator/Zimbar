@@ -104,37 +104,52 @@ public partial class App : Application
         _tray.ShowBalloonTip(3000);
     }
 
-    /// <summary>Desenha o ícone da bandeja em runtime: "Z" laranja em fundo escuro.</summary>
+    /// <summary>
+    /// O Z da bandeja — que é também o ícone dos balões de notificação.
+    /// Tenta o recurso embutido, depois o próprio executável (que carrega o
+    /// mesmo .ico), e só no fim desenha um. O desenho de emergência segue a
+    /// marca atual: Z terracota sobre papel, sem placa amarela.
+    /// </summary>
     private static Drawing.Icon CreateZIcon()
     {
-        // Usa o logo oficial embutido; se falhar, desenha um Z simples.
         try
         {
             var uri = new Uri("pack://application:,,,/assets/Zimbar.ico");
             var info = GetResourceStream(uri);
-            if (info?.Stream is System.IO.Stream s) return new Drawing.Icon(s, new Drawing.Size(32, 32));
+            if (info?.Stream is System.IO.Stream s)
+            {
+                Log.Escrever("bandeja: ícone do recurso embutido");
+                return new Drawing.Icon(s, new Drawing.Size(32, 32));
+            }
         }
-        catch { }
+        catch (Exception ex) { Log.Escrever("bandeja: recurso falhou — " + ex.Message); }
 
+        // O exe carrega o ApplicationIcon; é a mesma arte, por outro caminho.
+        try
+        {
+            var doExe = Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath ?? "");
+            if (doExe is not null)
+            {
+                Log.Escrever("bandeja: ícone tirado do executável");
+                return doExe;
+            }
+        }
+        catch (Exception ex) { Log.Escrever("bandeja: exe falhou — " + ex.Message); }
+
+        Log.Escrever("bandeja: caiu no desenho de emergência");
         using var bmp = new Drawing.Bitmap(32, 32);
         using (var g = Drawing.Graphics.FromImage(bmp))
         {
             g.SmoothingMode = Drawing.Drawing2D.SmoothingMode.AntiAlias;
             g.TextRenderingHint = Drawing.Text.TextRenderingHint.AntiAlias;
-            // Fallback na pegada Acervo: azulejo amarelo, borda e Z de tinta
-            using var bg = new Drawing.SolidBrush(Drawing.Color.FromArgb(0xFF, 0xC9, 0x40));
-            using var ink = new Drawing.SolidBrush(Drawing.Color.FromArgb(0x16, 0x16, 0x13));
-            using var pen = new Drawing.Pen(Drawing.Color.FromArgb(0x16, 0x16, 0x13), 2.5f);
-            g.FillRectangle(bg, 2, 2, 27, 27);
-            g.DrawRectangle(pen, 2, 2, 27, 27);
-            using var font = new Drawing.Font("Segoe UI", 18, Drawing.FontStyle.Bold, Drawing.GraphicsUnit.Pixel);
-            using var fg = ink;
+            using var tinta = new Drawing.SolidBrush(Drawing.Color.FromArgb(0xCB, 0x4F, 0x2F));
+            using var font = new Drawing.Font("Segoe UI", 26, Drawing.FontStyle.Bold, Drawing.GraphicsUnit.Pixel);
             var fmt = new Drawing.StringFormat
             {
                 Alignment = Drawing.StringAlignment.Center,
                 LineAlignment = Drawing.StringAlignment.Center
             };
-            g.DrawString("Z", font, fg, new Drawing.RectangleF(0, 0, 32, 32), fmt);
+            g.DrawString("Z", font, tinta, new Drawing.RectangleF(0, 0, 32, 32), fmt);
         }
         return Drawing.Icon.FromHandle(bmp.GetHicon());
     }

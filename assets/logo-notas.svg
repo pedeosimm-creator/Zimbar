@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- ZimNotes — a folha com o canto dobrado.
+       Mesma tinta e mesmo grão do Z do Zimbar, e a mesma inclinação leve,
+       pra ficar claro que são da mesma família sem repetir a letra. O
+       dobrado é o único vazio da silhueta: é ele que faz a forma ser lida
+       como papel já em 16px, quando as linhas somem. -->
+  <defs>
+    <linearGradient id="tinta" x1="0.05" y1="0" x2="0.95" y2="1">
+      <stop offset="0"    stop-color="#EA7E52"/>
+      <stop offset="0.35" stop-color="#CB4F2F"/>
+      <stop offset="0.72" stop-color="#9C3924"/>
+      <stop offset="1"    stop-color="#5E2B20"/>
+    </linearGradient>
+
+    <!-- a dobra é mais clara: é o verso do papel pegando luz -->
+    <linearGradient id="verso" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0"   stop-color="#F0A883"/>
+      <stop offset="1"   stop-color="#D2663F"/>
+    </linearGradient>
+
+    <filter id="grao" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="4" seed="11" result="ruido"/>
+      <feColorMatrix in="ruido" type="saturate" values="0" result="cinza"/>
+      <feComponentTransfer in="cinza" result="suave">
+        <feFuncR type="linear" slope="0.30" intercept="0.70"/>
+        <feFuncG type="linear" slope="0.30" intercept="0.70"/>
+        <feFuncB type="linear" slope="0.30" intercept="0.70"/>
+        <feFuncA type="linear" slope="0"    intercept="1"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" in2="suave" mode="multiply" result="misturado"/>
+      <feComposite in="misturado" in2="SourceGraphic" operator="in"/>
+    </filter>
+
+    <!-- Folha: canto superior direito cortado no mesmo ângulo do chanfro do Z.
+         Cantos de baixo levemente arredondados, os de cima retos: papel
+         empilhado, não cartão. -->
+    <path id="folha" d="
+      M 52 26
+      L 150 26
+      L 216 92
+      L 216 214
+      Q 216 230 200 230
+      L 68 230
+      Q 52 230 52 214
+      Z"/>
+
+    <!-- as pautas: some naturalmente no tamanho pequeno, sem virar sujeira -->
+    <g id="pautas">
+      <rect x="82" y="126" width="104" height="13" rx="6.5"/>
+      <rect x="82" y="158" width="104" height="13" rx="6.5"/>
+      <rect x="82" y="190" width="66"  height="13" rx="6.5"/>
+    </g>
+  </defs>
+
+  <g transform="skewX(-3.5) translate(9,0)">
+    <!-- corpo da folha, com o grão recortado na silhueta -->
+    <use href="#folha" fill="url(#tinta)" filter="url(#grao)"/>
+    <!-- as pautas são furos no papel: deixam o fundo aparecer -->
+    <use href="#pautas" fill="#FFFFFF" opacity="0.92"/>
+    <!-- o canto dobrado, por cima, mais claro que o corpo -->
+    <path d="M 150 26 L 216 92 L 164 92 Q 150 92 150 78 Z" fill="url(#verso)"/>
+  </g>
+</svg>
