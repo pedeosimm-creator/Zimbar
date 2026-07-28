@@ -41,6 +41,7 @@ public class PomoWindow : Window
     private PomoWindow()
     {
         Title = "Pomodoro";
+        Marca.Vestir(this);
         Width = 232; Height = 178;
         MinWidth = 200; MinHeight = 150;
         WindowStyle = WindowStyle.None;

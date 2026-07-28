@@ -1255,9 +1255,10 @@ function renderContas(){
 
   // próximos 6 meses da planilha
   const box=document.getElementById('mesesBox'); box.innerHTML='';
+  const agora=new Date();
   const linhas=[];
   for(let i=0;i<6;i++){
-    const d=new Date(hoje.getFullYear(),hoje.getMonth()+i,1);
+    const d=new Date(agora.getFullYear(),agora.getMonth()+i,1);
     const its=itensDoMes(c.compras,c.fixos,d.getFullYear(),d.getMonth()+1);
     linhas.push({d,tot:its.reduce((s,x)=>s+x.v,0),its});
   }
@@ -1286,10 +1287,20 @@ async function atualizarConta(){
     toast('conta atualizada');
   }catch(e){ console.error(e); toast('não deu pra atualizar'); }
 }
+/* Busca e desenho são separados de propósito: assim um erro de desenho
+   nunca mais se disfarça de "sem conexão" e some com o painel inteiro. */
 async function carregarContas(){
-  try{ S.conta=await Dados.contas(); renderContas(); }
-  catch(e){ console.error('contas',e);
-    document.getElementById('ctHs').textContent='sem conexão com o contas agora'; }
+  try{ S.conta=await Dados.contas(); }
+  catch(e){
+    console.error('contas — busca',e);
+    document.getElementById('ctHs').textContent='sem conexão com o contas agora';
+    return;
+  }
+  try{ renderContas(); }
+  catch(e){
+    console.error('contas — desenho',e);
+    document.getElementById('ctHs').textContent='erro ao montar o painel: '+e.message;
+  }
 }
 
 /* ═══ POMODORO ═══

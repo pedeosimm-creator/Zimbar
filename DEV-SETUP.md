@@ -39,6 +39,12 @@ dotnet publish -c Release -r win-x64 --self-contained true \
 ```
 Sai em `bin/Release/net9.0-windows10.0.19041.0/win-x64/publish/Zimbar.exe`.
 
+As três flags são obrigatórias — não dá pra encurtar o comando. Sem
+`IncludeNativeLibrariesForSelfExtract` o exe compila e instala normalmente,
+mas morre ao abrir com `DllNotFoundException` no WPF (as DLLs nativas ficam
+de fora do pacote). O sintoma é feio de diagnosticar: nem chega a escrever
+no `zimbar.log`, só aparece no Visualizador de Eventos.
+
 ## 4. Mapa do projeto
 - `App.xaml.cs` — bandeja + hotkeys globais (Ctrl+Alt+Z / Ctrl+Alt+D).
 - `BarWindow.xaml/.cs` — a barra e todas as abas (arquivo grande).

@@ -83,7 +83,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
 
 /* ══ CARDS ══ */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:17px 19px;
-  box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:0;transition:background .3s,border-color .3s}
+  box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:0;overflow:hidden;
+  transition:background .3s,border-color .3s}
 .card.flush{padding:0;overflow:hidden}
 .ttl{display:flex;align-items:center;gap:9px;margin-bottom:13px;flex-shrink:0}
 .ttl h2{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.16em;color:var(--dim);font-weight:500}
@@ -96,9 +97,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
 .scrollbox::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
 
 /* HOJE */
+/* As linhas têm piso em px: sobrando altura, o 1fr estica e preenche a tela;
+   faltando altura, cada linha para no piso e a página rola em vez de esmagar. */
 .grid-hoje{display:grid;height:100%;gap:16px;
   grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);
-  grid-template-rows:auto minmax(0,1fr);
+  grid-template-rows:auto minmax(330px,1fr);
   grid-template-areas:"foco  grana grana"
                       "plano lado  cap"}
 .grid-hoje>.focus{grid-area:foco}
@@ -106,44 +109,21 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
 .grid-hoje>.card{grid-area:plano}
 .grid-hoje>.stack{grid-area:lado}
 .grid-hoje>.stack.um{grid-area:cap}
-.stack{display:grid;gap:16px;min-height:0;grid-template-rows:auto minmax(0,1fr)}
+.stack{display:grid;gap:16px;min-height:0;grid-template-rows:minmax(170px,auto) minmax(120px,1fr)}
 .stack.um{grid-template-rows:minmax(0,1fr)}
 
-/* ══ JANELA PEQUENA — as grades desmontam em vez de espremer ══ */
-@media (max-width:1280px){
-  .grid-hoje{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);
-    grid-template-rows:auto minmax(0,1.1fr) minmax(0,.9fr);
-    grid-template-areas:"foco  grana"
-                        "plano lado"
-                        "plano cap"}
-  .grid-ct,.grid-ag{grid-template-columns:minmax(0,1fr);
-    grid-template-rows:auto minmax(0,1fr)}
-  .stack{grid-template-rows:auto minmax(130px,1fr)}
-}
-@media (max-width:1020px){
-  .grid-hoje,.grid-kb,.grid-ag,.grid-ct,.stack{
-    display:flex;flex-direction:column;height:auto;gap:16px}
-  .grid-hoje>*,.grid-kb>*,.grid-ag>*,.grid-ct>*,.stack>*{
-    grid-area:auto;grid-column:auto;flex:none;min-height:190px}
-  .grid-hoje>.focus,.grid-hoje>.money{min-height:0}
-  .view{height:auto}
-  .masonry{height:auto;grid-auto-rows:minmax(170px,auto)}
-  .kcol{min-height:260px}
-}
-@media (max-height:700px){
-  .head{padding:12px 26px 10px}
-  .hi{font-size:18px}
-  .hi small{display:none}
-}
 /* heatmap do ritmo */
+.hmbox{flex:1;min-height:0}
 .hm{display:grid;grid-template-columns:auto repeat(7,1fr);gap:5px;align-items:center;margin-top:2px}
+.hm .cell{max-height:30px}
 .hm .hn{font-size:11.5px;color:var(--dim);padding-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hm .hd{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--faint);text-align:center}
 .hm .cell{aspect-ratio:1;border-radius:5px;background:var(--sunk);border:1px solid var(--line-soft);cursor:pointer;transition:.13s}
 .hm .cell:hover{border-color:var(--faint)}
 .hm .cell.f{background:var(--ok);border-color:transparent}
 .hm .cell.hj{outline:1.5px solid var(--acc);outline-offset:1px}
-.streak{display:flex;align-items:baseline;gap:7px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line-soft)}
+.streak{display:flex;align-items:baseline;gap:7px;margin-top:12px;padding-top:11px;
+  border-top:1px solid var(--line-soft);flex-shrink:0;flex-wrap:wrap}
 .streak b{font-size:19px;font-weight:600;letter-spacing:-.02em}
 .streak span{font-size:11.5px;color:var(--dim)}
 .divlab{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.14em;color:var(--faint);
@@ -154,7 +134,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
 .mini .mt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mini .mq{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint)}
 .focus{grid-column:1/2;background:var(--ink);color:var(--shell);border:none;border-radius:13px;padding:20px 22px;
-  display:flex;flex-direction:column;justify-content:center;box-shadow:var(--shadow)}
+  display:flex;flex-direction:column;justify-content:center;box-shadow:var(--shadow);
+  overflow:hidden;min-height:118px}
 [data-theme=dark] .focus{background:var(--panel);border:1px solid var(--acc);color:var(--ink)}
 [data-theme=dark] .focus .fl{color:var(--acc);opacity:1}
 .focus .fl{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.18em;opacity:.55;margin-bottom:8px}
@@ -165,13 +146,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
 .focus button:hover{background:rgba(255,255,255,.25)}
 [data-theme=dark] .focus button{background:var(--acc-soft)}
 .money{grid-column:2/4;background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:18px 22px;
-  display:flex;align-items:center;gap:26px;box-shadow:var(--shadow)}
+  display:flex;align-items:center;gap:26px;box-shadow:var(--shadow);overflow:hidden;min-height:96px}
 .money .mv{font-size:40px;font-weight:600;letter-spacing:-.035em;line-height:1}
 .money .ml{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.16em;color:var(--faint);margin-bottom:5px}
 .money .mm{flex:1;min-width:0}
 .money .bar{height:4px;background:var(--sunk);border-radius:3px;overflow:hidden;margin-bottom:7px}
 .money .bar i{display:block;height:100%;background:var(--ok);border-radius:3px}
-.money .mr{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--dim)}
+.money .mr{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--dim)}
 
 /* listas de tarefas */
 .tk{display:flex;align-items:flex-start;gap:11px;padding:9px 6px;border-radius:8px;cursor:pointer;font-size:13.5px;line-height:1.35}
@@ -487,6 +469,45 @@ html.nativo .jbtn{display:flex}
 .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,12px);background:var(--ink);color:var(--shell);
   font-size:12.5px;padding:10px 18px;border-radius:9px;opacity:0;transition:.25s;pointer-events:none;box-shadow:var(--shadow-lg)}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ══════ JANELA PEQUENA ══════
+   Este bloco mora no fim do arquivo de propósito: precisa ganhar das regras
+   base, que aparecem depois das grades lá em cima. As linhas ganham um piso
+   em px — sobrando altura o 1fr estica e preenche; faltando, a linha para no
+   piso e a página rola, em vez de espremer o conteúdo pra fora do cartão. */
+@media (max-width:1280px){
+  .grid-hoje{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);
+    grid-template-rows:auto minmax(330px,1.1fr) minmax(190px,.9fr);
+    grid-template-areas:"foco  grana"
+                        "plano lado"
+                        "plano cap"}
+  .stack{grid-template-rows:minmax(170px,auto) minmax(120px,1fr)}
+  /* o "pode gastar" quebra em duas linhas em vez de espremer os dizeres */
+  .money{flex-wrap:wrap;gap:8px 18px;padding:15px 18px}
+  .money .mv{font-size:32px}
+  .money .mm{min-width:160px}
+  .grid-kb{grid-template-rows:minmax(330px,1fr)}
+  .grid-ag{grid-template-columns:minmax(0,1fr) 250px;grid-template-rows:minmax(360px,1fr)}
+  .grid-ct{grid-template-columns:minmax(0,300px) minmax(0,1fr);grid-template-rows:minmax(330px,1fr)}
+  .masonry{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+}
+@media (max-width:1020px){
+  .grid-hoje,.grid-kb,.grid-ag,.grid-ct,.stack{
+    display:flex;flex-direction:column;height:auto;gap:16px}
+  .grid-hoje>*,.grid-kb>*,.grid-ag>*,.grid-ct>*,.stack>*{
+    grid-area:auto;grid-column:auto;flex:none;min-height:190px}
+  .grid-hoje>.focus{min-height:118px}
+  .grid-hoje>.money{min-height:96px}
+  .view{height:auto}
+  .masonry{height:auto;grid-auto-rows:minmax(170px,auto)}
+  .kcol{min-height:260px}
+  .cal{min-height:330px}
+}
+@media (max-height:700px){
+  .head{padding:12px 26px 10px}
+  .hi{font-size:18px}
+  .hi small{display:none}
+}
 </style></head><body>
 <div class="app">
   <!-- ══ RAIL ══ -->
@@ -564,7 +585,7 @@ html.nativo .jbtn{display:flex}
           <div class="stack">
             <div class="card">
               <div class="ttl"><span class="dot" style="background:var(--ok)"></span><h2>RITMO DA SEMANA</h2></div>
-              <div class="hm" id="ritmoHm"></div>
+              <div class="scrollbox hmbox"><div class="hm" id="ritmoHm"></div></div>
               <div class="streak" id="streakBox"></div>
             </div>
             <div class="card">
