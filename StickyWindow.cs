@@ -54,6 +54,7 @@ public class StickyWindow : Window
     private readonly StackPanel _itensBox;
     private readonly Border _itensWrap;
     private readonly Button _pinBtn;
+    private DockPanel? _header;
 
     public static void OpenNote(string id, string titulo, string corpo, string cor)
     {
@@ -148,7 +149,7 @@ public class StickyWindow : Window
             dot.MouseLeftButtonDown += (_, e) =>
             {
                 _cor = (string)dot.Tag;
-                _root!.Background = CorFundo(_cor);
+                if (_header is not null) _header.Background = CorFundo(_cor);
                 MarkDots(ink);
                 _dirty = true;
                 _saveTimer.Stop();
@@ -203,13 +204,16 @@ public class StickyWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(11, 0, 0, 0)
         };
+        // O cabeçalho É a faixa de cor da nota: o corpo fica em papel branco,
+        // porque texto sobre fundo colorido cansa a vista numa nota longa.
         var header = new DockPanel
         {
-            Height = 32,
-            Background = new SolidColorBrush(Color.FromArgb(0x12, 0x16, 0x16, 0x13)),
+            Height = 34,
+            Background = CorFundo(_cor),
             Cursor = Cursors.SizeAll,
             LastChildFill = true
         };
+        _header = header;
         DockPanel.SetDock(topRight, Dock.Right);
         header.Children.Add(topRight);
         var dragZone = new Border { Background = Brushes.Transparent, Child = titulo_ };
@@ -268,8 +272,9 @@ public class StickyWindow : Window
         // Sem moldura grossa: a curva do Windows 11 já dá o recorte
         _root = new Border
         {
-            Background = CorFundo(_cor),
+            Background = Paleta.Cartao,
             CornerRadius = new CornerRadius(12),
+            ClipToBounds = true,          // a faixa do topo respeita a curva
             Child = layout
         };
         Content = _root;

@@ -180,7 +180,7 @@ public partial class NotesWindow : Window
             Text = titulo.Length == 0 ? "Sem título" : titulo,
             FontSize = 14,
             FontWeight = FontWeights.Bold,
-            Foreground = Paleta.TintaNota,
+            Foreground = Paleta.Tinta2,
             TextWrapping = TextWrapping.NoWrap,
             TextTrimming = TextTrimming.CharacterEllipsis
         });
@@ -191,7 +191,7 @@ public partial class NotesWindow : Window
             {
                 Text = corpo.Length > 120 ? corpo[..120] + "…" : corpo,
                 FontSize = 12,
-                Foreground = Paleta.TintaNota,
+                Foreground = Paleta.Tinta2,
                 Opacity = 0.72,
                 TextWrapping = TextWrapping.Wrap,
                 TextTrimming = TextTrimming.CharacterEllipsis,
@@ -214,7 +214,7 @@ public partial class NotesWindow : Window
                 {
                     Text = (feito ? "☑  " : "☐  ") + (it["t"]?.GetValue<string>() ?? ""),
                     FontSize = 11.5,
-                    Foreground = Paleta.TintaNota,
+                    Foreground = Paleta.Tinta2,
                     Opacity = feito ? 0.45 : 0.78,
                     TextWrapping = TextWrapping.NoWrap,
                     TextTrimming = TextTrimming.CharacterEllipsis,
@@ -227,7 +227,7 @@ public partial class NotesWindow : Window
                 {
                     Text = $"+{restantes}",
                     FontSize = 11,
-                    Foreground = Paleta.TintaNota,
+                    Foreground = Paleta.Tinta2,
                     Opacity = 0.45,
                     Margin = new Thickness(0, 3, 0, 0)
                 });
@@ -238,21 +238,34 @@ public partial class NotesWindow : Window
             Text = Quando(n),
             FontSize = 10.5,
             FontWeight = FontWeights.SemiBold,
-            Foreground = Paleta.TintaNota,
+            Foreground = Paleta.Tinta2,
             Opacity = 0.5,
             Margin = new Thickness(0, 9, 0, 0)
         });
 
+        // A cor da nota é uma faixa no alto; o papel do cartão fica branco.
+        // Texto sobre fundo colorido cansa a vista numa lista comprida.
+        var faixa = new Border
+        {
+            Height = 5,
+            Background = StickyWindow.CorFundo(cor),
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        var miolo = new Border { Padding = new Thickness(15, 16, 15, 12), Child = sp };
+        var pilha = new Grid();
+        pilha.Children.Add(miolo);
+        pilha.Children.Add(faixa);
+
         var card = new Border
         {
-            Background = StickyWindow.CorFundo(cor),
+            Background = Paleta.Cartao,
             CornerRadius = new CornerRadius(Paleta.Raio),
-            Padding = new Thickness(15, 13, 15, 12),
+            ClipToBounds = true,
             Margin = new Thickness(0, 0, 3, 10),
             Cursor = Cursors.Hand,
             ToolTip = "clica pra abrir a autoadesiva",
             Effect = Paleta.Sombra(16, 0.10),
-            Child = sp
+            Child = pilha
         };
         card.MouseEnter += (_, _) => card.Effect = Paleta.Sombra(22, 0.17);
         card.MouseLeave += (_, _) => card.Effect = Paleta.Sombra(16, 0.10);
