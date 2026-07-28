@@ -100,8 +100,42 @@ function porOrdem(itens, ordem) {
   });
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   TRABALHO — a tabela `tasks` é do ConceWay, o site que o Pedro usa
+   pra separar as coisas do trabalho. Mesmo banco, outra tabela.
+
+   É COMPARTILHADA com a equipe (Bels, Livia, Dalc, Guru). Por isso
+   TODA consulta e TODA gravação carregam `person=eq.Pedro`: um clique
+   errado aqui não pode alcançar a tarefa de outra pessoa.
+   ═══════════════════════════════════════════════════════════════ */
+const DONO = 'Pedro';
+const COLUNAS_TRABALHO = [
+  { k: 'todo',  rot: 'A FAZER' },
+  { k: 'doing', rot: 'FAZENDO' },
+  { k: 'done',  rot: 'FEITO' }
+];
+
 const Dados = {
   CORES_NOTA, corHex, corLista, novoId, hojeChave, porOrdem,
+  DONO, COLUNAS_TRABALHO,
+
+  /* ═══ TRABALHO (ConceWay) ═══ */
+  async trabalho() {
+    return sel('tasks?select=id,title,description,area,person,status,start_date,deadline,due_time' +
+               `&person=eq.${encodeURIComponent(DONO)}&order=deadline.asc.nullslast&limit=300`);
+  },
+
+  /* Move o card de coluna. O filtro por dono vai na URL de novo, de
+     propósito: se o id vier errado por algum motivo, a linha de outra
+     pessoa continua fora de alcance. */
+  async moverTask(id, status) {
+    if (!COLUNAS_TRABALHO.some(c => c.k === status)) throw new Error('status inválido: ' + status);
+    return rest(FLOW, `tasks?id=eq.${encodeURIComponent(id)}&person=eq.${encodeURIComponent(DONO)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ status })
+    });
+  },
 
   /* ═══ LEITURA INICIAL ═══ */
   async carregar() {

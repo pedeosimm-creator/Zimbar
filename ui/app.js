@@ -24,6 +24,9 @@ let S = {
   tarefas: [], mural: [], notas: [],
   ordem: {tarefas:[], mural:[]},
   conta: null,
+  /* do ConceWay; fora do S/BASE de propósito — é tabela de outro app,
+     compartilhada, e grava na hora em vez de entrar no diff */
+  trabalho: [],
   topicos: JSON.parse(localStorage.getItem('zimbar-secoes')||'["cinema","fotografia"]'),
   secaoAtiva: localStorage.getItem('zimbar-secao') || 'destaques'
 };
@@ -117,7 +120,7 @@ function categorias(){
 }
 
 /* ═══ NAVEGAÇÃO ═══ */
-const ORDEM=['hoje','kanban','agenda','listas','noticias','contas'];
+const ORDEM=['hoje','kanban','agenda','listas','noticias','contas','trabalho'];
 function go(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('v-'+v).classList.add('on');
@@ -701,20 +704,34 @@ document.getElementById('capIn').onkeydown=e=>{
     S.captura.unshift({id:Dados.novoId(),t:e.target.value.trim()}); e.target.value=''; salvar(); renderCaptura(); go('hoje'); toast('capturado ✓');
   }
 };
+/* Prazos pessoais e do trabalho na mesma lista, misturados por data —
+   é assim que a semana chega de verdade. O que separa os dois é uma
+   marca discreta, não uma lista à parte que você esqueceria de olhar. */
 function renderProximos(){
   const box=document.getElementById('proximos'); box.innerHTML='';
   const hj=chave(new Date());
-  const vindo=S.tarefas.filter(t=>t.prazo&&t.prazo>=hj&&t.status!=='feito')
-                       .sort((a,b)=>a.prazo.localeCompare(b.prazo)).slice(0,8);
+
+  const pessoais=S.tarefas.filter(t=>t.prazo&&t.prazo>=hj&&t.status!=='feito')
+    .map(t=>({quando:t.prazo, texto:t.t, trabalho:false}));
+  const doTrabalho=S.trabalho.filter(t=>t.deadline&&t.deadline>=hj&&t.status!=='done')
+    .map(t=>({quando:t.deadline, texto:t.title||'sem título', trabalho:true, area:t.area}));
+
+  const vindo=[...pessoais,...doTrabalho]
+    .sort((a,b)=>a.quando.localeCompare(b.quando)).slice(0,8);
+
   if(!vindo.length){box.innerHTML='<div class="empty">agenda livre pela frente</div>';return;}
   vindo.forEach(ev=>{
-    const d=new Date(ev.prazo+'T12:00');
+    const d=new Date(ev.quando+'T12:00');
     const el=document.createElement('div'); el.className='ag';
     el.innerHTML=`<span class="d">${d.toLocaleDateString('pt-BR',{weekday:'short'}).slice(0,3).toUpperCase()} ${String(d.getDate()).padStart(2,'0')}</span>
-      <span>${esc(ev.t)}</span>`;
+      <span>${esc(ev.texto)}</span>` +
+      (ev.trabalho?`<span class="tb" title="${esc(ev.area||'ConceWay')}">trabalho</span>`:'');
     el.style.cursor='pointer';
-    el.onclick=()=>{ diaSel=ev.prazo; mesRef=new Date(d.getFullYear(),d.getMonth(),1);
-                     renderAgenda(); renderEventos(); go('agenda'); };
+    el.onclick=()=>{
+      if(ev.trabalho){ go('trabalho'); return; }
+      diaSel=ev.quando; mesRef=new Date(d.getFullYear(),d.getMonth(),1);
+      renderAgenda(); renderEventos(); go('agenda');
+    };
     box.appendChild(el);
   });
 }
@@ -1343,7 +1360,98 @@ async function recarregar(){
       '<div class="empty">não deu pra falar com o banco — confere a internet e tenta de novo</div>';
   }
   carregarContas();
+  carregarTrabalho();
   renderFeed();
+}
+
+/* ═══ TRABALHO (ConceWay) ═══
+   Banco é o mesmo, tabela é outra e é compartilhada com a equipe.
+   Falhar aqui não pode derrubar o resto do Zimbar, então vive no
+   próprio try. */
+async function carregarTrabalho(){
+  try{
+    S.trabalho = await Dados.trabalho();
+    renderTrabalho(); renderProximos();
+  }catch(e){
+    console.error('trabalho',e);
+    const g=document.getElementById('tbGrid');
+    if(g) g.innerHTML='<div class="empty">não deu pra falar com o ConceWay agora</div>';
+  }
+}
+
+const trabalhoDe = (status) => S.trabalho.filter(t=>(t.status||'todo')===status);
+
+function renderTrabalho(){
+  const g=document.getElementById('tbGrid'); if(!g) return;
+  g.innerHTML='';
+  Dados.COLUNAS_TRABALHO.forEach((col,ci)=>{
+    const itens=trabalhoDe(col.k);
+    const c=document.createElement('div'); c.className='card kcol'; c.dataset.col=ci;
+    c.innerHTML=`<div class="ttl" style="padding-top:5px">
+      <h2>${col.rot}</h2><span class="sp"></span><span class="cnt">${itens.length}</span></div>
+      <div class="scrollbox"></div>`;
+    const box=c.querySelector('.scrollbox');
+    zonaSoltar(c,'tb'+ci);
+    if(!itens.length) box.innerHTML='<div class="empty">nada aqui</div>';
+    itens.forEach((it,ii)=>{
+      const k=document.createElement('div'); k.className='kcard';
+      const atrasada = it.deadline && it.deadline < chave(new Date()) && col.k!=='done';
+      k.innerHTML=esc(it.title||'sem título')+
+        `<small>${it.area?esc(it.area):''}${it.area&&it.deadline?' · ':''}` +
+        `${it.deadline?(atrasada?'⚠ ':'')+dLabel(it.deadline):''}</small>`;
+      if(atrasada) k.style.borderColor='var(--acc)';
+      k.title='arrasta pra mover — muda aqui e no ConceWay';
+      arrastavel(k,{zona:'tb'+ci,indice:ii,
+        carga:{texto:it.title||''},   // o card fica; pro resto do Zimbar vai uma cópia
+        aoSoltar:(zona)=>{
+          if(!zona.startsWith('tb')) return;
+          const dest=parseInt(zona.slice(2));
+          if(dest===ci) return;
+          moverTrabalho(it, Dados.COLUNAS_TRABALHO[dest]);
+        },
+        aoAbrir:()=>abrirCardTrabalho(it)});
+      box.appendChild(k);
+    });
+    g.appendChild(c);
+  });
+  const abertas=trabalhoDe('todo').length+trabalhoDe('doing').length;
+  const ct=document.getElementById('ct-trabalho');
+  if(ct) ct.textContent=abertas||'';
+}
+
+/* grava na hora: o ConceWay é de outra gente também, não dá pra
+   deixar a mudança esperando um debounce que pode nem chegar */
+async function moverTrabalho(it, col){
+  const antes=it.status;
+  it.status=col.k;
+  renderTrabalho();
+  sinal('salvando');
+  try{
+    await Dados.moverTask(it.id, col.k);
+    sinal('');
+    toast('foi pra '+col.rot.toLowerCase()+' — no ConceWay também');
+    renderProximos();
+  }catch(e){
+    console.error('moverTask',e);
+    it.status=antes; renderTrabalho();       // desfaz: o banco é a verdade
+    sinal('não salvou', true);
+    toast('não deu pra mover no ConceWay');
+  }
+}
+
+/* Só leitura de propósito: o texto da tarefa é da equipe inteira, então
+   editar é lá. Aqui você move de coluna, que é o que muda o seu dia. */
+function abrirCardTrabalho(it){
+  const quando = it.deadline ? dLabel(it.deadline) : 'sem prazo';
+  editor({titulo:'TAREFA DO CONCEWAY',
+    campos:[
+      {id:'t', rot:'TAREFA', tipo:'linha', valor:it.title||''},
+      {id:'d', rot:'DETALHE', tipo:'texto', valor:it.description||'—'},
+      {id:'a', rot:'ÁREA · PRAZO', tipo:'linha', valor:(it.area||'—')+'  ·  '+quando}
+    ],
+    acoes:[{rot:'abrir no ConceWay',
+            go:()=>Ponte.enviar({acao:'abrirLink', url:'https://conceway-app.netlify.app/'})}],
+    aoSalvar:()=>toast('o texto se edita no ConceWay — aqui você move de coluna')});
 }
 recarregar();
 

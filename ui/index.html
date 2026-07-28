@@ -252,6 +252,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
 .ag{display:flex;gap:11px;padding:8px 6px;border-bottom:1px solid var(--line-soft);font-size:13px;align-items:baseline}
 .ag:last-child{border-bottom:none}
 .ag .d{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--acc);min-width:40px;letter-spacing:.05em}
+/* marca do que veio do ConceWay, pra prazo do trabalho não se disfarçar de pessoal */
+.ag .tb{margin-left:auto;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:8px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+  background:var(--sunk);border:1px solid var(--line);border-radius:100px;padding:2px 7px}
 
 /* KANBAN */
 .grid-kb{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;height:100%}
@@ -547,6 +551,8 @@ html.nativo .jbtn{display:flex}
     <button class="nv" data-v="listas"><span class="gl">☰</span>Listas<span class="ct" id="ct-listas"></span></button>
     <button class="nv" data-v="noticias"><span class="gl">✷</span>Notícias<span class="ct" id="ct-noticias"></span></button>
     <button class="nv" data-v="contas"><span class="gl">$</span>Contas<span class="ct">R$ 4,67</span></button>
+    <div class="navlab" style="margin-top:14px">TRABALHO</div>
+    <button class="nv" data-v="trabalho"><span class="gl">◪</span>ConceWay<span class="ct" id="ct-trabalho"></span></button>
     <div class="rsp"></div>
     <div class="railfoot">
       <button class="tool" id="pomo"><span class="gl">◔</span>Pomodoro<span class="val" id="pomoVal">25:00</span></button>
@@ -634,6 +640,11 @@ html.nativo .jbtn{display:flex}
       <!-- KANBAN -->
       <section class="view" id="v-kanban">
         <div class="grid-kb" id="kbGrid"></div>
+      </section>
+
+      <!-- TRABALHO — o kanban do ConceWay, só as tarefas do Pedro -->
+      <section class="view" id="v-trabalho">
+        <div class="grid-kb" id="tbGrid"></div>
       </section>
 
       <!-- AGENDA -->
