@@ -9,11 +9,15 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>Zimbar</AssemblyName>
-    <Version>0.5.0</Version>
+    <Version>1.0.0</Version>
     <Product>Zimbar</Product>
     <Description>Cinto de ferramentas do Pedro — barra rápida com hotkey global.</Description>
     <ApplicationIcon>assets\Zimbar.ico</ApplicationIcon>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <!-- publicação limpa: só o exe e a pasta ui -->
+    <AllowedReferenceRelatedFileExtensions>none</AllowedReferenceRelatedFileExtensions>
+    <DebugType>none</DebugType>
+    <SatelliteResourceLanguages>pt-BR</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <!-- WinForms + WPF juntos colidem em Application/Point etc. (mesmo padrão do Relâmpago) -->
@@ -35,6 +39,19 @@
     <Resource Include="assets\fonts\ArchivoBlack-Regular.ttf" />
     <Resource Include="assets\fonts\SpaceGrotesk-Regular.ttf" />
     <Resource Include="assets\fonts\SpaceGrotesk-Bold.ttf" />
+  </ItemGroup>
+
+  <!-- A interface roda num WebView2 (runtime já vem no Windows 11) -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4078.44" />
+  </ItemGroup>
+
+  <!-- ui/ vai junto do executável: é a interface inteira -->
+  <ItemGroup>
+    <None Include="ui\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Remove="_antigo\**" />
+    <Compile Remove="_antigo\**" />
+    <Page Remove="_antigo\**" />
   </ItemGroup>
 
 </Project>

@@ -63,16 +63,19 @@ public class StickyWindow : Window
         _cor = cor;
 
         Title = titulo.Length > 0 ? titulo : "nota";
-        Width = 320;
-        Height = 320;
+        Width = 268;
+        Height = 268;
         MinWidth = 200;
         MinHeight = 160;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.CanResize;
         ShowInTaskbar = true;
         SnapsToDevicePixels = true;
-        // A barra do Zimbar e Topmost; sem isso a nota some atras dela ao trocar de aba.
-        Topmost = true;
+        Cantos.ArredondarQuandoAbrir(this);
+        // Nao e Topmost: a nota se comporta como janela normal, pode ficar
+        // atras das outras. Quem garante que ela nao some atras da barra do
+        // Zimbar e o proprio Zimbar, que deixou de ser Topmost tambem.
+        Topmost = false;
 
         // Resize nativo pelas bordas, sem moldura do Windows
         WindowChrome.SetWindowChrome(this, new WindowChrome
@@ -80,7 +83,7 @@ public class StickyWindow : Window
             CaptionHeight = 0,
             ResizeBorderThickness = new Thickness(7),
             GlassFrameThickness = new Thickness(0),
-            CornerRadius = new CornerRadius(0),
+            CornerRadius = new CornerRadius(12),
             UseAeroCaptionButtons = false
         });
 
@@ -99,13 +102,13 @@ public class StickyWindow : Window
             BorderThickness = new Thickness(0),
             Foreground = ink,
             CaretBrush = ink,
-            FontSize = 14,
+            FontSize = 13.5,
             FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI"),
             TextWrapping = TextWrapping.Wrap,
             AcceptsReturn = true,
             AcceptsTab = true,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Padding = new Thickness(12, 8, 10, 10),
+            Padding = new Thickness(13, 4, 11, 6),
             Text = ComposeText(titulo, corpo)
         };
         _body.TextChanged += (_, _) =>
@@ -165,31 +168,50 @@ public class StickyWindow : Window
         topRight.Children.Add(minBtn);
         topRight.Children.Add(closeBtn);
 
+        // Barra fininha só pra pegar e arrastar, como no protótipo: um rótulo
+        // discreto à esquerda e os botões à direita. As cores foram pro pé.
+        var titulo_ = new TextBlock
+        {
+            Text = "✎ nota",
+            FontSize = 11.5,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = ink,
+            Opacity = 0.6,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(11, 0, 0, 0)
+        };
         var header = new DockPanel
         {
-            Height = 34,
-            Background = new SolidColorBrush(Color.FromArgb(0x22, 0x16, 0x16, 0x13)),
+            Height = 32,
+            Background = new SolidColorBrush(Color.FromArgb(0x12, 0x16, 0x16, 0x13)),
             Cursor = Cursors.SizeAll,
             LastChildFill = true
         };
         DockPanel.SetDock(topRight, Dock.Right);
         header.Children.Add(topRight);
-        var dragZone = new Border { Background = Brushes.Transparent, Padding = new Thickness(9, 0, 0, 0), Child = _dots };
+        var dragZone = new Border { Background = Brushes.Transparent, Child = titulo_ };
         dragZone.MouseLeftButtonDown += (_, e) => { if (e.ButtonState == MouseButtonState.Pressed) DragMove(); };
         header.Children.Add(dragZone);
-        header.MouseEnter += (_, _) => _dots.Opacity = 1;
-        header.MouseLeave += (_, _) => _dots.Opacity = 0.45;
+
+        // Fita de cores no pé, sempre visível mas leve
+        _dots.Margin = new Thickness(11, 0, 11, 9);
+        _dots.Opacity = 0.75;
+        var pe = new Border { Child = _dots, Background = Brushes.Transparent };
+        pe.MouseEnter += (_, _) => _dots.Opacity = 1;
+        pe.MouseLeave += (_, _) => _dots.Opacity = 0.75;
 
         var layout = new DockPanel();
         DockPanel.SetDock(header, Dock.Top);
+        DockPanel.SetDock(pe, Dock.Bottom);
         layout.Children.Add(header);
+        layout.Children.Add(pe);
         layout.Children.Add(_body);
 
+        // Sem moldura grossa: a curva do Windows 11 já dá o recorte
         _root = new Border
         {
             Background = CorFundo(_cor),
-            BorderBrush = ink,
-            BorderThickness = new Thickness(2.5),
+            CornerRadius = new CornerRadius(12),
             Child = layout
         };
         Content = _root;

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Zimbar — só a letra, sem placa atrás.
+       Z geométrico com uma inclinação leve (dá o ar de itálico sem virar
+       itálico) e pontas chanfradas no mesmo ângulo da diagonal. Por dentro,
+       tinta em degradê e um grão fino recortado na silhueta da letra. -->
+  <defs>
+    <linearGradient id="tinta" x1="0.05" y1="0" x2="0.95" y2="1">
+      <stop offset="0"    stop-color="#EA7E52"/>
+      <stop offset="0.35" stop-color="#CB4F2F"/>
+      <stop offset="0.72" stop-color="#9C3924"/>
+      <stop offset="1"    stop-color="#5E2B20"/>
+    </linearGradient>
+
+    <!-- grão de papel/tinta, sempre recortado pela letra -->
+    <filter id="grao" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="4" seed="11" result="ruido"/>
+      <feColorMatrix in="ruido" type="saturate" values="0" result="cinza"/>
+      <feComponentTransfer in="cinza" result="suave">
+        <feFuncR type="linear" slope="0.30" intercept="0.70"/>
+        <feFuncG type="linear" slope="0.30" intercept="0.70"/>
+        <feFuncB type="linear" slope="0.30" intercept="0.70"/>
+        <feFuncA type="linear" slope="0"    intercept="1"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" in2="suave" mode="multiply" result="misturado"/>
+      <feComposite in="misturado" in2="SourceGraphic" operator="in"/>
+    </filter>
+
+    <!-- pontas chanfradas no ângulo da diagonal; leve inclinação pra direita -->
+    <path id="zeta" d="
+      M 52 30
+      L 222 30
+      L 222 56
+      L 214 66
+      L 106 196
+      L 210 196
+      L 210 222
+      L 40 222
+      L 40 196
+      L 48 186
+      L 156 56
+      L 52 56
+      Z" transform="skewX(-3.5) translate(9,0)"/>
+  </defs>
+
+  <use href="#zeta" fill="url(#tinta)" filter="url(#grao)"/>
+</svg>

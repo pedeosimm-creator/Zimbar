@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using Drawing = System.Drawing;
@@ -40,6 +41,20 @@ public partial class App : Application
         WinForms.Application.SetHighDpiMode(WinForms.HighDpiMode.PerMonitorV2);
         base.OnStartup(e);
 
+        Log.Escrever("subindo — args: " + string.Join(" ", e.Args));
+        DispatcherUnhandledException += (_, ev) =>
+        {
+            Log.Erro("interface", ev.Exception);
+            MessageBox.Show("Deu ruim: " + ev.Exception.Message + "\n\nDetalhes em " + Log.Caminho,
+                            "Zimbar", MessageBoxButton.OK, MessageBoxImage.Error);
+            ev.Handled = true;
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, ev) =>
+        {
+            if (ev.ExceptionObject is Exception x) Log.Erro("fora da interface", x);
+        };
+        TaskScheduler.UnobservedTaskException += (_, ev) => Log.Erro("tarefa solta", ev.Exception);
+
         _singleInstance = new Mutex(true, "Zimbar.SingleInstance", out bool isNew);
         if (!isNew)
         {
@@ -59,6 +74,7 @@ public partial class App : Application
         // Modo de teste: abre a barra direto na inicialização.
         if (Array.Exists(e.Args, a => a == "--show"))
             ToggleBar();
+
     }
 
     private void SetupTray()
@@ -73,6 +89,7 @@ public partial class App : Application
         var menu = new WinForms.ContextMenuStrip();
         menu.Items.Add("Abrir Zimbar  (Ctrl+Alt+Z)", null, (_, _) => ToggleBar());
         menu.Items.Add("Abrir ZimNotes  (Ctrl+Alt+D)", null, (_, _) => NotesWindow.Open());
+        menu.Items.Add("Pomodoro", null, (_, _) => PomoWindow.Abrir());
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add("Sair", null, (_, _) => Shutdown());
         _tray.ContextMenuStrip = menu;
