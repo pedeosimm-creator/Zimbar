@@ -579,9 +579,11 @@ function renderRitmo(){
     if(itens.some(r=>r.days&&r.days[chave(d)])) seq++;
     else if(i>0) break;            // hoje ainda pode estar em branco
   }
-  document.getElementById('streakBox').innerHTML=
-    `<b>${feitosHoje}/${itens.length}</b><span>hoje</span>
-     <span style="flex:1"></span><b>${seq}</b><span>${seq===1?'dia seguido':'dias seguidos'}</span>`;
+  // resumo curto, no cabeçalho do cartão: "2/4 hoje · 5d seguidos"
+  const el=document.getElementById('streakBox');
+  el.innerHTML=`<b>${feitosHoje}/${itens.length}</b> hoje · <b>${seq}</b>d seguidos`;
+  el.title=`${feitosHoje} de ${itens.length} hábitos feitos hoje · `+
+           `${seq} ${seq===1?'dia seguido':'dias seguidos'}`;
 }
 function renderCaptura(){
   const box=document.getElementById('listaCap'); box.innerHTML='';

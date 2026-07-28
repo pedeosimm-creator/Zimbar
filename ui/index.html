@@ -99,33 +99,52 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
 /* HOJE */
 /* As linhas têm piso em px: sobrando altura, o 1fr estica e preenche a tela;
    faltando altura, cada linha para no piso e a página rola em vez de esmagar. */
+/* Ordem de importância, da esquerda pra direita: o plano do dia, a captura
+   (que é onde a cabeça se esvazia), e por último a coluna calma — o que
+   só precisa de um olhar de passagem. */
 .grid-hoje{display:grid;height:100%;gap:16px;
-  grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);
+  grid-template-columns:minmax(0,1.35fr) minmax(0,1.1fr) minmax(0,.9fr);
   grid-template-rows:auto minmax(330px,1fr);
   grid-template-areas:"foco  grana grana"
-                      "plano lado  cap"}
+                      "plano cap   lado"}
 .grid-hoje>.focus{grid-area:foco}
 .grid-hoje>.money{grid-area:grana}
 .grid-hoje>.card{grid-area:plano}
 .grid-hoje>.stack{grid-area:lado}
 .grid-hoje>.stack.um{grid-area:cap}
-.stack{display:grid;gap:16px;min-height:0;grid-template-rows:minmax(170px,auto) minmax(120px,1fr)}
+/* na coluna calma o de cima manda; o ritmo fica com a sobra, encolhido */
+.stack{display:grid;gap:16px;min-height:0;grid-template-rows:minmax(120px,1fr) auto}
 .stack.um{grid-template-rows:minmax(0,1fr)}
 
-/* heatmap do ritmo */
+/* ══ PESO DOS CARTÕES ══
+   destaque = o que você usa; discreto = o que você só confere. */
+.card.destaque{border-color:var(--acc-soft);box-shadow:0 2px 14px rgba(203,79,47,.09),var(--shadow)}
+.card.destaque .ttl h2{color:var(--acc);font-weight:600}
+.card.destaque .ttl .dot{background:var(--acc)}
+.atalho{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.1em;color:var(--faint);
+  border:1px solid var(--line);padding:2px 5px;border-radius:4px;margin-right:2px}
+.card.discreto{background:transparent;box-shadow:none;border-style:dashed;padding:12px 15px;min-height:112px}
+.card.discreto .ttl{margin-bottom:8px}
+.card.discreto .ttl h2{font-size:8.5px;color:var(--faint)}
+.card.discreto .ttl .dot{width:5px;height:5px;opacity:.6}
+
+/* heatmap do ritmo — em modo discreto, quadradinhos pequenos */
 .hmbox{flex:1;min-height:0}
 .hm{display:grid;grid-template-columns:auto repeat(7,1fr);gap:5px;align-items:center;margin-top:2px}
 .hm .cell{max-height:30px}
+.discreto .hm{gap:3px}
+.discreto .hm .cell{max-height:15px;border-radius:3px}
+.discreto .hm .hn{font-size:10.5px;color:var(--faint)}
+.discreto .hm .hd{font-size:7px}
 .hm .hn{font-size:11.5px;color:var(--dim);padding-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hm .hd{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--faint);text-align:center}
 .hm .cell{aspect-ratio:1;border-radius:5px;background:var(--sunk);border:1px solid var(--line-soft);cursor:pointer;transition:.13s}
 .hm .cell:hover{border-color:var(--faint)}
 .hm .cell.f{background:var(--ok);border-color:transparent}
 .hm .cell.hj{outline:1.5px solid var(--acc);outline-offset:1px}
-.streak{display:flex;align-items:baseline;gap:7px;margin-top:12px;padding-top:11px;
-  border-top:1px solid var(--line-soft);flex-shrink:0;flex-wrap:wrap}
-.streak b{font-size:19px;font-weight:600;letter-spacing:-.02em}
-.streak span{font-size:11.5px;color:var(--dim)}
+/* o resumo do ritmo virou uma linha só, no cabeçalho do próprio cartão */
+.streak{font-size:10.5px;color:var(--faint);white-space:nowrap;flex-shrink:0}
+.streak b{font-weight:600;color:var(--dim)}
 .divlab{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.14em;color:var(--faint);
   padding:11px 6px 5px;margin-top:5px;border-top:1px solid var(--line-soft)}
 .mini{display:flex;align-items:center;gap:9px;padding:7px 6px;font-size:12.5px;border-radius:7px;cursor:pointer}
@@ -204,9 +223,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
 .nivsel b:hover{opacity:.7}
 .nivsel b.on{opacity:1;border-color:var(--ink)}
 /* envios da captura */
-.cap-item{padding:9px 6px;border-radius:8px}
+.cap-item{padding:10px 9px;border-radius:8px;border-bottom:1px solid var(--line-soft)}
+.cap-item:last-child{border-bottom:none}
 .cap-item:hover{background:var(--sunk)}
-.cap-item .ctx{font-size:13px;line-height:1.4}
+.cap-item .ctx{font-size:14px;line-height:1.4}
 .envios{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;opacity:0;max-height:0;overflow:hidden;transition:opacity .15s,max-height .15s}
 .cap-item:hover .envios{opacity:1;max-height:60px}
 .envios button{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:3px 8px;
@@ -476,12 +496,11 @@ html.nativo .jbtn{display:flex}
    em px — sobrando altura o 1fr estica e preenche; faltando, a linha para no
    piso e a página rola, em vez de espremer o conteúdo pra fora do cartão. */
 @media (max-width:1280px){
-  .grid-hoje{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);
-    grid-template-rows:auto minmax(330px,1.1fr) minmax(190px,.9fr);
+  .grid-hoje{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);
+    grid-template-rows:auto minmax(250px,1.05fr) minmax(240px,.95fr);
     grid-template-areas:"foco  grana"
-                        "plano lado"
-                        "plano cap"}
-  .stack{grid-template-rows:minmax(170px,auto) minmax(120px,1fr)}
+                        "plano cap"
+                        "plano lado"}
   /* o "pode gastar" quebra em duas linhas em vez de espremer os dizeres */
   .money{flex-wrap:wrap;gap:8px 18px;padding:15px 18px}
   .money .mv{font-size:32px}
@@ -582,24 +601,26 @@ html.nativo .jbtn{display:flex}
               </div></div>
           </div>
 
-          <div class="stack">
-            <div class="card">
-              <div class="ttl"><span class="dot" style="background:var(--ok)"></span><h2>RITMO DA SEMANA</h2></div>
-              <div class="scrollbox hmbox"><div class="hm" id="ritmoHm"></div></div>
-              <div class="streak" id="streakBox"></div>
+          <div class="stack um">
+            <div class="card destaque">
+              <div class="ttl"><span class="dot"></span><h2>CAPTURA RÁPIDA</h2><span class="sp"></span>
+                <span class="atalho">CTRL K</span>
+                <button class="act" onclick="limparCaptura()">limpar</button></div>
+              <div class="scrollbox" id="listaCap"></div>
             </div>
+          </div>
+
+          <!-- coluna calma: o que só precisa de um olhar de passagem -->
+          <div class="stack">
             <div class="card">
               <div class="ttl"><span class="dot" style="background:var(--warn)"></span><h2>PRÓXIMOS DIAS</h2><span class="sp"></span>
                 <button class="act" onclick="go('agenda')">agenda →</button></div>
               <div class="scrollbox" id="proximos"></div>
             </div>
-          </div>
-
-          <div class="stack um">
-            <div class="card">
-              <div class="ttl"><span class="dot" style="background:var(--faint)"></span><h2>CAPTURA</h2><span class="sp"></span>
-                <button class="act" onclick="limparCaptura()">limpar</button></div>
-              <div class="scrollbox" id="listaCap"></div>
+            <div class="card discreto">
+              <div class="ttl"><span class="dot" style="background:var(--ok)"></span><h2>RITMO</h2><span class="sp"></span>
+                <span class="streak" id="streakBox"></span></div>
+              <div class="scrollbox hmbox"><div class="hm" id="ritmoHm"></div></div>
             </div>
           </div>
         </div>
