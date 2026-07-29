@@ -212,6 +212,13 @@ const Dados = {
     return upd('notas', 'id=eq.' + encodeURIComponent(n.id), { titulo: n.t, corpo: n.b, cor: n.c || '' });
   },
   apagarNota(id) { return del('notas', 'id=eq.' + encodeURIComponent(id)); },
+  /* o rol de pastas do ZimNotes (mesma chave que o celular usa) */
+  async pastasNota() {
+    try {
+      const r = await sel('app_kv?k=eq.zimnotes_pastas&select=v');
+      return r.length ? JSON.parse(r[0].v) : [];
+    } catch (e) { return []; }
+  },
 
   /* ═══ CONTAS (banco separado) ═══ */
   async contas() {

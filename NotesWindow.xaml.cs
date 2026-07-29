@@ -23,6 +23,8 @@ public partial class NotesWindow : Window
     private static NotesWindow? _instance;
 
     private readonly List<JsonObject> _notas = new();
+    private readonly List<string> _pastas = new();
+    private string _filtroCat = "";      // "" = todas
     private bool _loadingNotas;
     private DateTime _lastSync = DateTime.MinValue;
     private readonly DispatcherTimer _syncTimer = new() { Interval = TimeSpan.FromSeconds(20) };
@@ -95,6 +97,8 @@ public partial class NotesWindow : Window
                 if (node is JsonObject n)
                     _notas.Add(n);
 
+            await CarregarPastas();
+            RenderChips();
             RenderNotesList();
             StatusText.Text = "";
             _lastSync = DateTime.Now;
@@ -120,18 +124,86 @@ public partial class NotesWindow : Window
         await LoadNotas();
     }
 
+    /// <summary>As pastas (categorias), do mesmo app_kv que o celular usa.</summary>
+    private async Task CarregarPastas()
+    {
+        _pastas.Clear();
+        try
+        {
+            var r = await Supa.Select("app_kv?k=eq.zimnotes_pastas&select=v");
+            if (r.Count > 0 && r[0]?["v"]?.GetValue<string>() is string v)
+                if (System.Text.Json.Nodes.JsonNode.Parse(v) is JsonArray arr)
+                    foreach (var p in arr)
+                        if (p?.GetValue<string>() is string s && s.Length > 0) _pastas.Add(s);
+        }
+        catch { }
+        // pasta que só existe nas notas também entra
+        foreach (var n in _notas)
+            if (n["pasta"]?.GetValue<string>() is string pa && pa.Length > 0 && !_pastas.Contains(pa))
+                _pastas.Add(pa);
+    }
+
+    /// <summary>Chips de categoria: Todas + pastas. Nenhuma = todas.</summary>
+    private void RenderChips()
+    {
+        ChipsPanel.Children.Clear();
+        Chip("Todas", "");
+        foreach (var p in _pastas) Chip(p, p);
+    }
+
+    private void Chip(string rotulo, string valor)
+    {
+        bool on = _filtroCat == valor;
+        int q = valor.Length == 0
+            ? _notas.Count
+            : _notas.Count(n => (n["pasta"]?.GetValue<string>() ?? "") == valor);
+
+        var txt = new TextBlock
+        {
+            Text = rotulo + "  " + q,
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = on ? Paleta.Cartao : Paleta.Fraca
+        };
+        var b = new Border
+        {
+            Background = on ? Paleta.Tinta : Paleta.FundoBaixo,
+            CornerRadius = new CornerRadius(100),
+            Padding = new Thickness(11, 4, 11, 5),
+            Margin = new Thickness(0, 0, 5, 0),
+            Cursor = Cursors.Hand,
+            Child = txt
+        };
+        b.MouseLeftButtonUp += (_, _) =>
+        {
+            _filtroCat = _filtroCat == valor ? "" : valor;
+            RenderChips();
+            RenderNotesList();
+        };
+        ChipsPanel.Children.Add(b);
+    }
+
     private void RenderNotesList()
     {
         NotesListPanel.Children.Clear();
         CountText.Text = $"{_notas.Count} nota{(_notas.Count == 1 ? "" : "s")}";
+
+        var lista = _filtroCat.Length == 0
+            ? _notas
+            : _notas.Where(n => (n["pasta"]?.GetValue<string>() ?? "") == _filtroCat).ToList();
 
         if (_notas.Count == 0)
         {
             NotesListPanel.Children.Add(EmptyText("Ainda não tem nota nenhuma.\nToca em ＋ pra escrever a primeira."));
             return;
         }
+        if (lista.Count == 0)
+        {
+            NotesListPanel.Children.Add(EmptyText($"Nada em \"{_filtroCat}\"."));
+            return;
+        }
 
-        foreach (var n in _notas)
+        foreach (var n in lista)
             NotesListPanel.Children.Add(NoteCard(n));
     }
 

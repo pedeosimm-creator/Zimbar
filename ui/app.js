@@ -1049,6 +1049,7 @@ function abrirBiblioteca(){
       <button title="puxar o ZimNotes pra fora do Zimbar" id="bibPop">⤢</button>
       <button title="nova nota" id="bibNova">＋</button>
       <button title="fechar" id="bibX">✕</button></div>
+    <div class="bibchips" id="bibChips"></div>
     <div class="lista" id="bibLista"></div><div class="redim"></div>`;
   document.body.appendChild(j);
   tornarJanela(j,j.querySelector('.barra'),destacarBiblioteca);
@@ -1056,6 +1057,15 @@ function abrirBiblioteca(){
   j.querySelector('#bibNova').onclick=()=>novaNota();
   j.querySelector('#bibPop').onclick=destacarBiblioteca;
   renderBiblioteca();
+  // as pastas (categorias) vêm do mesmo lugar que o celular
+  Dados.pastasNota().then(ps=>{ bibPastas=ps; renderBiblioteca(); }).catch(()=>{});
+}
+/* categorias do ZimNotes: filtro atual e o rol de pastas */
+let bibFiltro='', bibPastas=[];
+function categoriasNota(){
+  const set=new Set(bibPastas);
+  for(const n of S.notas) if(n.pasta) set.add(n.pasta);
+  return [...set];
 }
 /* Destaca o ZimNotes: abre a janela solta (a mesma cara, mas livre sobre a
    área de trabalho) e fecha o painel de dentro do Zimbar. */
@@ -1065,15 +1075,35 @@ function destacarBiblioteca(){
   const j=document.getElementById('janBib'); if(j) j.remove();
   toast('ZimNotes destacado');
 }
+function renderBibChips(){
+  const box=document.getElementById('bibChips'); if(!box) return;
+  const cats=categoriasNota();
+  const chip=(rot,val,cor)=>{
+    const b=document.createElement('button');
+    b.className='bchip'+(bibFiltro===val?' on':'');
+    const q = val==='' ? S.notas.length : S.notas.filter(n=>n.pasta===val).length;
+    b.innerHTML=(cor?`<i style="background:${cor}"></i>`:'')+esc(rot)+` <span class="bn">${q}</span>`;
+    b.onclick=()=>{ bibFiltro=(bibFiltro===val?'':val); renderBibChips(); renderBiblioteca(); };
+    box.appendChild(b);
+  };
+  box.innerHTML='';
+  chip('Todas','',null);
+  cats.forEach(p=>chip(p,p,Dados.corLista(p)));
+}
 function renderBiblioteca(){
   const box=document.getElementById('bibLista'); if(!box) return;
+  renderBibChips();
   box.innerHTML='';
   zonaSoltar(box,'notas');
+  // nenhuma categoria selecionada = todas; senão, só as da pasta
+  const lista = bibFiltro==='' ? S.notas : S.notas.filter(n=>n.pasta===bibFiltro);
   if(!S.notas.length){ box.innerHTML='<div class="empty">nenhuma nota — usa o ＋ ali em cima</div>'; return; }
+  if(!lista.length){ box.innerHTML='<div class="empty">nada em "'+esc(bibFiltro)+'"</div>'; return; }
   // tira as marcas de formatação (negrito/sublinhado do celular) da prévia:
   // a lista é resumo, não editor — <b> no meio do texto só polui
   const semTags = s => String(s||'').replace(/<[^>]*>/g,'');
-  S.notas.forEach((n,ni)=>{
+  lista.forEach((n)=>{
+    const ni=S.notas.indexOf(n);   // índice real, pra reordenar certo mesmo filtrado
     const el=document.createElement('div'); el.className='nt';
     const previa=semTags(n.b).split('\n').map(l=>l.trim()).filter(Boolean)[0]||'vazia';
     const cat=n.pasta?`<span class="ncat">${esc(n.pasta)}</span>`:'';

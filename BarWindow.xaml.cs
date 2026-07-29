@@ -42,6 +42,12 @@ public partial class BarWindow : Window
     public BarWindow()
     {
         InitializeComponent();
+        // identidade própria: a BarWindow leva o id do Zimbar (o mesmo que é
+        // carimbado nos atalhos), pra o botão da barra de tarefas mostrar o Z
+        // e não se confundir com o atalho do ZimNotes, que aponta pro mesmo exe
+        var helper = new WindowInteropHelper(this);
+        helper.EnsureHandle();
+        IdentidadeJanela.Definir(helper.Handle, "PedroKuster.Zimbar");
         Cantos.ArredondarQuandoAbrir(this);
         PreviewKeyDown += (_, e) =>
         {

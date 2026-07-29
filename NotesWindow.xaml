@@ -55,6 +55,7 @@
             <Grid Margin="14,12,14,14">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
@@ -76,7 +77,13 @@
                     </StackPanel>
                 </DockPanel>
 
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <!-- categorias (pastas), iguais às do painel embutido -->
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollBarVisibility="Disabled" Margin="0,0,0,10">
+                    <StackPanel x:Name="ChipsPanel" Orientation="Horizontal"/>
+                </ScrollViewer>
+
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="NotesListPanel"/>
                 </ScrollViewer>
             </Grid>

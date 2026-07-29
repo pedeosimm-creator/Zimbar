@@ -79,6 +79,13 @@ public partial class App : Application
         SetupTray();
         SetupHotkey();
 
+        // carimba os atalhos com o AppUserModelID certo (Zimbar / ZimNotes) pra
+        // a barra de tarefas dar um botão e um ícone pra cada. Roda no ocioso.
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            try { IdentidadeJanela.EstamparAtalhos(); } catch (Exception ex) { Log.Erro("estampar atalhos", ex); }
+        }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+
         // Atalho do ZimNotes: abre só a biblioteca de notas, sem a barra.
         if (querNotas)
             NotesWindow.Open();
