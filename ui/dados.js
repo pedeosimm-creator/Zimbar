@@ -139,11 +139,12 @@ const Dados = {
 
   /* ═══ LEITURA INICIAL ═══ */
   async carregar() {
-    const [foco, inbox, ritmo, ordem, tarefas, mural, notas] = await Promise.all([
+    // as notas não entram aqui: quem carrega e grava a tabela `notas` é o
+    // ZimNotes (notas.js), e ele faz isso quando você abre o módulo
+    const [foco, inbox, ritmo, ordem, tarefas, mural] = await Promise.all([
       kvLer('me2_foco'), kvLer('me2_inbox'), kvLer('me2_ritmo'), kvLer('zimbar_ordem'),
       sel('tarefas?select=id,titulo,status,prazo,created_at&order=created_at.desc&limit=400'),
-      sel('mural_items?select=id,categoria,texto,created_at&order=created_at.asc'),
-      sel('notas?select=id,titulo,corpo,cor,created_at&order=created_at.desc&limit=200')
+      sel('mural_items?select=id,categoria,texto,created_at&order=created_at.asc')
     ]);
 
     const f = kvJson(foco, { date: hojeChave(), frog: { text: '', done: false }, big: [], med: [], small: [] });
@@ -169,8 +170,7 @@ const Dados = {
         })), ord.tarefas),
       mural: porOrdem(
         mural.map(m => ({ id: m.id, cat: m.categoria || 'geral', t: m.texto || '', criado: m.created_at })),
-        ord.mural),
-      notas: notas.map(n => ({ id: n.id, t: n.titulo || '', b: n.corpo || '', c: n.cor || '' }))
+        ord.mural)
     };
   },
 
@@ -204,14 +204,12 @@ const Dados = {
   },
   apagarItem(id) { return del('mural_items', 'id=eq.' + encodeURIComponent(id)); },
 
-  /* ═══ NOTAS ═══ */
+  /* ═══ NOTAS ═══
+     Só o "criar": é o que o arrastar-pro-módulo precisa. Ler, editar e
+     apagar é com o ZimNotes, dono da tabela. */
   criarNota(n) {
     return ins('notas', { id: n.id, titulo: n.t, corpo: n.b, cor: n.c || '', data_nota: hojeChave() });
   },
-  atualizarNota(n) {
-    return upd('notas', 'id=eq.' + encodeURIComponent(n.id), { titulo: n.t, corpo: n.b, cor: n.c || '' });
-  },
-  apagarNota(id) { return del('notas', 'id=eq.' + encodeURIComponent(id)); },
 
   /* ═══ CONTAS (banco separado) ═══ */
   async contas() {

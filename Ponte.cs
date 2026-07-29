@@ -71,12 +71,8 @@ public class Ponte
                     AbrirNoNavegador(m["url"]?.GetValue<string>() ?? "");
                     break;
 
-                case "abrirNota":
-                    StickyWindow.OpenNote(
-                        m["id"]?.GetValue<string>() ?? "",
-                        m["titulo"]?.GetValue<string>() ?? "",
-                        m["corpo"]?.GetValue<string>() ?? "",
-                        m["cor"]?.GetValue<string>() ?? "");
+                case "abrirNotas":
+                    NotesWindow.Open();
                     break;
 
                 case "pomodoro":

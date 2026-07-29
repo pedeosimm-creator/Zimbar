@@ -2,7 +2,8 @@
 <html lang="pt-BR"><head><meta charset="utf-8">
 <title>Zimbar</title>
 <link rel="icon" href="z.svg" type="image/svg+xml">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="notas.css">
 <style>
 :root{
   --bg:#e6e2d8; --shell:#f8f6f1; --rail:#f2efe8; --panel:#fffefb; --sunk:#f0ede5;
@@ -355,41 +356,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
 .mbar i{display:block;height:100%;background:var(--acc);opacity:.75;border-radius:3px}
 .mit{display:flex;justify-content:space-between;font-size:11.5px;color:var(--faint);padding:3px 0 0}
 
-/* ══ NOTAS: janelas soltas (biblioteca + autoadesivas) ══ */
-.jan{position:fixed;border-radius:12px;box-shadow:0 24px 70px rgba(25,24,21,.32),0 2px 8px rgba(25,24,21,.14);
-  display:flex;flex-direction:column;overflow:hidden;z-index:60;min-width:210px;min-height:170px}
-[data-theme=dark] .jan{box-shadow:0 24px 70px rgba(0,0,0,.6),0 2px 8px rgba(0,0,0,.4)}
-.jan .barra{height:32px;display:flex;align-items:center;gap:7px;padding:0 8px 0 11px;cursor:grab;flex-shrink:0}
-.jan .barra:active{cursor:grabbing}
-.jan .barra .tt{flex:1;font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.75}
-.jan .barra button{width:20px;height:20px;border:none;background:transparent;border-radius:5px;cursor:pointer;
-  font-size:11px;line-height:1;opacity:.5;font-family:inherit;color:inherit}
-.jan .barra button:hover{opacity:1;background:rgba(0,0,0,.09)}
-.jan .redim{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize}
-.jan .redim:after{content:"";position:absolute;right:4px;bottom:4px;width:7px;height:7px;
-  border-right:2px solid currentColor;border-bottom:2px solid currentColor;opacity:.3}
-/* biblioteca */
-.bib{background:var(--panel);border:1px solid var(--line);width:310px;height:420px}
-.bib .barra{background:var(--sunk);border-bottom:1px solid var(--line);color:var(--ink)}
-.bib .lista{flex:1;overflow:auto;padding:9px 11px}
-.bib .lista::-webkit-scrollbar{width:6px}
-.bib .lista::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
-.nt{display:flex;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;margin-bottom:6px;
-  border:1px solid var(--line);background:var(--panel);transition:.14s}
-.nt:hover{border-color:var(--acc)}
-.nt .fita{width:4px;border-radius:3px;flex-shrink:0}
-.nt .ni{flex:1;min-width:0}
-.nt .nt1{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.nt .nt2{font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-/* autoadesiva */
-.sticky{width:250px;height:250px;color:#191815;border:none}
-.sticky .barra{background:rgba(0,0,0,.07)}
-.sticky .corpo{flex:1;border:none;background:transparent;font-family:inherit;font-size:13.5px;line-height:1.6;
-  color:inherit;outline:none;resize:none;padding:9px 13px 13px;min-height:0}
-.sticky .corpo::placeholder{color:rgba(25,24,21,.32)}
-.sticky .cores{display:flex;gap:4px;padding:0 11px 9px}
-.sticky .cores b{width:13px;height:13px;border-radius:4px;cursor:pointer;border:1.5px solid transparent}
-.sticky .cores b.on{border-color:rgba(0,0,0,.45)}
+/* As notas moram no módulo Notas, desenhado em notas.css — a janelinha
+   flutuante da biblioteca e as autoadesivas saíram daqui. */
 
 /* NOTÍCIAS */
 /* ══ NOTÍCIAS: seções em cima, grade de manchetes com imagem ══ */
@@ -561,12 +529,12 @@ html.nativo .jbtn{display:flex}
     <button class="nv" data-v="kanban"><span class="gl">◱</span>Kanban<span class="ct" id="ct-kanban"></span></button>
     <button class="nv" data-v="agenda"><span class="gl">◷</span>Agenda<span class="ct" id="ct-agenda"></span></button>
     <button class="nv" data-v="listas"><span class="gl">☰</span>Listas<span class="ct" id="ct-listas"></span></button>
+    <button class="nv" data-v="notas"><span class="gl">✎</span>Notas<span class="ct" id="ct-notas"></span></button>
     <button class="nv" data-v="noticias"><span class="gl">✷</span>Notícias<span class="ct" id="ct-noticias"></span></button>
     <button class="nv" data-v="contas"><span class="gl">$</span>Contas<span class="ct">R$ 4,67</span></button>
     <div class="rsp"></div>
     <div class="railfoot">
       <button class="tool" id="pomo"><span class="gl">◔</span>Pomodoro<span class="val" id="pomoVal">25:00</span></button>
-      <button class="tool" id="toolNotas" onclick="abrirBiblioteca()"><span class="gl">✎</span>Notas<span class="val" id="ct-notas"></span></button>
       <button class="tool" id="themeBtn"><span class="gl">◐</span>Tema<span class="val" id="themeVal">claro</span></button>
       <button class="tool" id="toolRecarregar"><span class="gl">↺</span>Recarregar<span class="val" id="syncVal"></span></button>
     </div>
@@ -682,6 +650,11 @@ html.nativo .jbtn{display:flex}
         </div>
       </section>
 
+      <!-- NOTAS (ZimNotes) — o mesmo módulo da janela solta, ver notas.js -->
+      <section class="view" id="v-notas">
+        <div id="znRaiz" style="height:100%"></div>
+      </section>
+
       <!-- NOTÍCIAS -->
       <section class="view" id="v-noticias">
         <div class="card flush">
@@ -727,5 +700,6 @@ html.nativo .jbtn{display:flex}
 
 <script src="dados.js"></script>
 <script src="ponte.js"></script>
+<script src="notas.js"></script>
 <script src="app.js"></script>
 </body></html>

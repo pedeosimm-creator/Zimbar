@@ -1,345 +1,164 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Threading;
+using System.Windows.Interop;
+using Microsoft.Web.WebView2.Core;
 
 namespace Zimbar;
 
 /// <summary>
-/// ZimNotes: a BIBLIOTECA de notas (tabela `notas`). Clicar numa nota abre
-/// uma janela autoadesiva (StickyWindow) so com o texto dela, como o
-/// Sticky Notes do Windows.
+/// ZimNotes como aplicativo próprio do computador.
+///
+/// A janela não desenha nada: ela hospeda ui/notas.html, que é a MESMA
+/// interface da aba Notas dentro do Zimbar (notas.css + notas.js). Foi de
+/// propósito — assim os dois são iguais por construção, e não porque
+/// alguém lembrou de repetir a mudança dos dois lados.
+///
+/// Ao C# sobra o que o navegador não faz: mover, redimensionar e os três
+/// botões do canto, já que a janela é sem moldura.
 /// </summary>
 public partial class NotesWindow : Window
 {
     private static NotesWindow? _instance;
 
-    private readonly List<JsonObject> _notas = new();
-    private bool _loadingNotas;
-    private DateTime _lastSync = DateTime.MinValue;
-    private readonly DispatcherTimer _syncTimer = new() { Interval = TimeSpan.FromSeconds(20) };
-
     public static void Open()
     {
         _instance ??= new NotesWindow();
+        if (_instance.WindowState == WindowState.Minimized)
+            _instance.WindowState = WindowState.Normal;
         _instance.Show();
         _instance.Activate();
-        _ = _instance.LoadNotas();
-    }
-
-    /// <summary>As autoadesivas chamam isso ao salvar/excluir pra lista refletir na hora.</summary>
-    public static void RefreshIfOpen()
-    {
-        if (_instance is not null) _ = _instance.LoadNotas();
+        _instance.Web.Focus();
     }
 
     private NotesWindow()
     {
         InitializeComponent();
-        Closed += (_, _) => { _syncTimer.Stop(); _instance = null; };
-        Activated += (_, _) => _ = LoadNotasIfSafe();
-        _syncTimer.Tick += (_, _) => _ = LoadNotasIfSafe();
-        _syncTimer.Start();
-        PreviewKeyDown += Window_PreviewKeyDown;
+        Cantos.ArredondarQuandoAbrir(this);
+        Closed += (_, _) => _instance = null;
+        _ = IniciarSeguro();
     }
 
-    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    /// <summary>Pasta ui/ ao lado do executável (ou a do projeto, no dev).</summary>
+    private static string PastaUi
     {
-        bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
-        if (ctrl && e.Key == Key.N) { New_Click(this, new RoutedEventArgs()); e.Handled = true; return; }
-        if (ctrl && e.Key == Key.F) { SearchBox.Focus(); SearchBox.SelectAll(); e.Handled = true; return; }
-
-        if (e.Key == Key.Escape)
+        get
         {
-            if (SearchBox.IsKeyboardFocusWithin && SearchBox.Text.Length > 0)
-                SearchBox.Text = "";
-            else
-                Close();
-            e.Handled = true;
-        }
-    }
-
-    private void Header_MouseDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.OriginalSource is Button or TextBox) return;
-        if (e.ButtonState == MouseButtonState.Pressed) DragMove();
-    }
-
-    private void CloseWin_Click(object sender, RoutedEventArgs e) => Close();
-
-    private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
-    {
-        Width = Math.Max(MinWidth, Width + e.HorizontalChange);
-        Height = Math.Max(MinHeight, Height + e.VerticalChange);
-    }
-
-    // -- Lista -------------------------------------------------------
-
-    private async Task LoadNotas()
-    {
-        if (_loadingNotas) return;
-        _loadingNotas = true;
-        try
-        {
-            // fixadas primeiro, como no celular
-            var rows = await Supa.Select(
-                "notas?select=id,titulo,corpo,data_nota,cor,created_at,fixada,itens" +
-                "&order=fixada.desc,created_at.desc&limit=160");
-            _notas.Clear();
-            foreach (var node in rows)
-                if (node is JsonObject n)
-                    _notas.Add(n);
-
-            RenderNotesList();
-            StatusText.Text = "";
-            _lastSync = DateTime.Now;
-        }
-        catch
-        {
-            _notas.Clear();
-            NotesListPanel.Children.Clear();
-            NotesListPanel.Children.Add(EmptyText("sem conexao com o banco agora"));
-            CountText.Text = "";
-            StatusText.Text = "offline";
-        }
-        finally
-        {
-            _loadingNotas = false;
-        }
-    }
-
-    private async Task LoadNotasIfSafe()
-    {
-        if (_loadingNotas) return;
-        if ((DateTime.Now - _lastSync).TotalSeconds < 4) return;
-        await LoadNotas();
-    }
-
-    private void RenderNotesList()
-    {
-        NotesListPanel.Children.Clear();
-        string q = SearchBox.Text.Trim();
-        var filtered = _notas
-            .Where(n => q.Length == 0 || Haystack(n).Contains(q, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        CountText.Text = q.Length == 0
-            ? $"{_notas.Count} nota{(_notas.Count == 1 ? "" : "s")}"
-            : $"{filtered.Count}/{_notas.Count} nota{(_notas.Count == 1 ? "" : "s")}";
-
-        if (_notas.Count == 0)
-        {
-            NotesListPanel.Children.Add(EmptyText("Ainda não tem nota nenhuma.\nToca em + nota pra escrever a primeira."));
-            return;
-        }
-        if (filtered.Count == 0)
-        {
-            NotesListPanel.Children.Add(EmptyText("Nada com essa palavra.\nTenta outra."));
-            return;
-        }
-
-        foreach (var n in filtered)
-            NotesListPanel.Children.Add(NoteCard(n));
-    }
-
-    /// <summary>Cartão na cor da nota, no desenho do ZimNotes de celular.</summary>
-    private Border NoteCard(JsonObject n)
-    {
-        string titulo = TitleOf(n);
-        string corpo = BodyPreview(n);
-        string cor = n["cor"]?.GetValue<string>() ?? "";
-        bool fixada = n["fixada"]?.GetValue<bool>() ?? false;
-        var itens = n["itens"] as JsonArray ?? new JsonArray();
-
-        var sp = new StackPanel();
-
-        // título com o alfinete à direita, se estiver fixada
-        var linhaTitulo = new DockPanel { LastChildFill = true };
-        if (fixada)
-        {
-            var pin = new TextBlock
+            string aoLado = Path.Combine(AppContext.BaseDirectory, "ui");
+            if (File.Exists(Path.Combine(aoLado, "notas.html"))) return aoLado;
+            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            while (dir != null)
             {
-                Text = "📌",
-                FontSize = 11,
-                Opacity = 0.55,
-                Margin = new Thickness(6, 0, 0, 0),
-                VerticalAlignment = VerticalAlignment.Top
-            };
-            DockPanel.SetDock(pin, Dock.Right);
-            linhaTitulo.Children.Add(pin);
-        }
-        linhaTitulo.Children.Add(new TextBlock
-        {
-            Text = titulo.Length == 0 ? "Sem título" : titulo,
-            FontSize = 14,
-            FontWeight = FontWeights.Bold,
-            Foreground = Paleta.Tinta2,
-            TextWrapping = TextWrapping.NoWrap,
-            TextTrimming = TextTrimming.CharacterEllipsis
-        });
-        sp.Children.Add(linhaTitulo);
-
-        if (corpo.Length > 0)
-            sp.Children.Add(new TextBlock
-            {
-                Text = corpo.Length > 120 ? corpo[..120] + "…" : corpo,
-                FontSize = 12,
-                Foreground = Paleta.Tinta2,
-                Opacity = 0.72,
-                TextWrapping = TextWrapping.Wrap,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                // 2 linhas exatas: com MaxHeight solto a 3a linha ficava cortada no meio
-                LineHeight = 17,
-                LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
-                MaxHeight = 34,
-                Margin = new Thickness(0, 5, 0, 0)
-            });
-
-        // prévia do checklist: os que faltam primeiro, que é o que interessa
-        if (itens.Count > 0)
-        {
-            var abertos = itens.OfType<JsonObject>().Where(i => !(i["f"]?.GetValue<bool>() ?? false)).ToList();
-            var mostra = (abertos.Count > 0 ? abertos : itens.OfType<JsonObject>().ToList()).Take(2);
-            foreach (var it in mostra)
-            {
-                bool feito = it["f"]?.GetValue<bool>() ?? false;
-                sp.Children.Add(new TextBlock
-                {
-                    Text = (feito ? "☑  " : "☐  ") + (it["t"]?.GetValue<string>() ?? ""),
-                    FontSize = 11.5,
-                    Foreground = Paleta.Tinta2,
-                    Opacity = feito ? 0.45 : 0.78,
-                    TextWrapping = TextWrapping.NoWrap,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    Margin = new Thickness(0, 4, 0, 0)
-                });
+                string tenta = Path.Combine(dir.FullName, "ui");
+                if (File.Exists(Path.Combine(tenta, "notas.html"))) return tenta;
+                dir = dir.Parent;
             }
-            int restantes = itens.Count - mostra.Count();
-            if (restantes > 0)
-                sp.Children.Add(new TextBlock
+            return aoLado;
+        }
+    }
+
+    private async Task IniciarSeguro()
+    {
+        try { await Iniciar(); }
+        catch (Exception ex)
+        {
+            Log.Erro("subir webview das notas", ex);
+            MessageBox.Show("O ZimNotes não conseguiu abrir.\n\n" + ex.Message +
+                            "\n\nDetalhes em: " + Log.Caminho,
+                            "ZimNotes", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async Task Iniciar()
+    {
+        // mesmo perfil do Zimbar: o tema e as preferências são compartilhados
+        string perfil = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Zimbar", "WebView2");
+        Directory.CreateDirectory(perfil);
+
+        var ambiente = await CoreWebView2Environment.CreateAsync(null, perfil);
+        await Web.EnsureCoreWebView2Async(ambiente);
+
+        var nucleo = Web.CoreWebView2;
+        var cfg = nucleo.Settings;
+        cfg.AreDefaultContextMenusEnabled = false;
+        cfg.IsStatusBarEnabled = false;
+        cfg.IsZoomControlEnabled = false;
+#if DEBUG
+        cfg.AreDevToolsEnabled = true;
+#else
+        cfg.AreDevToolsEnabled = false;
+#endif
+
+        nucleo.SetVirtualHostNameToFolderMapping(
+            "zimbar.local", PastaUi, CoreWebView2HostResourceAccessKind.Allow);
+
+        nucleo.WebMessageReceived += (_, e) => Receber(e.TryGetWebMessageAsString());
+        nucleo.NewWindowRequested += (_, e) => { e.Handled = true; Ponte.AbrirNoNavegador(e.Uri); };
+
+        nucleo.Navigate("https://zimbar.local/notas.html");
+    }
+
+    /// <summary>Só o que é da janela; o resto o JavaScript resolve sozinho.</summary>
+    private void Receber(string? bruto)
+    {
+        if (string.IsNullOrWhiteSpace(bruto)) return;
+        JsonObject? m;
+        try { m = JsonNode.Parse(bruto) as JsonObject; }
+        catch { return; }
+        if (m is null) return;
+
+        switch (m["acao"]?.GetValue<string>())
+        {
+            case "arrastar":
+                if (WindowState == WindowState.Maximized) WindowState = WindowState.Normal;
+                Empurrar(HTCAPTION);
+                break;
+            case "redimensionar":
+                Empurrar(m["borda"]?.GetValue<string>() switch
                 {
-                    Text = $"+{restantes}",
-                    FontSize = 11,
-                    Foreground = Paleta.Tinta2,
-                    Opacity = 0.45,
-                    Margin = new Thickness(0, 3, 0, 0)
+                    "n" => HTTOP, "s" => HTBOTTOM, "w" => HTLEFT, "e" => HTRIGHT,
+                    "nw" => HTTOPLEFT, "ne" => HTTOPRIGHT,
+                    "sw" => HTBOTTOMLEFT, "se" => HTBOTTOMRIGHT,
+                    _ => HTCAPTION
                 });
-        }
-
-        sp.Children.Add(new TextBlock
-        {
-            Text = Quando(n),
-            FontSize = 10.5,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = Paleta.Tinta2,
-            Opacity = 0.5,
-            Margin = new Thickness(0, 9, 0, 0)
-        });
-
-        // A cor da nota é uma faixa no alto; o papel do cartão fica branco.
-        // Texto sobre fundo colorido cansa a vista numa lista comprida.
-        var faixa = new Border
-        {
-            Height = 5,
-            Background = StickyWindow.CorFundo(cor),
-            VerticalAlignment = VerticalAlignment.Top
-        };
-        var miolo = new Border { Padding = new Thickness(15, 16, 15, 12), Child = sp };
-        var pilha = new Grid();
-        pilha.Children.Add(miolo);
-        pilha.Children.Add(faixa);
-
-        var card = new Border
-        {
-            Background = Paleta.Cartao,
-            CornerRadius = new CornerRadius(Paleta.Raio),
-            ClipToBounds = true,
-            Margin = new Thickness(0, 0, 3, 10),
-            Cursor = Cursors.Hand,
-            ToolTip = "clica pra abrir a autoadesiva",
-            Effect = Paleta.Sombra(16, 0.10),
-            Child = pilha
-        };
-        card.MouseEnter += (_, _) => card.Effect = Paleta.Sombra(22, 0.17);
-        card.MouseLeave += (_, _) => card.Effect = Paleta.Sombra(16, 0.10);
-        card.MouseLeftButtonUp += (_, _) => OpenSticky(n);
-        return card;
-    }
-
-    /// <summary>"hoje", "ontem", "há 3 dias" — a mesma conversa do celular.</summary>
-    private static string Quando(JsonObject n)
-    {
-        var bruto = n["created_at"]?.GetValue<string>();
-        if (!DateTime.TryParse(bruto, out var d)) return n["data_nota"]?.GetValue<string>() ?? "";
-        int dias = (DateTime.Now.Date - d.ToLocalTime().Date).Days;
-        return dias switch
-        {
-            <= 0 => "hoje",
-            1 => "ontem",
-            < 7 => $"há {dias} dias",
-            < 14 => "semana passada",
-            < 60 => $"há {dias / 7} semanas",
-            _ => d.ToLocalTime().ToString("d 'de' MMM")
-        };
-    }
-
-    private static void OpenSticky(JsonObject n)
-        => StickyWindow.OpenNote(IdOf(n), TitleOf(n), n["corpo"]?.GetValue<string>() ?? "", n["cor"]?.GetValue<string>() ?? "");
-
-    private TextBlock EmptyText(string text) => new()
-    {
-        Text = text,
-        Foreground = Paleta.Fraca,
-        FontSize = 12.5,
-        TextAlignment = TextAlignment.Center,
-        TextWrapping = TextWrapping.Wrap,
-        Margin = new Thickness(10, 34, 10, 0)
-    };
-
-    /// <summary>Cria a nota no banco na hora e ja abre a autoadesiva dela.</summary>
-    private async void New_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            StatusText.Text = "criando...";
-            string id = Supa.NewId();
-            await Supa.Insert("notas", new JsonObject
-            {
-                ["id"] = id,
-                ["titulo"] = "",
-                ["corpo"] = "",
-                ["data_nota"] = DateTime.Now.ToString("yyyy-MM-dd"),
-                ["cor"] = ""
-            });
-            StatusText.Text = "";
-            StickyWindow.OpenNote(id, "", "", "");
-            await LoadNotas();
-        }
-        catch
-        {
-            StatusText.Text = "erro ao criar";
+                break;
+            case "minimizar":
+                WindowState = WindowState.Minimized;
+                break;
+            case "maximizar":
+                WindowState = WindowState == WindowState.Maximized
+                    ? WindowState.Normal : WindowState.Maximized;
+                break;
+            case "fechar":
+                Close();
+                break;
+            case "abrirLink":
+                Ponte.AbrirNoNavegador(m["url"]?.GetValue<string>() ?? "");
+                break;
         }
     }
 
-    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => RenderNotesList();
+    // O clique nasce DENTRO do WebView2, que é outra janela do Windows: o
+    // DragMove() do WPF não serve. Devolve-se o clique pro Windows como se
+    // tivesse acontecido na moldura.
+    private const int WM_NCLBUTTONDOWN = 0x00A1;
+    private const int HTCAPTION = 2, HTLEFT = 10, HTRIGHT = 11, HTTOP = 12,
+                      HTTOPLEFT = 13, HTTOPRIGHT = 14, HTBOTTOM = 15,
+                      HTBOTTOMLEFT = 16, HTBOTTOMRIGHT = 17;
 
-    private static string IdOf(JsonObject n) => n["id"]?.GetValue<string>() ?? "";
-    private static string TitleOf(JsonObject n) => n["titulo"]?.GetValue<string>() ?? "";
-    private static string Haystack(JsonObject n) => $"{TitleOf(n)}\n{n["corpo"]?.GetValue<string>() ?? ""}";
+    [DllImport("user32.dll")] private static extern bool ReleaseCapture();
+    [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr h, int msg, IntPtr wp, IntPtr lp);
 
-    private static string BodyPreview(JsonObject n)
+    private void Empurrar(int parte)
     {
-        string titulo = TitleOf(n);
-        string corpo = n["corpo"]?.GetValue<string>() ?? "";
-        return corpo.StartsWith(titulo, StringComparison.Ordinal) && corpo.Length > titulo.Length
-            ? corpo[titulo.Length..].TrimStart('\n', '\r', ' ')
-            : corpo;
+        var h = new WindowInteropHelper(this).Handle;
+        if (h == IntPtr.Zero) return;
+        ReleaseCapture();
+        SendMessage(h, WM_NCLBUTTONDOWN, new IntPtr(parte), IntPtr.Zero);
     }
 }

@@ -1,0 +1,234 @@
+/* ═══════════════════════════════════════════════════════════════
+   ZIMNOTES — o mesmo desenho do aplicativo de celular, na largura do
+   computador. Este arquivo serve às duas telas ao mesmo tempo: a aba
+   Notas dentro do Zimbar e a janela solta do ZimNotes (notas.html).
+   São o mesmo código, então são iguais por construção — não por
+   alguém lembrar de copiar a mudança de um lado pro outro.
+
+   Tudo mora embaixo de .zn: as cores daqui são as do celular (papel
+   claro, sombra macia) e não podem vazar pro resto do Zimbar, que tem
+   a paleta dele.
+   ═══════════════════════════════════════════════════════════════ */
+.zn{
+  --zbg-1:#F3F4F8; --zbg-2:#E7EAF0;
+  --zcard:#FFFFFF; --zcard-2:#FAFBFC;
+  --zink:#14161B; --zink-2:#3A3F49; --zdim:#858C99; --zfaint:#A8AEB9;
+  --zline:rgba(20,22,27,.07); --zline-2:rgba(20,22,27,.12);
+  --zacc:#CB4F2F; --zacc-soft:rgba(203,79,47,.11);
+  --zsombra:0 10px 30px rgba(22,27,44,.07), 0 2px 6px rgba(22,27,44,.04);
+  --zsombra-alta:0 18px 44px rgba(22,27,44,.13), 0 4px 10px rgba(22,27,44,.06);
+  --zsombra-suave:0 4px 14px rgba(22,27,44,.05);
+  --zr:20px; --zr-sm:14px;
+  --nota-vazio:#FFF3C4; --nota-uva:#E6DAFF; --nota-vinho:#FFD5E9;
+  --nota-mel:#FFE4B5;   --nota-mata:#D2F2DF; --nota-noite:#D9E9FF;
+
+  font-family:'Plus Jakarta Sans','Inter',sans-serif;
+  color:var(--zink);
+  display:grid; grid-template-columns:minmax(0,300px) minmax(0,1fr); gap:16px;
+  height:100%; min-height:0;
+}
+[data-theme=dark] .zn{
+  --zbg-1:#111318; --zbg-2:#0B0D11;
+  --zcard:#191C22; --zcard-2:#15181D;
+  --zink:#ECEEF2; --zink-2:#C3C8D2; --zdim:#858C99; --zfaint:#5E6673;
+  --zline:rgba(255,255,255,.07); --zline-2:rgba(255,255,255,.13);
+  --zsombra:0 10px 30px rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.3);
+  --zsombra-alta:0 18px 44px rgba(0,0,0,.55);
+  --zsombra-suave:0 4px 14px rgba(0,0,0,.3);
+  --nota-vazio:#4A431F; --nota-uva:#373050; --nota-vinho:#4C2C3D;
+  --nota-mel:#4C3B1E;   --nota-mata:#22412F; --nota-noite:#22354C;
+}
+.zn *{box-sizing:border-box}
+.zn button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+.zn input,.zn textarea{font:inherit;color:inherit;background:none;border:none;outline:none}
+
+/* ══ COLUNA DA ESQUERDA ══ */
+.zn-lado{display:flex;flex-direction:column;min-height:0;gap:11px}
+.zn-topo{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.zn-busca{flex:1;display:flex;align-items:center;gap:9px;background:var(--zcard);
+  border-radius:100px;padding:10px 15px;box-shadow:var(--zsombra-suave)}
+.zn-busca svg{flex-shrink:0;color:var(--zfaint)}
+.zn-busca input{flex:1;min-width:0;font-size:13px;font-weight:500}
+.zn-busca input::placeholder{color:var(--zfaint)}
+.zn-mais{width:38px;height:38px;border-radius:50%;flex-shrink:0;
+  background:var(--zink);color:var(--zbg-1);display:grid;place-items:center;
+  box-shadow:var(--zsombra-alta);transition:transform .13s}
+.zn-mais:hover{transform:scale(1.06)}
+.zn-mais:active{transform:scale(.92)}
+
+.zn-chips{display:flex;gap:6px;overflow-x:auto;flex-shrink:0;padding-bottom:2px;
+  scrollbar-width:none}
+.zn-chips::-webkit-scrollbar{display:none}
+.zn-chip{flex-shrink:0;padding:6px 13px;border-radius:100px;font-size:11.5px;font-weight:600;
+  color:var(--zink-2);background:var(--zcard);box-shadow:var(--zsombra-suave);
+  display:flex;align-items:center;gap:6px;white-space:nowrap;transition:.14s}
+.zn-chip.on{background:var(--zink);color:var(--zbg-1)}
+.zn-chip i{width:7px;height:7px;border-radius:50%;display:block;flex-shrink:0}
+.zn-chip .n{opacity:.5}
+
+.zn-lista{flex:1;min-height:0;overflow:auto;padding:2px 4px 4px 0;margin-right:-4px}
+.zn-lista::-webkit-scrollbar{width:6px}
+.zn-lista::-webkit-scrollbar-thumb{background:var(--zline-2);border-radius:3px}
+
+/* a cor da nota vive numa faixa no topo do cartão, e só nela */
+.zn-nota{display:block;width:100%;text-align:left;margin-bottom:10px;
+  background:var(--zcard);border-radius:var(--zr-sm);padding:13px 14px 11px;
+  border-top:4px solid var(--cn,var(--nota-vazio));box-shadow:var(--zsombra-suave);
+  position:relative;overflow:hidden;transition:transform .13s,box-shadow .13s}
+.zn-nota:hover{box-shadow:var(--zsombra)}
+.zn-nota.on{box-shadow:0 0 0 2px var(--zink),var(--zsombra)}
+.zn-nota h3{font-size:13.5px;font-weight:700;letter-spacing:-.015em;line-height:1.25;
+  padding-right:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zn-nota p{font-size:11.5px;line-height:1.45;opacity:.7;font-weight:500;margin-top:5px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.zn-nota .capa{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:9px;
+  margin-top:7px;display:block;background:var(--zbg-2)}
+.zn-nota .previa{margin-top:7px;display:flex;flex-direction:column;gap:4px}
+.zn-nota .previa div{display:flex;align-items:center;gap:6px;font-size:11px;
+  font-weight:500;color:var(--zink-2);white-space:nowrap;overflow:hidden}
+.zn-nota .previa .cx{width:11px;height:11px;border-radius:3.5px;flex-shrink:0;
+  border:1.5px solid var(--zline-2)}
+.zn-nota .previa .cx.f{background:var(--zfaint);border-color:var(--zfaint)}
+.zn-nota .previa .feito{text-decoration:line-through;color:var(--zfaint)}
+.zn-nota .etq{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+.zn-nota .etq span{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:100px;
+  background:var(--zbg-2);color:var(--zdim)}
+.zn-nota .quando{font-size:10px;opacity:.5;font-weight:600;margin-top:8px}
+.zn-nota .alfinete{position:absolute;top:11px;right:11px;opacity:.5}
+.zn-vazio{color:var(--zfaint);font-size:12.5px;text-align:center;line-height:1.6;
+  padding:38px 18px;font-weight:500}
+.zn-vazio b{display:block;color:var(--zink);font-size:13.5px;margin-bottom:5px;font-weight:700}
+
+/* ══ EDITOR ══ */
+.zn-editor{background:var(--zcard);border-radius:var(--zr);box-shadow:var(--zsombra);
+  display:flex;flex-direction:column;min-height:0;overflow:hidden;position:relative}
+.zn-editor:before{content:"";position:absolute;top:0;left:0;right:0;height:5px;
+  background:var(--cn,var(--nota-vazio));z-index:2}
+.zn-cabeca{display:flex;align-items:center;gap:7px;padding:17px 20px 0;flex-shrink:0}
+.zn-cabeca .sp{flex:1}
+.zn-redondo{width:34px;height:34px;border-radius:50%;flex-shrink:0;color:var(--zink-2);
+  display:grid;place-items:center;transition:background .15s,color .15s}
+.zn-redondo:hover{background:var(--zbg-2)}
+.zn-redondo.ativa{color:var(--zacc)}
+
+.zn-corpo{flex:1;min-height:0;overflow:auto;padding:4px 24px 18px}
+.zn-corpo::-webkit-scrollbar{width:7px}
+.zn-corpo::-webkit-scrollbar-thumb{background:var(--zline-2);border-radius:4px}
+.zn-titulo{width:100%;font-size:26px;font-weight:800;letter-spacing:-.035em;line-height:1.16;
+  resize:none;overflow:hidden;margin-bottom:9px}
+.zn-titulo::placeholder{color:var(--zfaint)}
+.zn-meta{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--zdim);
+  font-weight:600;padding-bottom:13px;margin-bottom:14px;border-bottom:1px solid var(--zline)}
+
+/* Duas áreas de escrita, uma de cada lado da lista: dá pra explicar antes
+   e comentar depois sem a lista ter de descer pro pé da nota. Campo rico
+   porque negrito e sublinhado não existem dentro de um textarea. */
+.zn-texto{width:100%;font-size:14px;line-height:1.68;font-weight:500;color:var(--zink-2);
+  outline:none;min-height:1.68em;word-break:break-word}
+.zn-texto:empty:before{content:attr(data-vazio);color:var(--zfaint);pointer-events:none}
+.zn-texto b,.zn-texto strong{font-weight:800;color:var(--zink)}
+.zn-texto u{text-underline-offset:3px;text-decoration-thickness:1.5px}
+.zn-rodape{margin-top:16px}
+
+/* fotos */
+.zn-fotos{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-top:15px}
+.zn-foto{position:relative;border-radius:var(--zr-sm);overflow:hidden;aspect-ratio:4/3;
+  background:var(--zcard-2);box-shadow:var(--zsombra-suave)}
+.zn-foto img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+.zn-foto .tira{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
+  background:rgba(12,14,20,.55);color:#fff;display:grid;place-items:center;opacity:0;
+  transition:opacity .14s}
+.zn-foto:hover .tira{opacity:1}
+.zn-foto.subindo{display:grid;place-items:center;color:var(--zfaint);font-size:11px;font-weight:700}
+
+/* checklist — mesmo cartão branco com contorno do celular */
+.zn-itens{margin-top:17px;background:var(--zcard);border:1px solid var(--zline-2);
+  border-radius:var(--zr-sm);padding:5px 3px;overflow:hidden}
+.zn-item{display:flex;align-items:flex-start;gap:10px;padding:8px 11px;background:var(--zcard);
+  position:relative;transition:transform .16s cubic-bezier(.2,.7,.3,1)}
+.zn-item.arrastando{transition:none;z-index:3;box-shadow:var(--zsombra-alta);border-radius:10px}
+.zn-pega{color:var(--zfaint);opacity:.45;flex-shrink:0;margin-top:3px;cursor:grab;touch-action:none}
+.zn-pega:hover{opacity:1}
+.zn-item .cx{width:18px;height:18px;border-radius:6px;flex-shrink:0;margin-top:1px;
+  border:2px solid var(--zline-2);display:grid;place-items:center;color:transparent;
+  transition:background .15s,border-color .15s,color .15s}
+.zn-item .cx.f{background:var(--zacc);border-color:var(--zacc);color:#fff}
+.zn-item input{flex:1;min-width:0;font-size:13px;font-weight:500;padding:1px 0}
+.zn-item.feito input{text-decoration:line-through;color:var(--zfaint)}
+.zn-item .lixo{opacity:0;color:var(--zfaint);flex-shrink:0}
+.zn-item:hover .lixo,.zn-item:focus-within .lixo{opacity:1}
+.zn-item .lixo:hover{color:var(--zacc)}
+.zn-add{display:flex;align-items:center;gap:10px;padding:9px 11px;color:var(--zfaint);
+  font-size:12.5px;font-weight:600;width:100%;text-align:left}
+.zn-add:hover{color:var(--zink-2)}
+
+/* ══ RODAPÉ DO EDITOR ══ */
+.zn-pe{flex-shrink:0;padding:0 20px 16px}
+.zn-marcas{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+.zn-marca{font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:100px;
+  background:var(--zbg-2);color:var(--zink-2);display:flex;align-items:center;gap:6px}
+.zn-marca .x{opacity:.4;font-weight:600}
+.zn-marca .x:hover{opacity:1;color:var(--zacc)}
+
+.zn-paleta{display:none;align-items:center;gap:7px;background:var(--zbg-2);border-radius:100px;
+  padding:8px 14px;margin-bottom:9px;width:max-content}
+.zn-paleta.on{display:flex}
+.zn-tinta{width:24px;height:24px;border-radius:50%;flex-shrink:0;border:2.5px solid transparent;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.05);transition:transform .13s,border-color .15s}
+.zn-tinta:hover{transform:scale(1.1)}
+.zn-tinta.on{border-color:var(--zink);transform:scale(1.1)}
+
+.zn-ferramentas{display:flex;align-items:center;gap:3px;background:var(--zbg-2);
+  border-radius:100px;padding:6px 9px}
+.zn-ferramentas .sp{flex:1}
+.zn-ferramentas button{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+  color:var(--zink-2);transition:background .15s,color .15s}
+.zn-ferramentas button:hover{background:var(--zcard)}
+.zn-ferramentas button.on{background:var(--zacc-soft);color:var(--zacc)}
+.zn-ferramentas .risco{width:1px;height:18px;background:var(--zline-2);margin:0 5px}
+
+/* nada selecionado */
+.zn-nada{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:9px;height:100%;color:var(--zfaint);font-size:13px;font-weight:500;text-align:center;
+  padding:30px}
+.zn-nada b{font-size:15px;font-weight:700;color:var(--zdim)}
+
+/* gaveta (coleção, etiqueta) — cai no meio da tela, como um diálogo */
+.zn-veu{position:fixed;inset:0;background:rgba(12,14,20,.42);z-index:300;
+  display:flex;align-items:center;justify-content:center}
+.zn-gaveta{background:var(--zcard);border-radius:var(--zr);padding:20px 22px 22px;
+  width:340px;max-width:92vw;max-height:80vh;overflow:auto;box-shadow:var(--zsombra-alta);
+  font-family:'Plus Jakarta Sans','Inter',sans-serif;color:var(--zink)}
+.zn-gaveta h2{font-size:16px;font-weight:800;letter-spacing:-.03em;margin-bottom:3px}
+.zn-gaveta .dica{font-size:12px;color:var(--zdim);font-weight:500;margin-bottom:14px}
+.zn-gaveta .campo{width:100%;background:var(--zcard-2);border:1.5px solid var(--zline-2);
+  border-radius:var(--zr-sm);padding:11px 13px;font-size:13.5px;font-weight:500;margin-bottom:10px}
+.zn-gaveta .campo:focus{border-color:var(--zacc)}
+.zn-opcao{display:flex;align-items:center;gap:11px;padding:10px 5px;width:100%;text-align:left;
+  border-bottom:1px solid var(--zline);font-size:13.5px;font-weight:600}
+.zn-opcao:last-of-type{border-bottom:none}
+.zn-opcao:hover{color:var(--zacc)}
+.zn-opcao .tile{width:27px;height:27px;border-radius:8px;flex-shrink:0;display:grid;
+  place-items:center;color:#22262E}
+.zn-opcao .ok{margin-left:auto;color:var(--zacc)}
+.zn-botao{width:100%;background:var(--zink);color:var(--zbg-1);border-radius:100px;padding:12px;
+  font-size:13.5px;font-weight:700;margin-top:6px}
+.zn-botao.fantasma{background:none;color:var(--zacc)}
+
+/* ══ JANELA SOLTA (notas.html) ══
+   Fora do Zimbar a página inteira é o ZimNotes: mesma coluna dupla, só
+   que ocupando a janela. */
+html.zn-solo,html.zn-solo body{height:100%;margin:0;background:linear-gradient(170deg,#F3F4F8,#E7EAF0)}
+html.zn-solo[data-theme=dark],html.zn-solo[data-theme=dark] body{
+  background:linear-gradient(170deg,#111318,#0B0D11)}
+html.zn-solo body{display:flex;flex-direction:column;
+  font-family:'Plus Jakarta Sans',sans-serif;-webkit-font-smoothing:antialiased}
+.zn-barra-janela{height:38px;flex-shrink:0;display:flex;align-items:center;gap:8px;
+  padding:0 8px 0 16px;-webkit-user-select:none;user-select:none;cursor:default}
+.zn-barra-janela .marca{flex:1;font-size:12px;font-weight:700;letter-spacing:-.01em;
+  color:#858C99;display:flex;align-items:center;gap:8px}
+.zn-barra-janela button{width:28px;height:24px;border-radius:6px;color:#858C99;font-size:12px;
+  display:grid;place-items:center;transition:.13s;border:none;background:none;cursor:pointer}
+.zn-barra-janela button:hover{background:rgba(20,22,27,.07);color:#14161B}
+.zn-barra-janela button.x:hover{background:#CB4F2F;color:#fff}
+html.zn-solo .zn{flex:1;min-height:0;padding:0 16px 16px}

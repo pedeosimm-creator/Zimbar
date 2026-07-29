@@ -46,14 +46,25 @@ de fora do pacote). O sintoma é feio de diagnosticar: nem chega a escrever
 no `zimbar.log`, só aparece no Visualizador de Eventos.
 
 ## 4. Mapa do projeto
+
+O C# é só a casca: janela, bandeja, hotkey e o que o navegador não faz.
+A interface inteira é HTML/JS em `ui/`.
+
 - `App.xaml.cs` — bandeja + hotkeys globais (Ctrl+Alt+Z / Ctrl+Alt+D).
-- `BarWindow.xaml/.cs` — a barra e todas as abas (arquivo grande).
-- `NotesWindow.*` — ZimNotes.  `PomoWindow.*` — pomodoro.
-- `Supa.cs` — cliente Supabase (mesmo banco do site).
-- `DesignSystem.cs` — tokens/estilos/componentes (`ZTokens`, `Zui`). Use
-  isso pra UI nova em vez de criar Border/Button na mão. Ver `DESIGN_SYSTEM.md`.
+- `BarWindow.xaml/.cs` — a janela do Zimbar, hospedando `ui/index.html`.
+- `NotesWindow.xaml/.cs` — a janela solta do ZimNotes, hospedando
+  `ui/notas.html`. Não desenha nada: é a mesma interface da aba Notas.
+- `PomoWindow.cs` — pomodoro.  `Ponte.cs` — a conversa JS ⇄ C#.
 - `Theme.cs` — temas + config (`%APPDATA%\Zimbar\settings.json`).
-- `News.cs`, `MediaCtl.cs`.
+- `News.cs` — RSS das notícias (o feed não libera CORS, então é o C# que busca).
+
+Dentro de `ui/`:
+- `index.html` + `app.js` — o Zimbar (Hoje, Kanban, Agenda, Listas, Notícias, Contas).
+- `dados.js` — Supabase: flowspace + contas.
+- `notas.css` + `notas.js` — **o ZimNotes**. Servem ao mesmo tempo a aba
+  Notas (dentro do `index.html`) e a janela solta (`notas.html`). Mexeu num,
+  mudou nos dois — é de propósito, é o que faz os dois serem iguais.
+- `ponte.js` — o outro lado da `Ponte.cs`.
 
 ## Observações
 - Precisa de internet: os dados vêm do Supabase (chave anon já pública no site).
