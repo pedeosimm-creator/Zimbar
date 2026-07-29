@@ -1079,8 +1079,12 @@ function renderBiblioteca(){
     const cat=n.pasta?`<span class="ncat">${esc(n.pasta)}</span>`:'';
     el.innerHTML=`<div class="fita" style="background:${Dados.corHex(n.c)}"></div>
       <div class="ni"><div class="nt1">${esc(n.t||'sem título')}</div>
-        <div class="nt2">${esc(previa)}</div>${cat}</div>`;
+        <div class="nt2">${esc(previa)}</div>${cat}</div>
+      <button class="del" title="excluir nota">✕</button>`;
     el.title='arrasta pra reordenar · solta num módulo do trilho pra mandar pra lá · clica pra abrir';
+    // o ✕ exclui — e para o clique aí, senão abriria a autoadesiva junto
+    el.querySelector('.del').addEventListener('mousedown',ev=>ev.stopPropagation());
+    el.querySelector('.del').onclick=(ev)=>{ ev.stopPropagation(); excluirNota(n.id); };
     arrastavel(el,{zona:'notas',indice:ni,
       carga:{texto:n.t||previa},
       aoSoltar:(zona,idx)=>{ if(zona!=='notas')return;
@@ -1088,6 +1092,13 @@ function renderBiblioteca(){
       aoAbrir:()=>abrirSticky(n.id)});
     box.appendChild(el);
   });
+}
+/* exclui a nota do banco (via diff do salvar) e some da lista na hora */
+function excluirNota(id){
+  const n=S.notas.find(x=>x.id===id); if(!n) return;
+  if(!confirm('Excluir "'+(n.t||'sem título')+'"? Isso não volta.')) return;
+  S.notas=S.notas.filter(x=>x.id!==id);
+  salvar(); renderBiblioteca(); atualizaContadorNotas();
 }
 function novaNota(){
   const n={id:Dados.novoId(),t:'',

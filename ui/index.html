@@ -385,6 +385,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
   letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:var(--sunk);
   border:1px solid var(--line);border-radius:100px;padding:2px 7px;max-width:100%;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;vertical-align:top}
+.nt .del{opacity:0;background:none;border:none;color:var(--faint);cursor:pointer;font-size:12px;
+  padding:0 2px;font-family:inherit;flex-shrink:0;align-self:flex-start;line-height:1;transition:.13s}
+.nt:hover .del{opacity:1}
+.nt .del:hover{color:var(--acc)}
 /* autoadesiva */
 .sticky{width:250px;height:250px;color:#191815;border:none}
 .sticky .barra{background:rgba(0,0,0,.07)}

@@ -45,6 +45,11 @@ public partial class NotesWindow : Window
     {
         InitializeComponent();
         Cantos.ArredondarQuandoAbrir(this);
+        // identidade própria na barra de tarefas: o ZimNotes não se funde com
+        // o botão do Zimbar (era isso que fazia o Zimbar mostrar o ícone errado)
+        var helper = new System.Windows.Interop.WindowInteropHelper(this);
+        helper.EnsureHandle();
+        IdentidadeJanela.Definir(helper.Handle, "PedroKuster.ZimNotes");
         Closed += (_, _) => { _syncTimer.Stop(); _instance = null; };
         Activated += (_, _) => _ = LoadNotasIfSafe();
         _syncTimer.Tick += (_, _) => _ = LoadNotasIfSafe();
@@ -130,7 +135,11 @@ public partial class NotesWindow : Window
             NotesListPanel.Children.Add(NoteCard(n));
     }
 
-    /// <summary>Cartão simples: faixa da cor no topo, título, prévia e a coleção.</summary>
+    /// <summary>
+    /// Cartão idêntico ao painel embutido no Zimbar: fita da cor na ESQUERDA,
+    /// título, prévia ("vazia" quando não tem texto) e a coleção. Um ✕ de
+    /// excluir aparece ao passar o mouse.
+    /// </summary>
     private Border NoteCard(JsonObject n)
     {
         string titulo = TitleOf(n);
@@ -146,11 +155,8 @@ public partial class NotesWindow : Window
         {
             var pin = new TextBlock
             {
-                Text = "📌",
-                FontSize = 10.5,
-                Opacity = 0.55,
-                Margin = new Thickness(6, 0, 0, 0),
-                VerticalAlignment = VerticalAlignment.Top
+                Text = "📌", FontSize = 10.5, Opacity = 0.55,
+                Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top
             };
             DockPanel.SetDock(pin, Dock.Right);
             linhaTitulo.Children.Add(pin);
@@ -158,29 +164,22 @@ public partial class NotesWindow : Window
         linhaTitulo.Children.Add(new TextBlock
         {
             Text = titulo.Length == 0 ? "sem título" : titulo,
-            FontSize = 13.5,
-            FontWeight = FontWeights.Bold,
-            Foreground = Paleta.Tinta2,
-            TextWrapping = TextWrapping.NoWrap,
-            TextTrimming = TextTrimming.CharacterEllipsis
+            FontSize = 13.5, FontWeight = FontWeights.Bold, Foreground = Paleta.Tinta,
+            TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis
         });
         sp.Children.Add(linhaTitulo);
 
-        if (corpo.Length > 0)
-            sp.Children.Add(new TextBlock
-            {
-                Text = corpo.Length > 90 ? corpo[..90] + "…" : corpo,
-                FontSize = 11.5,
-                Foreground = Paleta.Fraca,
-                TextWrapping = TextWrapping.NoWrap,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                Margin = new Thickness(0, 3, 0, 0)
-            });
-
-        // a coleção (pasta), quando tem — é a "categoria" que o Pedro quer ver
-        if (pasta.Length > 0)
+        // prévia sempre (igual ao embutido, que mostra "vazia")
+        sp.Children.Add(new TextBlock
         {
-            var chip = new Border
+            Text = corpo.Length == 0 ? "vazia" : (corpo.Length > 90 ? corpo[..90] + "…" : corpo),
+            FontSize = 11.5, Foreground = Paleta.Fraca,
+            TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis,
+            Margin = new Thickness(0, 3, 0, 0)
+        });
+
+        if (pasta.Length > 0)
+            sp.Children.Add(new Border
             {
                 Background = Paleta.FundoBaixo,
                 CornerRadius = new CornerRadius(100),
@@ -190,41 +189,76 @@ public partial class NotesWindow : Window
                 Child = new TextBlock
                 {
                     Text = pasta.ToUpperInvariant(),
-                    FontSize = 8.5,
-                    FontWeight = FontWeights.Bold,
-                    Foreground = Paleta.Fraca
+                    FontSize = 8.5, FontWeight = FontWeights.Bold, Foreground = Paleta.Fraca
                 }
-            };
-            sp.Children.Add(chip);
-        }
+            });
 
-        // A cor da nota é uma faixa no alto; o papel do cartão fica branco.
-        var faixa = new Border
+        // fita da cor na ESQUERDA (como o .fita do painel embutido)
+        var fita = new Border
         {
-            Height = 5,
+            Width = 4,
             Background = StickyWindow.CorFundo(cor),
-            VerticalAlignment = VerticalAlignment.Top
+            CornerRadius = new CornerRadius(4),
+            Margin = new Thickness(0, 2, 11, 2),
+            VerticalAlignment = VerticalAlignment.Stretch
         };
-        var miolo = new Border { Padding = new Thickness(14, 15, 14, 12), Child = sp };
+        var linha = new DockPanel { LastChildFill = true, Margin = new Thickness(13, 12, 12, 11) };
+        DockPanel.SetDock(fita, Dock.Left);
+        linha.Children.Add(fita);
+        linha.Children.Add(sp);
+
+        // ✕ excluir, revelado no hover (canto superior direito)
+        var lixo = new Button
+        {
+            Content = "✕",
+            FontSize = 11,
+            Foreground = Paleta.Fraca,
+            Cursor = Cursors.Hand,
+            Background = System.Windows.Media.Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(6, 2, 6, 2),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 4, 4, 0),
+            Opacity = 0,
+            ToolTip = "excluir nota"
+        };
+        lixo.Click += async (_, e) => { await DeleteNote(n); };
+
         var pilha = new Grid();
-        pilha.Children.Add(miolo);
-        pilha.Children.Add(faixa);
+        pilha.Children.Add(linha);
+        pilha.Children.Add(lixo);
 
         var card = new Border
         {
             Background = Paleta.Cartao,
-            CornerRadius = new CornerRadius(Paleta.Raio),
+            CornerRadius = new CornerRadius(Paleta.RaioGrande),
             ClipToBounds = true,
             Margin = new Thickness(0, 0, 3, 9),
             Cursor = Cursors.Hand,
-            ToolTip = "clica pra abrir a autoadesiva",
             Effect = Paleta.Sombra(15, 0.09),
             Child = pilha
         };
-        card.MouseEnter += (_, _) => card.Effect = Paleta.Sombra(20, 0.15);
-        card.MouseLeave += (_, _) => card.Effect = Paleta.Sombra(15, 0.09);
-        card.MouseLeftButtonUp += (_, _) => OpenSticky(n);
+        card.MouseEnter += (_, _) => { card.Effect = Paleta.Sombra(20, 0.15); lixo.Opacity = 1; };
+        card.MouseLeave += (_, _) => { card.Effect = Paleta.Sombra(15, 0.09); lixo.Opacity = 0; };
+        card.MouseLeftButtonUp += (_, e) => { if (e.OriginalSource is not Button) OpenSticky(n); };
         return card;
+    }
+
+    /// <summary>Exclui a nota (com confirmação) direto do painel.</summary>
+    private async Task DeleteNote(JsonObject n)
+    {
+        string titulo = TitleOf(n);
+        var r = MessageBox.Show(this,
+            $"Excluir \"{(titulo.Length == 0 ? "sem título" : titulo)}\"? Isso não volta.",
+            "ZimNotes", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+        if (r != MessageBoxResult.OK) return;
+        try
+        {
+            await Supa.Delete("notas", "id=eq." + Uri.EscapeDataString(IdOf(n)));
+            await LoadNotas();
+        }
+        catch { StatusText.Text = "não deu pra excluir"; }
     }
 
     private static void OpenSticky(JsonObject n)
