@@ -1008,8 +1008,10 @@ function atualizaContadorNotas(){
   const el=document.getElementById('ct-notas');
   if(el) el.textContent=S.notas.length||'';
 }
-/* arrastar + redimensionar qualquer janela */
-function tornarJanela(j,handle){
+/* arrastar + redimensionar qualquer janela. onDestacar (opcional): dispara
+   quando a janela é largada encostada numa borda da tela — é o gesto de
+   "puxar pra fora" do Zimbar. */
+function tornarJanela(j,handle,onDestacar){
   j.style.zIndex=++zTopo;
   j.addEventListener('mousedown',()=>{ j.style.zIndex=++zTopo; });
   handle.addEventListener('mousedown',e=>{
@@ -1017,7 +1019,10 @@ function tornarJanela(j,handle){
     const r=j.getBoundingClientRect(), dx=e.clientX-r.left, dy=e.clientY-r.top;
     const mv=ev=>{ j.style.left=Math.max(4,Math.min(innerWidth-60,ev.clientX-dx))+'px';
                    j.style.top =Math.max(4,Math.min(innerHeight-40,ev.clientY-dy))+'px'; };
-    const up=()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); };
+    const up=()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up);
+      if(onDestacar){ const b=j.getBoundingClientRect();
+        // largou encostado na borda: esquerda, topo ou direita → destaca
+        if(b.left<=6 || b.top<=6 || b.left>=innerWidth-60) onDestacar(); } };
     document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
     e.preventDefault();
   });
@@ -1041,24 +1046,40 @@ function abrirBiblioteca(){
   const j=document.createElement('div'); j.className='jan bib'; j.id='janBib';
   const p=posBiblioteca(); j.style.left=p.l+'px'; j.style.top=p.t+'px';
   j.innerHTML=`<div class="barra"><span class="tt">✎ Minhas notas</span>
-      <button title="nova nota" id="bibNova">＋</button><button title="fechar" id="bibX">✕</button></div>
+      <button title="puxar o ZimNotes pra fora do Zimbar" id="bibPop">⤢</button>
+      <button title="nova nota" id="bibNova">＋</button>
+      <button title="fechar" id="bibX">✕</button></div>
     <div class="lista" id="bibLista"></div><div class="redim"></div>`;
   document.body.appendChild(j);
-  tornarJanela(j,j.querySelector('.barra'));
+  tornarJanela(j,j.querySelector('.barra'),destacarBiblioteca);
   j.querySelector('#bibX').onclick=()=>j.remove();
   j.querySelector('#bibNova').onclick=()=>novaNota();
+  j.querySelector('#bibPop').onclick=destacarBiblioteca;
   renderBiblioteca();
+}
+/* Destaca o ZimNotes: abre a janela solta (a mesma cara, mas livre sobre a
+   área de trabalho) e fecha o painel de dentro do Zimbar. */
+function destacarBiblioteca(){
+  if(!Ponte.tem()){ toast('o ZimNotes solto só abre no aplicativo'); return; }
+  Ponte.enviar({acao:'abrirNotas'});
+  const j=document.getElementById('janBib'); if(j) j.remove();
+  toast('ZimNotes destacado');
 }
 function renderBiblioteca(){
   const box=document.getElementById('bibLista'); if(!box) return;
   box.innerHTML='';
   zonaSoltar(box,'notas');
   if(!S.notas.length){ box.innerHTML='<div class="empty">nenhuma nota — usa o ＋ ali em cima</div>'; return; }
+  // tira as marcas de formatação (negrito/sublinhado do celular) da prévia:
+  // a lista é resumo, não editor — <b> no meio do texto só polui
+  const semTags = s => String(s||'').replace(/<[^>]*>/g,'');
   S.notas.forEach((n,ni)=>{
     const el=document.createElement('div'); el.className='nt';
-    const previa=(n.b||'').split('\n').filter(l=>l.trim())[0]||'vazia';
+    const previa=semTags(n.b).split('\n').map(l=>l.trim()).filter(Boolean)[0]||'vazia';
+    const cat=n.pasta?`<span class="ncat">${esc(n.pasta)}</span>`:'';
     el.innerHTML=`<div class="fita" style="background:${Dados.corHex(n.c)}"></div>
-      <div class="ni"><div class="nt1">${esc(n.t||'sem título')}</div><div class="nt2">${esc(previa)}</div></div>`;
+      <div class="ni"><div class="nt1">${esc(n.t||'sem título')}</div>
+        <div class="nt2">${esc(previa)}</div>${cat}</div>`;
     el.title='arrasta pra reordenar · solta num módulo do trilho pra mandar pra lá · clica pra abrir';
     arrastavel(el,{zona:'notas',indice:ni,
       carga:{texto:n.t||previa},

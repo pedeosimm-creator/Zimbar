@@ -143,7 +143,7 @@ const Dados = {
       kvLer('me2_foco'), kvLer('me2_inbox'), kvLer('me2_ritmo'), kvLer('zimbar_ordem'),
       sel('tarefas?select=id,titulo,status,prazo,created_at&order=created_at.desc&limit=400'),
       sel('mural_items?select=id,categoria,texto,created_at&order=created_at.asc'),
-      sel('notas?select=id,titulo,corpo,cor,created_at&order=created_at.desc&limit=200')
+      sel('notas?select=id,titulo,corpo,cor,created_at,pasta&order=created_at.desc&limit=200')
     ]);
 
     const f = kvJson(foco, { date: hojeChave(), frog: { text: '', done: false }, big: [], med: [], small: [] });
@@ -170,7 +170,7 @@ const Dados = {
       mural: porOrdem(
         mural.map(m => ({ id: m.id, cat: m.categoria || 'geral', t: m.texto || '', criado: m.created_at })),
         ord.mural),
-      notas: notas.map(n => ({ id: n.id, t: n.titulo || '', b: n.corpo || '', c: n.cor || '' }))
+      notas: notas.map(n => ({ id: n.id, t: n.titulo || '', b: n.corpo || '', c: n.cor || '', pasta: n.pasta || '' }))
     };
   },
 

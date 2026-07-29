@@ -79,6 +79,11 @@ public class Ponte
                         m["cor"]?.GetValue<string>() ?? "");
                     break;
 
+                case "abrirNotas":
+                    // "destacar": o painel de dentro do Zimbar vira a janela solta
+                    NotesWindow.Open();
+                    break;
+
                 case "pomodoro":
                     PomoWindow.Abrir();
                     break;

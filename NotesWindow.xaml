@@ -4,8 +4,8 @@
         xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
         Title="ZimNotes"
         Icon="assets/ZimNotes.png"
-        Width="430" Height="640"
-        MinWidth="330" MinHeight="420"
+        Width="360" Height="560"
+        MinWidth="300" MinHeight="360"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="True" ResizeMode="NoResize"
@@ -14,8 +14,8 @@
         TextOptions.TextRenderingMode="Auto"
         RenderOptions.BitmapScalingMode="HighQuality">
 
-    <!-- Mesmo desenho do ZimNotes de celular: papel claro, cantos macios,
-         sombra larga. Sem depender do dicionario antigo do Zimbar. -->
+    <!-- O mesmo painel "Minhas notas" que aparece embutido no Zimbar, só que
+         solto: puxou pra fora, virou esta janela. Papel claro, cantos macios. -->
     <Window.Resources>
         <Style x:Key="Redondo" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
@@ -24,52 +24,15 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="b" Background="#FFFFFF" CornerRadius="16"
-                                Width="32" Height="32">
+                        <Border x:Name="b" Background="Transparent" CornerRadius="8"
+                                Width="26" Height="24">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#F0F2F6"/>
+                                <Setter TargetName="b" Property="Background" Value="#E7EAF0"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="Escuro" TargetType="Button">
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="#F3F4F8"/>
-            <Setter Property="FontSize" Value="12.5"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="b" Background="#14161B" CornerRadius="16" Padding="14,7">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="b" Property="Background" Value="#2A2E37"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="Busca" TargetType="TextBox">
-            <Setter Property="Foreground" Value="#14161B"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="CaretBrush" Value="#14161B"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border Background="#FFFFFF" CornerRadius="15" Padding="14,10">
-                            <ScrollViewer x:Name="PART_ContentHost"/>
-                        </Border>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -77,7 +40,7 @@
     </Window.Resources>
 
     <Grid Margin="12">
-        <Border CornerRadius="20" Padding="0">
+        <Border CornerRadius="18" Padding="0">
             <Border.Background>
                 <LinearGradientBrush StartPoint="0.15,0" EndPoint="0.85,1">
                     <GradientStop Color="#F3F4F8" Offset="0"/>
@@ -89,38 +52,31 @@
                                   Opacity="0.18" Color="#161B2C"/>
             </Border.Effect>
 
-            <Grid Margin="18,16,18,16">
+            <Grid Margin="14,12,14,14">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <DockPanel Grid.Row="0" Margin="0,0,0,14" Background="Transparent"
+                <!-- barra: título à esquerda, + e × à direita; arrasta a janela -->
+                <DockPanel Grid.Row="0" Margin="2,0,0,10" Background="Transparent"
                            Cursor="SizeAll" MouseLeftButtonDown="Header_MouseDown"
-                           ToolTip="arrasta aqui pra mover a janela">
+                           ToolTip="arrasta pra mover a janela">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Style="{StaticResource Escuro}" Click="New_Click" Content="+ nota"/>
-                        <Button Style="{StaticResource Redondo}" Click="CloseWin_Click" Content="✕" Margin="8,0,0,0"/>
+                        <Button Style="{StaticResource Redondo}" Click="New_Click" Content="＋" ToolTip="nova nota"/>
+                        <Button Style="{StaticResource Redondo}" Click="CloseWin_Click" Content="✕" ToolTip="fechar"/>
                     </StackPanel>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="Suas notas" FontSize="21" FontWeight="Bold"
-                                   Foreground="#14161B"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                            <TextBlock x:Name="CountText" Text="" FontSize="11.5" Foreground="#858C99"/>
-                            <TextBlock x:Name="StatusText" Text="" FontSize="11.5"
-                                       Foreground="#CB4F2F" Margin="9,0,0,0"/>
-                        </StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="✎" FontSize="13" Foreground="#858C99" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Minhas notas" FontSize="14.5" FontWeight="Bold" Foreground="#14161B"/>
+                        <TextBlock x:Name="CountText" Text="" FontSize="11" Foreground="#A8AEB9"
+                                   VerticalAlignment="Center" Margin="9,1,0,0"/>
+                        <TextBlock x:Name="StatusText" Text="" FontSize="11" Foreground="#CB4F2F"
+                                   VerticalAlignment="Center" Margin="8,1,0,0"/>
                     </StackPanel>
                 </DockPanel>
 
-                <TextBox x:Name="SearchBox" Grid.Row="1"
-                         Style="{StaticResource Busca}"
-                         TextChanged="SearchBox_TextChanged"
-                         Margin="0,0,0,14"
-                         ToolTip="buscar notas (Ctrl+F)"/>
-
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="NotesListPanel"/>
                 </ScrollViewer>
             </Grid>
