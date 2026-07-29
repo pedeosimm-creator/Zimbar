@@ -21,15 +21,12 @@ let S = {
   tema: localStorage.getItem('zimbar-tema') || 'claro',
   hoje: [], frog:{text:'',done:false},
   captura: [], ritmo:{items:[]},
-  tarefas: [], mural: [],
+  tarefas: [], mural: [], notas: [],
   ordem: {tarefas:[], mural:[]},
   conta: null,
   /* do ConceWay; fora do S/BASE de propósito — é tabela de outro app,
      compartilhada, e grava na hora em vez de entrar no diff */
   trabalho: [],
-  /* as notas também ficam de fora: quem manda na tabela `notas` é o
-     ZimNotes (notas.js), que grava direto. Dois donos pro mesmo dado é
-     receita pra um sobrescrever o outro. */
   topicos: JSON.parse(localStorage.getItem('zimbar-secoes')||'["cinema","fotografia"]'),
   secaoAtiva: localStorage.getItem('zimbar-secao') || 'destaques'
 };
@@ -39,7 +36,7 @@ let sincronizando=false, pendente=false, relogio=null;
 
 const retrato = () => JSON.stringify({
   hoje:S.hoje, frog:S.frog, captura:S.captura, ritmo:S.ritmo,
-  tarefas:S.tarefas, mural:S.mural, ordem:S.ordem
+  tarefas:S.tarefas, mural:S.mural, notas:S.notas, ordem:S.ordem
 });
 
 /* chamado pela interface inteira: agenda a sincronia */
@@ -73,6 +70,7 @@ async function sincronizar(){
 
     diferenca(antes.tarefas, agora.tarefas, Dados.criarTarefa, Dados.atualizarTarefa, Dados.apagarTarefa, tarefas);
     diferenca(antes.mural,   agora.mural,   Dados.criarItem,   Dados.atualizarItem,   Dados.apagarItem,   tarefas);
+    diferenca(antes.notas,   agora.notas,   Dados.criarNota,   Dados.atualizarNota,   Dados.apagarNota,   tarefas);
 
     await Promise.all(tarefas);
     BASE=JSON.stringify(agora);
@@ -122,14 +120,11 @@ function categorias(){
 }
 
 /* ═══ NAVEGAÇÃO ═══ */
-const ORDEM=['hoje','kanban','agenda','listas','notas','noticias','contas'];
+const ORDEM=['hoje','kanban','agenda','listas','noticias','contas'];
 function go(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('v-'+v).classList.add('on');
   document.querySelectorAll('.nv').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  // O ZimNotes só se monta quando você entra nele: subir o Zimbar já
-  // custa uma volta no Supabase, e as notas não precisam entrar nessa fila.
-  if(v==='notas') ZimNotes.montar(document.getElementById('znRaiz'));
 }
 document.querySelectorAll('.nv').forEach(b=>b.onclick=()=>go(b.dataset.v));
 document.addEventListener('keydown',e=>{
@@ -337,25 +332,19 @@ function noPonto(x,y){ return {getBoundingClientRect:()=>
 
 function renderTudo(){
   [renderHoje,renderKanban,renderCaptura,renderAgenda,renderEventos,
-   renderProximos,renderTopicos,renderFeed]
+   renderProximos,renderTopicos,renderFeed,atualizaContadorNotas]
     .forEach(f=>{ try{ f(); }catch(e){} });
   try{ renderListas(); }catch(e){}
 }
 
 const novaTarefa=(texto,status,prazo)=>
   ({id:Dados.novoId('t'),t:texto,status:status||'a fazer',prazo:prazo||null,criado:new Date().toISOString()});
-
-/* Soltar algo em cima de Notas grava direto na tabela e abre o módulo —
-   as notas não passam mais pelo diff do Zimbar, quem manda nelas é o
-   ZimNotes. */
-async function virarNota(texto){
-  const n = { id: Dados.novoId(),
-              t: texto.length > 42 ? texto.slice(0, 42) + '…' : texto,
-              c: '', b: texto };
-  await Dados.criarNota(n);
-  go('notas');
-  ZimNotes.montar(document.getElementById('znRaiz'));
-  ZimNotes.recarregar();
+function novaNotaCom(texto){
+  const n={id:Dados.novoId(),
+           t:texto.length>42?texto.slice(0,42)+'…':texto,
+           c:Dados.CORES_NOTA[S.notas.length%Dados.CORES_NOTA.length].k,
+           b:texto};
+  S.notas.unshift(n);
   return n;
 }
 
@@ -389,8 +378,9 @@ function mandarPara(destino,carga,x,y){
     return;
   }
   if(destino==='notas'){
+    const n=novaNotaCom(txt);
     carga.tirar?.(); salvar(); renderTudo();
-    virarNota(txt).then(()=>toast('virou nota')).catch(()=>toast('não deu pra criar a nota'));
+    abrirSticky(n.id); toast('virou nota');
     return;
   }
   toast('esse módulo não recebe itens');
@@ -682,8 +672,8 @@ function enviarCaptura(id,destino,alvoBtn){
     menu(alvoBtn,'PRA QUANDO',ops); return;
   }
   if(destino==='nota'){
-    tira();
-    virarNota(txt).then(()=>toast('virou nota')).catch(()=>toast('não deu pra criar a nota'));
+    const n=novaNotaCom(txt);
+    tira(); atualizaContadorNotas(); abrirSticky(n.id); toast('virou nota');
     return;
   }
 }
@@ -1011,10 +1001,89 @@ function novaLista(nome){
   salvar(); renderListas(); toast('lista "'+n+'" criada');
 }
 
-/* ═══ NOTAS ═══
-   A biblioteca em janelinha flutuante saiu: o ZimNotes virou módulo de
-   verdade, com o mesmo espaço dos outros. Quem desenha e grava é o
-   notas.js, o mesmo arquivo que a janela solta do ZimNotes usa. */
+/* ═══ NOTAS — ferramenta, em janelas soltas (autoadesivas) ═══ */
+let zTopo=60, cascata=0;
+
+function atualizaContadorNotas(){
+  const el=document.getElementById('ct-notas');
+  if(el) el.textContent=S.notas.length||'';
+}
+/* arrastar + redimensionar qualquer janela */
+function tornarJanela(j,handle){
+  j.style.zIndex=++zTopo;
+  j.addEventListener('mousedown',()=>{ j.style.zIndex=++zTopo; });
+  handle.addEventListener('mousedown',e=>{
+    if(e.target.tagName==='BUTTON')return;
+    const r=j.getBoundingClientRect(), dx=e.clientX-r.left, dy=e.clientY-r.top;
+    const mv=ev=>{ j.style.left=Math.max(4,Math.min(innerWidth-60,ev.clientX-dx))+'px';
+                   j.style.top =Math.max(4,Math.min(innerHeight-40,ev.clientY-dy))+'px'; };
+    const up=()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); };
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+    e.preventDefault();
+  });
+  const rz=j.querySelector('.redim');
+  if(rz) rz.addEventListener('mousedown',e=>{
+    const r=j.getBoundingClientRect(), x0=e.clientX, y0=e.clientY, w0=r.width, h0=r.height;
+    const mv=ev=>{ j.style.width=Math.max(200,w0+ev.clientX-x0)+'px';
+                   j.style.height=Math.max(160,h0+ev.clientY-y0)+'px'; };
+    const up=()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); };
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+    e.preventDefault(); e.stopPropagation();
+  });
+}
+/* biblioteca encosta na direita; as adesivas cascateiam à esquerda dela */
+function posBiblioteca(){ return {l:innerWidth-338, t:104}; }
+
+/* ── biblioteca de notas ── */
+function abrirBiblioteca(){
+  const jaAberta=document.getElementById('janBib');
+  if(jaAberta){ jaAberta.style.zIndex=++zTopo; return; }
+  const j=document.createElement('div'); j.className='jan bib'; j.id='janBib';
+  const p=posBiblioteca(); j.style.left=p.l+'px'; j.style.top=p.t+'px';
+  j.innerHTML=`<div class="barra"><span class="tt">✎ Minhas notas</span>
+      <button title="nova nota" id="bibNova">＋</button><button title="fechar" id="bibX">✕</button></div>
+    <div class="lista" id="bibLista"></div><div class="redim"></div>`;
+  document.body.appendChild(j);
+  tornarJanela(j,j.querySelector('.barra'));
+  j.querySelector('#bibX').onclick=()=>j.remove();
+  j.querySelector('#bibNova').onclick=()=>novaNota();
+  renderBiblioteca();
+}
+function renderBiblioteca(){
+  const box=document.getElementById('bibLista'); if(!box) return;
+  box.innerHTML='';
+  zonaSoltar(box,'notas');
+  if(!S.notas.length){ box.innerHTML='<div class="empty">nenhuma nota — usa o ＋ ali em cima</div>'; return; }
+  S.notas.forEach((n,ni)=>{
+    const el=document.createElement('div'); el.className='nt';
+    const previa=(n.b||'').split('\n').filter(l=>l.trim())[0]||'vazia';
+    el.innerHTML=`<div class="fita" style="background:${Dados.corHex(n.c)}"></div>
+      <div class="ni"><div class="nt1">${esc(n.t||'sem título')}</div><div class="nt2">${esc(previa)}</div></div>`;
+    el.title='arrasta pra reordenar · solta num módulo do trilho pra mandar pra lá · clica pra abrir';
+    arrastavel(el,{zona:'notas',indice:ni,
+      carga:{texto:n.t||previa},
+      aoSoltar:(zona,idx)=>{ if(zona!=='notas')return;
+        const [m]=S.notas.splice(ni,1); S.notas.splice(idx,0,m); salvar(); renderBiblioteca(); },
+      aoAbrir:()=>abrirSticky(n.id)});
+    box.appendChild(el);
+  });
+}
+function novaNota(){
+  const n={id:Dados.novoId(),t:'',
+           c:Dados.CORES_NOTA[S.notas.length%Dados.CORES_NOTA.length].k,b:''};
+  S.notas.unshift(n); salvar(); renderBiblioteca(); atualizaContadorNotas();
+  // grava antes de abrir: a janela nativa edita direto no banco
+  sincronizar().then(()=>abrirSticky(n.id,true));
+}
+/* ── autoadesiva ──
+   A nota abre como JANELA DE VERDADE do Windows (a mesma do ZimNotes),
+   não como caixinha dentro do app: some da barra, fica por cima de tudo,
+   salva sozinha enquanto você digita. Quem faz isso é o C#. */
+function abrirSticky(id,focar){
+  const n=S.notas.find(x=>x.id===id); if(!n) return;
+  if(!Ponte.tem()){ toast('as notas soltas só abrem no aplicativo'); return; }
+  Ponte.enviar({acao:'abrirNota', id:n.id, titulo:n.t||'', corpo:n.b||'', cor:n.c||''});
+}
 
 /* ═══════════════════════════════════════════════════════════════
    NOTÍCIAS — igual ao Zimbar de sempre: seções fixas em cima e uma
@@ -1315,6 +1384,7 @@ let tT; function toast(m){const t=document.getElementById('toast');t.textContent
 /* o trilho inteiro recebe itens: arrasta qualquer coisa pra cima de um
    módulo e ele pergunta onde encaixar. É o atalho entre as abas. */
 document.querySelectorAll('.nv').forEach(b=>zonaSoltar(b,'rail:'+b.dataset.v));
+zonaSoltar(document.getElementById('toolNotas'),'rail:notas');
 
 aplicaTema();
 renderTopicos();
@@ -1324,7 +1394,7 @@ async function recarregar(){
   try{
     const d=await Dados.carregar();
     S.hoje=d.hoje; S.frog=d.frog; S.captura=d.captura; S.ritmo=d.ritmo;
-    S.tarefas=d.tarefas; S.mural=d.mural; S.ordem=d.ordem;
+    S.tarefas=d.tarefas; S.mural=d.mural; S.notas=d.notas; S.ordem=d.ordem;
     BASE=retrato();
     renderTudo(); renderRitmo();
     sinal('');

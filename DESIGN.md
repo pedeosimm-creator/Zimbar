@@ -62,10 +62,7 @@
 - **Kanban**: colunas = blocos com header em tag de accent; itens = **cards** paper (bolinha de status + título + data), nunca linhas soltas.
 - **Agenda**: cada dia = card com borda ink (contraste real entre dias); hoje = fundo accent-soft; eventos = chips coloridos (sky/sun).
 - **Links**: pastas = cards soft alternados; cada link = **badge** (favicon do DuckDuckGo, com LETRA de fallback — todo link tem badge) + nome, 1 clique abre.
-- **ZimNotes**: fora deste sistema de propósito. Segue a linguagem do app de
-  celular (papel claro, sombra macia, Plus Jakarta Sans, a cor da nota só na
-  faixa do topo) e mora em `ui/notas.css`, embaixo de `.zn` pra não vazar. É
-  a mesma interface na aba Notas e na janela solta.
+- **ZimNotes**: biblioteca (cards na cor da nota) + sticky. Header com grip `⠿` + cursor SizeAll = fácil de arrastar.
 
 ## 6. NUNCA
 

@@ -29,8 +29,19 @@ const Ponte = (() => {
       S.captura.unshift({ id: Dados.novoId(), t: m.texto });
       salvar(); renderCaptura(); go('hoje'); toast('capturado ✓');
     }
-    if (m.evento === 'notas-mudaram') {       // a janela solta do ZimNotes gravou
-      if (typeof ZimNotes !== 'undefined') ZimNotes.recarregar();
+    if (m.evento === 'nota-mudou') {         // a janela da nota salvou
+      const n = S.notas.find(x => x.id === m.id);
+      if (n) { n.t = m.titulo; n.b = m.corpo; n.c = m.cor; }
+      else S.notas.unshift({ id: m.id, t: m.titulo, b: m.corpo, c: m.cor });
+      BASE = null;                            // veio do C#, não remandar
+      renderBiblioteca(); atualizaContadorNotas();
+      Dados.carregar().then(d => { S.notas = d.notas; BASE = retrato(); renderBiblioteca(); })
+                      .catch(() => { BASE = retrato(); });
+    }
+    if (m.evento === 'nota-apagada') {
+      S.notas = S.notas.filter(x => x.id !== m.id);
+      BASE = retrato();
+      renderBiblioteca(); atualizaContadorNotas();
     }
     if (m.evento === 'recarregar') recarregar();
   }
