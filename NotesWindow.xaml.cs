@@ -32,6 +32,18 @@ public partial class NotesWindow : Window
         _instance.Activate();
     }
 
+    /// <summary>Deixa o ZimNotes pronto na surdina, pra a 1ª abertura não ter
+    /// aquela espera do WebView2 subir do zero.</summary>
+    public static void Preparar()
+    {
+        if (_instance is not null) return;
+        _instance = new NotesWindow();
+        try { new WindowInteropHelper(_instance).EnsureHandle(); } catch { }
+    }
+
+    /// <summary>Só o "Sair" da bandeja liga isto; aí a janela pode morrer.</summary>
+    public static bool Saindo;
+
     /// <summary>As autoadesivas chamam ao salvar/excluir pra a lista atualizar.</summary>
     public static void RefreshIfOpen()
     {
@@ -59,18 +71,29 @@ public partial class NotesWindow : Window
         helper.EnsureHandle();
         // identidade própria na barra de tarefas (ícone do ZimNotes, não o do Zimbar)
         IdentidadeJanela.Definir(helper.Handle, "PedroKuster.ZimNotes");
-        Closing += (_, _) =>
-        {
-            var r = RestoreBounds;   // vale mesmo se estiver maximizada
-            if (!r.IsEmpty)
-            {
-                Config.NotasLeft = r.Left; Config.NotasTop = r.Top;
-                Config.NotasWidth = r.Width; Config.NotasHeight = r.Height;
-                Config.Save();
-            }
-        };
         Closed += (_, _) => _instance = null;
         _ = IniciarSeguro();
+    }
+
+    /// <summary>
+    /// O ✕ (e o Alt+F4) escondem em vez de fechar: assim o WebView2 fica de
+    /// pé e a próxima abertura é instantânea (sem a tela preta/carregando).
+    /// Fechar de verdade só quando o app está saindo.
+    /// </summary>
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        SalvarBounds();
+        if (!Saindo) { e.Cancel = true; Hide(); return; }
+        base.OnClosing(e);
+    }
+
+    private void SalvarBounds()
+    {
+        var r = RestoreBounds;   // vale mesmo se estiver maximizada
+        if (r.IsEmpty || r.Width < 200) return;
+        Config.NotasLeft = r.Left; Config.NotasTop = r.Top;
+        Config.NotasWidth = r.Width; Config.NotasHeight = r.Height;
+        Config.Save();
     }
 
     private static string PastaUi
@@ -106,6 +129,9 @@ public partial class NotesWindow : Window
         string perfil = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Zimbar", "WebView2");
         Directory.CreateDirectory(perfil);
+
+        // fundo creme (não preto) enquanto a página carrega — sem "tela preta"
+        try { Web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0xFF, 0xF8, 0xF6, 0xF1); } catch { }
 
         var ambiente = await CoreWebView2Environment.CreateAsync(null, perfil);
         await Web.EnsureCoreWebView2Async(ambiente);

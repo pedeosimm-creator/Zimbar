@@ -93,8 +93,9 @@ public partial class App : Application
         else if (Array.Exists(e.Args, a => a == "--show"))
             ToggleBar();
         else
-            // Subiu pra bandeja: esquenta a interface enquanto ninguém olha.
-            Dispatcher.BeginInvoke(new Action(PrepararBarra),
+            // Subiu pra bandeja: esquenta a interface (barra + ZimNotes)
+            // enquanto ninguém olha, pra abrirem sem espera nem tela preta.
+            Dispatcher.BeginInvoke(new Action(() => { PrepararBarra(); NotesWindow.Preparar(); }),
                                    System.Windows.Threading.DispatcherPriority.ApplicationIdle);
 
     }
@@ -139,7 +140,7 @@ public partial class App : Application
         menu.Items.Add("Abrir ZimNotes  (Ctrl+Alt+D)", null, (_, _) => NotesWindow.Open());
         menu.Items.Add("Pomodoro", null, (_, _) => PomoWindow.Abrir());
         menu.Items.Add(new WinForms.ToolStripSeparator());
-        menu.Items.Add("Sair", null, (_, _) => { BarWindow.Saindo = true; Shutdown(); });
+        menu.Items.Add("Sair", null, (_, _) => { BarWindow.Saindo = true; NotesWindow.Saindo = true; Shutdown(); });
         _tray.ContextMenuStrip = menu;
         _tray.DoubleClick += (_, _) => ToggleBar();
 
