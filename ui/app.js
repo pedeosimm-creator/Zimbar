@@ -1056,9 +1056,21 @@ function abrirBiblioteca(){
   j.querySelector('#bibX').onclick=()=>j.remove();
   j.querySelector('#bibNova').onclick=()=>novaNota();
   j.querySelector('#bibPop').onclick=destacarBiblioteca;
+  arrastarChipsBib(j.querySelector('#bibChips'));
   renderBiblioteca();
   // as pastas (categorias) vêm do mesmo lugar que o celular
   Dados.pastasNota().then(ps=>{ bibPastas=ps; renderBiblioteca(); }).catch(()=>{});
+}
+/* arrastar as categorias pro lado (a barra de chips rola no arrasto + roda) */
+function arrastarChipsBib(box){
+  if(!box) return;
+  let x0=0,s0=0,arr=false;
+  box.addEventListener('pointerdown',e=>{ if(e.target.closest('.bchip'))return;
+    arr=true; x0=e.clientX; s0=box.scrollLeft; box.setPointerCapture(e.pointerId); });
+  box.addEventListener('pointermove',e=>{ if(arr) box.scrollLeft=s0-(e.clientX-x0); });
+  const fim=()=>arr=false;
+  box.addEventListener('pointerup',fim); box.addEventListener('pointercancel',fim);
+  box.addEventListener('wheel',e=>{ if(e.deltaY){ box.scrollLeft+=e.deltaY; e.preventDefault(); } },{passive:false});
 }
 /* categorias do ZimNotes: filtro atual e o rol de pastas */
 let bibFiltro='', bibPastas=[];

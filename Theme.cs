@@ -14,6 +14,7 @@ public static class Config
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Zimbar", "settings.json");
 
     public static double? BarLeft, BarTop, PomoLeft, PomoTop, BarWidth, ViewMax;
+    public static double? NotasLeft, NotasTop, NotasWidth, NotasHeight;   // janela do ZimNotes solto
     public static double PomoScale = 1.0;
     public static string Theme = "Verde";
 
@@ -30,6 +31,10 @@ public static class Config
             PomoTop = s["pomoTop"]?.GetValue<double>();
             BarWidth = s["barWidth"]?.GetValue<double>();
             ViewMax = s["viewMax"]?.GetValue<double>();
+            NotasLeft = s["notasLeft"]?.GetValue<double>();
+            NotasTop = s["notasTop"]?.GetValue<double>();
+            NotasWidth = s["notasWidth"]?.GetValue<double>();
+            NotasHeight = s["notasHeight"]?.GetValue<double>();
             PomoScale = s["pomoScale"]?.GetValue<double>() ?? 1.0;
             Theme = s["theme"]?.GetValue<string>() ?? "Verde";
         }
@@ -48,6 +53,10 @@ public static class Config
             if (PomoTop is double pt) o["pomoTop"] = pt;
             if (BarWidth is double bw) o["barWidth"] = bw;
             if (ViewMax is double vm) o["viewMax"] = vm;
+            if (NotasLeft is double nl) o["notasLeft"] = nl;
+            if (NotasTop is double nt2) o["notasTop"] = nt2;
+            if (NotasWidth is double nw) o["notasWidth"] = nw;
+            if (NotasHeight is double nh) o["notasHeight"] = nh;
             File.WriteAllText(PathFile, o.ToJsonString());
         }
         catch { }

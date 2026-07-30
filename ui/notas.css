@@ -1,0 +1,79 @@
+/* ═══════════════════════════════════════════════════════════════
+   ZimNotes SOLTO — a janela do Ctrl+Alt+D.
+
+   Usa EXATAMENTE o mesmo desenho do painel "Minhas notas" embutido no
+   Zimbar (as classes .bibchips/.bchip/.nt são cópia fiel das de
+   index.html). Por isso a janela solta é IGUAL à de dentro, não parecida:
+   é o mesmo HTML e o mesmo CSS, num WebView2 em vez de num painel.
+
+   ⚠ Se mexer no visual dos cards/chips da biblioteca em index.html, copie
+   aqui também — os dois têm que continuar iguais.
+   ═══════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+html.zn-solo{
+  --bg:#e6e2d8; --shell:#f8f6f1; --panel:#fffefb; --sunk:#f0ede5;
+  --line:#e4e0d5; --line-soft:#eeeae1;
+  --ink:#191815; --dim:#6e6a60; --faint:#a8a397;
+  --acc:#bf4229; --acc-ink:#fff; --acc-soft:#f7e3dd;
+}
+html.zn-solo[data-theme=dark]{
+  --bg:#0a0b0e; --shell:#15171c; --panel:#1b1e25; --sunk:#171a20;
+  --line:#272b34; --line-soft:#21242c;
+  --ink:#e9ebf0; --dim:#959bab; --faint:#5e6472;
+  --acc:#ff7a5c; --acc-ink:#1a1005; --acc-soft:#2e1f1c;
+}
+html.zn-solo,html.zn-solo body{height:100%;margin:0}
+html.zn-solo body{font-family:'Inter',sans-serif;background:transparent;color:var(--ink);
+  -webkit-font-smoothing:antialiased}
+html.zn-solo *{box-sizing:border-box}
+
+/* a janela é a própria "bib": ocupa tudo, cantos arredondados */
+.bib-janela{position:fixed;inset:0;background:var(--panel);display:flex;flex-direction:column;
+  overflow:hidden;border-radius:12px}
+.bib-barra{height:34px;display:flex;align-items:center;gap:7px;padding:0 8px 0 12px;flex-shrink:0;
+  background:var(--sunk);border-bottom:1px solid var(--line);color:var(--ink);
+  cursor:default;-webkit-user-select:none;user-select:none}
+.bib-barra .tt{flex:1;font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;opacity:.75}
+.bib-barra button{width:22px;height:22px;border:none;background:transparent;border-radius:6px;cursor:pointer;
+  font-size:12px;line-height:1;opacity:.55;font-family:inherit;color:inherit}
+.bib-barra button:hover{opacity:1;background:rgba(0,0,0,.09)}
+[data-theme=dark] .bib-barra button:hover{background:rgba(255,255,255,.1)}
+.bib-lista{flex:1;overflow:auto;padding:9px 11px}
+.bib-lista::-webkit-scrollbar{width:6px}
+.bib-lista::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+
+/* ══ CÓPIA FIEL da biblioteca de index.html ══ */
+.bibchips{display:flex;gap:5px;overflow-x:auto;padding:8px 11px 7px;flex-shrink:0;
+  border-bottom:1px solid var(--line);scrollbar-width:none;cursor:grab}
+.bibchips:active{cursor:grabbing}
+.bibchips::-webkit-scrollbar{display:none}
+.bchip{flex-shrink:0;display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:100px;
+  font-size:11px;font-weight:600;color:var(--dim);background:var(--sunk);border:1px solid var(--line);
+  cursor:pointer;white-space:nowrap;font-family:inherit;transition:.13s}
+.bchip:hover{border-color:var(--faint)}
+.bchip.on{background:var(--ink);color:var(--shell);border-color:var(--ink)}
+.bchip i{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.bchip .bn{opacity:.6;font-family:'JetBrains Mono',monospace;font-size:9px}
+.nt{display:flex;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;margin-bottom:6px;
+  border:1px solid var(--line);background:var(--panel);transition:.14s}
+.nt:hover{border-color:var(--acc)}
+.nt .fita{width:4px;border-radius:3px;flex-shrink:0}
+.nt .ni{flex:1;min-width:0}
+.nt .nt1{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nt .nt2{font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.nt .ncat{display:inline-block;margin-top:5px;font-family:'JetBrains Mono',monospace;font-size:8.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:var(--sunk);
+  border:1px solid var(--line);border-radius:100px;padding:2px 7px;max-width:100%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;vertical-align:top}
+.nt .del{opacity:0;background:none;border:none;color:var(--faint);cursor:pointer;font-size:12px;
+  padding:0 2px;font-family:inherit;flex-shrink:0;align-self:flex-start;line-height:1;transition:.13s}
+.nt:hover .del{opacity:1}
+.nt .del:hover{color:var(--acc)}
+.empty{color:var(--faint);font-size:12.5px;padding:14px 8px;font-style:italic;text-align:center}
+
+/* faixa de redimensionar no canto (a janela é sem moldura) */
+.redim{position:fixed;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;z-index:9}
+.redim:after{content:"";position:absolute;right:4px;bottom:4px;width:7px;height:7px;
+  border-right:2px solid currentColor;border-bottom:2px solid currentColor;opacity:.3;color:var(--faint)}

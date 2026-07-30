@@ -376,7 +376,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
 .bib .lista::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
 /* categorias (pastas) no topo do painel, iguais às do celular */
 .bibchips{display:flex;gap:5px;overflow-x:auto;padding:8px 11px 7px;flex-shrink:0;
-  border-bottom:1px solid var(--line);scrollbar-width:none}
+  border-bottom:1px solid var(--line);scrollbar-width:none;cursor:grab}
+.bibchips:active{cursor:grabbing}
 .bibchips::-webkit-scrollbar{display:none}
 .bchip{flex-shrink:0;display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:100px;
   font-size:11px;font-weight:600;color:var(--dim);background:var(--sunk);border:1px solid var(--line);
