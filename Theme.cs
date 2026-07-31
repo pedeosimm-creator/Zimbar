@@ -15,6 +15,7 @@ public static class Config
 
     public static double? BarLeft, BarTop, PomoLeft, PomoTop, BarWidth, ViewMax;
     public static double? NotasLeft, NotasTop, NotasWidth, NotasHeight;   // janela do ZimNotes solto
+    public static double NotasFonte = 13.5;   // tamanho do texto da autoadesiva (o "A" cicla)
     public static double PomoScale = 1.0;
     public static string Theme = "Verde";
 
@@ -35,6 +36,7 @@ public static class Config
             NotasTop = s["notasTop"]?.GetValue<double>();
             NotasWidth = s["notasWidth"]?.GetValue<double>();
             NotasHeight = s["notasHeight"]?.GetValue<double>();
+            NotasFonte = s["notasFonte"]?.GetValue<double>() ?? 13.5;
             PomoScale = s["pomoScale"]?.GetValue<double>() ?? 1.0;
             Theme = s["theme"]?.GetValue<string>() ?? "Verde";
         }
@@ -46,7 +48,7 @@ public static class Config
         try
         {
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(PathFile)!);
-            var o = new JsonObject { ["theme"] = Theme, ["pomoScale"] = PomoScale };
+            var o = new JsonObject { ["theme"] = Theme, ["pomoScale"] = PomoScale, ["notasFonte"] = NotasFonte };
             if (BarLeft is double bl) o["left"] = bl;
             if (BarTop is double bt) o["top"] = bt;
             if (PomoLeft is double pl) o["pomoLeft"] = pl;

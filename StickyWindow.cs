@@ -38,7 +38,10 @@ public class StickyWindow : Window
 
     private readonly string _id;
     private string _cor;
+    private readonly TextBox _titulo;
+    private readonly TextBlock _tituloPh;
     private readonly TextBox _body;
+    private double _fonte = Config.NotasFonte;   // tamanho do texto; o "A" no pé cicla
     private readonly Border _root;
     private readonly StackPanel _dots;
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(1100) };
@@ -107,6 +110,53 @@ public class StickyWindow : Window
         Top = Math.Min(wa.Bottom - Height - 20, wa.Top + 110 + step * 34);
 
         var ink = new SolidColorBrush(Color.FromRgb(0x18, 0x13, 0x20));
+        var fraca = new SolidColorBrush(Color.FromArgb(0x66, 0x18, 0x13, 0x20));
+
+        // Nome e corpo separados, como no celular. Notas antigas do desktop
+        // guardavam o nome também na 1ª linha do corpo; SepararNome tira essa
+        // duplicata pra o nome não aparecer duas vezes.
+        var (nome, corpoLimpo) = SepararNome(titulo, corpo);
+
+        // Campo do NOME da nota (o que faltava no desktop): uma linha em negrito
+        // no topo. Enter pula pro corpo. O placeholder "Sem título" fica atrás.
+        _titulo = new TextBox
+        {
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Foreground = ink,
+            CaretBrush = ink,
+            FontSize = _fonte + 2,
+            FontWeight = FontWeights.Bold,
+            FontFamily = new FontFamily("Segoe UI Variable Display, Segoe UI"),
+            TextWrapping = TextWrapping.NoWrap,
+            AcceptsReturn = false,
+            Padding = new Thickness(13, 8, 11, 0),
+            Text = nome
+        };
+        _tituloPh = new TextBlock
+        {
+            Text = "Sem título",
+            FontSize = _fonte + 2,
+            FontWeight = FontWeights.Bold,
+            Foreground = fraca,
+            IsHitTestVisible = false,
+            Margin = new Thickness(14, 8, 11, 0),
+            Visibility = nome.Length == 0 ? Visibility.Visible : Visibility.Collapsed
+        };
+        _titulo.TextChanged += (_, _) =>
+        {
+            _tituloPh.Visibility = _titulo.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+            _dirty = true; _saveTimer.Stop(); _saveTimer.Start();
+        };
+        _titulo.PreviewKeyDown += (_, e) =>
+        {
+            // _body já existe quando isto roda (janela pronta); só o compilador
+            // não sabe, porque é criado algumas linhas abaixo.
+            if (e.Key == Key.Enter) { _body!.Focus(); e.Handled = true; }
+        };
+        var tituloWrap = new Grid();
+        tituloWrap.Children.Add(_titulo);
+        tituloWrap.Children.Add(_tituloPh);
 
         // Corpo: so o texto, sem adornos
         _body = new TextBox
@@ -115,14 +165,14 @@ public class StickyWindow : Window
             BorderThickness = new Thickness(0),
             Foreground = ink,
             CaretBrush = ink,
-            FontSize = 13.5,
+            FontSize = _fonte,
             FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI"),
             TextWrapping = TextWrapping.Wrap,
             AcceptsReturn = true,
             AcceptsTab = true,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             Padding = new Thickness(13, 4, 11, 6),
-            Text = ComposeText(titulo, corpo)
+            Text = corpoLimpo
         };
         _body.TextChanged += (_, _) =>
         {
@@ -235,9 +285,29 @@ public class StickyWindow : Window
         };
         btLista.Click += (_, _) => NovoItem(_itens.Count);
 
+        // "A" que cicla o tamanho do texto (pequeno → grande → volta). Vale pra
+        // todas as notas abertas e fica guardado, como o ajuste do celular.
+        var btFonte = new Button
+        {
+            Content = "A",
+            FontSize = 13,
+            FontWeight = FontWeights.Bold,
+            Cursor = Cursors.Hand,
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Foreground = new SolidColorBrush(Color.FromArgb(0x99, 0x18, 0x13, 0x20)),
+            Padding = new Thickness(6, 0, 6, 0),
+            ToolTip = "tamanho do texto"
+        };
+        btFonte.Click += (_, _) => CiclarFonte();
+
+        var acoesPe = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        acoesPe.Children.Add(btFonte);
+        acoesPe.Children.Add(btLista);
+
         var peLinha = new DockPanel { LastChildFill = true, Margin = new Thickness(11, 0, 11, 9) };
-        DockPanel.SetDock(btLista, Dock.Right);
-        peLinha.Children.Add(btLista);
+        DockPanel.SetDock(acoesPe, Dock.Right);
+        peLinha.Children.Add(acoesPe);
         _dots.Margin = new Thickness(0);
         _dots.Opacity = 0.75;
         peLinha.Children.Add(_dots);
@@ -264,9 +334,11 @@ public class StickyWindow : Window
 
         var layout = new DockPanel();
         DockPanel.SetDock(header, Dock.Top);
+        DockPanel.SetDock(tituloWrap, Dock.Top);
         DockPanel.SetDock(pe, Dock.Bottom);
         DockPanel.SetDock(_itensWrap, Dock.Bottom);
         layout.Children.Add(header);
+        layout.Children.Add(tituloWrap);
         layout.Children.Add(pe);
         layout.Children.Add(_itensWrap);
         layout.Children.Add(_body);
@@ -295,7 +367,11 @@ public class StickyWindow : Window
             { _saveTimer.Stop(); _ = SaveNote(); e.Handled = true; }
         };
 
-        Loaded += (_, _) => { _body.Focus(); _body.CaretIndex = _body.Text.Length; };
+        Loaded += (_, _) =>
+        {
+            if (_titulo.Text.Length == 0) { _titulo.Focus(); }
+            else { _body.Focus(); _body.CaretIndex = _body.Text.Length; }
+        };
         _ = CarregarExtras();
     }
 
@@ -377,7 +453,7 @@ public class StickyWindow : Window
             BorderThickness = new Thickness(0),
             Foreground = Paleta.TintaNota,
             CaretBrush = Paleta.TintaNota,
-            FontSize = 12.5,
+            FontSize = _fonte - 1,
             FontFamily = Paleta.Fonte,
             TextWrapping = TextWrapping.Wrap,
             AcceptsReturn = false,
@@ -488,20 +564,44 @@ public class StickyWindow : Window
                 : new SolidColorBrush(Color.FromArgb(0x50, 0x18, 0x13, 0x20));
     }
 
-    /// <summary>Titulo (1a linha) + corpo viram um texto so; tira o titulo duplicado de notas antigas.</summary>
-    private static string ComposeText(string titulo, string corpo)
+    // Passos do tamanho do texto; o "A" no pé anda por eles e volta ao início.
+    private static readonly double[] Fontes = { 12.0, 13.5, 15.5, 17.5, 20.0 };
+
+    private void CiclarFonte()
     {
-        if (corpo.StartsWith(titulo, StringComparison.Ordinal) && titulo.Length > 0)
-            return corpo;
-        if (titulo.Length == 0) return corpo;
-        return corpo.Length == 0 ? titulo : titulo + Environment.NewLine + corpo;
+        int i = Array.FindIndex(Fontes, f => Math.Abs(f - _fonte) < 0.1);
+        _fonte = Fontes[(i + 1) % Fontes.Length];
+        Config.NotasFonte = _fonte;
+        Config.Save();
+        // vale pra todas as notas abertas, como o ajuste único do celular
+        foreach (var w in Abertas.Values) { w._fonte = _fonte; w.AplicarFonte(); }
+    }
+
+    private void AplicarFonte()
+    {
+        _titulo.FontSize = _fonte + 2;
+        _tituloPh.FontSize = _fonte + 2;
+        _body.FontSize = _fonte;
+        DesenharItens();   // os itens do checklist acompanham
+    }
+
+    /// <summary>
+    /// Separa nome e corpo. Notas antigas do desktop guardavam o nome também na
+    /// 1ª linha do corpo (o corpo "começa com" o título) — aqui esse prefixo sai,
+    /// pra o nome não aparecer no campo de cima E na 1ª linha do texto.
+    /// </summary>
+    private static (string nome, string corpo) SepararNome(string titulo, string corpo)
+    {
+        if (titulo.Length > 0 && corpo.StartsWith(titulo, StringComparison.Ordinal))
+            return (titulo, corpo.Substring(titulo.Length).TrimStart('\r', '\n'));
+        return (titulo, corpo);
     }
 
     private async Task SaveNote()
     {
-        string texto = _body.Text;
-        string titulo = texto.Split('\n', 2)[0].Trim().TrimEnd('\r');
+        string titulo = _titulo.Text.Trim();
         if (titulo.Length > 80) titulo = titulo[..80];
+        string texto = _body.Text;
         try
         {
             var patch = new JsonObject
