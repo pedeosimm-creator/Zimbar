@@ -929,6 +929,66 @@ document.getElementById('addEv').onkeydown=e=>{
 };
 function mudaMes(n){ mesRef=new Date(mesRef.getFullYear(),mesRef.getMonth()+n,1); renderAgenda(); }
 
+/* ═══ AGENDA · MODO SEMANA (quadro kanban por dia) ═══
+   É só uma OPÇÃO: o padrão continua o mês. Clicar em SEMANA troca a visão
+   pra 7 colunas (seg→dom) com os cards de cada dia. Reaproveita o arrastar
+   do mês — soltar um card noutra coluna remarca o prazo. */
+let agVista='mes';
+function agModo(m){
+  agVista=m;
+  document.querySelectorAll('#agSeg button').forEach(b=>b.classList.toggle('on', b.dataset.m===m));
+  document.getElementById('agMes').style.display = m==='mes' ? '' : 'none';
+  document.getElementById('agSemana').style.display = m==='semana' ? '' : 'none';
+  if(m==='semana') renderSemana(); else { renderAgenda(); renderEventos(); }
+}
+const MM_AG=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+const DN_AG=['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
+function semBase(){ const b=new Date(diaSel+'T12:00'); b.setDate(b.getDate()-((b.getDay()+6)%7)); return b; }
+function semNav(n){ const b=new Date(diaSel+'T12:00'); b.setDate(b.getDate()+n*7); diaSel=chave(b); renderSemana(); }
+function semHoje(){ diaSel=chave(new Date()); renderSemana(); }
+function renderSemana(){
+  const box=document.getElementById('agSemana'); if(!box) return; box.innerHTML='';
+  const base=semBase(), fim=new Date(base); fim.setDate(base.getDate()+6);
+  const rng = base.getMonth()===fim.getMonth()
+    ? `${base.getDate()}–${fim.getDate()} ${MM_AG[fim.getMonth()]} ${fim.getFullYear()}`
+    : `${base.getDate()} ${MM_AG[base.getMonth()]} – ${fim.getDate()} ${MM_AG[fim.getMonth()]}`;
+  const top=document.createElement('div'); top.className='wk-top';
+  top.innerHTML=`<button class="nb" onclick="semNav(-1)">←</button><div class="rng">${rng}</div>`+
+    `<button class="nb" onclick="semNav(1)">→</button><button class="nb hoje" onclick="semHoje()">hoje</button>`;
+  box.appendChild(top);
+  const grid=document.createElement('div'); grid.className='wk-board';
+  const hojeStr=chave(new Date());
+  for(let i=0;i<7;i++){
+    const d=new Date(base); d.setDate(base.getDate()+i); const key=chave(d);
+    const col=document.createElement('div'); col.className='wk-col'+(key===hojeStr?' hoje':'');
+    zonaSoltar(col,'dia:'+key);
+    const trab=trabalhoDoDia(key), evs=tarefasDoDia(key), total=trab.length+evs.length;
+    const h=document.createElement('div'); h.className='wk-h';
+    h.innerHTML=`<b>${d.getDate()}</b><span class="dn">${DN_AG[i]}</span>${total?`<span class="n">${total}</span>`:''}`;
+    col.appendChild(h);
+    const body=document.createElement('div'); body.className='wk-body';
+    trab.forEach(tb=>{
+      const c=document.createElement('div'); c.className='wk-card trab';
+      c.innerHTML=`<div>${esc(tb.title||'sem título')}</div><div class="sub">ConceWay${tb.area?' · '+esc(tb.area):''}</div>`;
+      c.title='do ConceWay — clica pra ver'; c.onclick=()=>abrirCardTrabalho(tb);
+      body.appendChild(c);
+    });
+    evs.forEach((ev,ei)=>{
+      const c=document.createElement('div'); c.className='wk-card'+(ev.status==='feito'?' done':'');
+      c.innerHTML=`<div>${esc(ev.t)}</div><div class="sub">${esc(ev.status||'')}</div>`;
+      c.title='arrasta pra outro dia pra remarcar · clica pra editar';
+      arrastavel(c,{zona:'dia:'+key,indice:ei,carga:{texto:ev.t},
+        aoSoltar:(zona)=>{ if(!zona.startsWith('dia:'))return; const novo=zona.slice(4); if(novo===key)return;
+          ev.prazo=novo; salvar(); renderSemana(); renderAgenda(); renderProximos(); toast('remarcado'); },
+        aoAbrir:()=>abrirCard(ev.id)});
+      body.appendChild(c);
+    });
+    if(!total){ const e=document.createElement('div'); e.className='wk-empty'; e.textContent='—'; body.appendChild(e); }
+    col.appendChild(body); grid.appendChild(col);
+  }
+  box.appendChild(grid);
+}
+
 /* ═══ LISTAS ═══
    Cada pasta é uma `categoria` da tabela mural_items. Mover um item
    entre pastas é trocar a categoria dele. */

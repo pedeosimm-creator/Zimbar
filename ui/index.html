@@ -308,6 +308,40 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);
   border-radius:6px;cursor:pointer;color:var(--dim)}
 .seg button.on{background:var(--panel);color:var(--ink);font-weight:500;box-shadow:var(--shadow)}
 
+/* AGENDA — barra de modo + quadro semanal (kanban por dia) */
+#v-agenda.on{display:flex;flex-direction:column;gap:13px}
+.agbar{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.wk-top{display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-shrink:0}
+.wk-top .rng{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink);
+  font-weight:500;min-width:172px;text-align:center}
+.wk-top .nb{border:1px solid var(--line);background:var(--panel);color:var(--dim);border-radius:8px;
+  width:30px;height:30px;font-family:inherit;font-size:13px;cursor:pointer;box-shadow:var(--shadow)}
+.wk-top .nb:hover{border-color:var(--acc);color:var(--acc)}
+.wk-top .nb.hoje{width:auto;padding:0 12px;font-size:12px}
+#agMes{flex:1;min-height:0}
+#agSemana{flex:1;min-height:0;display:flex;flex-direction:column}
+.wk-board{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;flex:1;min-height:0}
+.wk-col{background:var(--rail);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden;transition:border-color .14s}
+.wk-col.hoje{border-color:var(--acc)}
+.wk-h{padding:11px 12px 9px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:7px;flex-shrink:0}
+.wk-h b{font-size:16px;font-weight:600;letter-spacing:-.02em}
+.wk-h .dn{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.1em;color:var(--faint);text-transform:uppercase}
+.wk-h .n{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint);background:var(--panel);border:1px solid var(--line);border-radius:100px;padding:1px 7px}
+.wk-col.hoje .wk-h b{color:var(--acc)}
+.wk-body{flex:1;overflow:auto;padding:9px}
+.wk-body::-webkit-scrollbar{width:5px}
+.wk-body::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.wk-card{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--wkc,var(--acc));border-radius:8px;
+  padding:9px 10px;margin-bottom:8px;font-size:12.5px;line-height:1.34;box-shadow:var(--shadow);cursor:grab;transition:border-color .13s}
+.wk-card:hover{border-color:var(--acc)}
+.wk-card.trab{border-left-color:#3b7bd4;cursor:pointer}
+[data-theme=dark] .wk-card.trab{border-left-color:#7aaaff}
+.wk-card.done>div:first-child{text-decoration:line-through;color:var(--faint)}
+.wk-card .sub{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--faint);margin-top:5px;letter-spacing:.05em;text-transform:uppercase}
+.wk-card.trab .sub{color:#3b7bd4}
+[data-theme=dark] .wk-card.trab .sub{color:#7aaaff}
+.wk-empty{color:var(--faint);font-size:16px;text-align:center;padding:14px 0;opacity:.5}
+
 /* LISTAS — cards da mesma altura, "+ novo item" alinhado na base de todos */
 .masonry{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:14px;
   height:100%;grid-auto-rows:minmax(170px,1fr);align-content:stretch}
@@ -674,7 +708,13 @@ html.nativo .jbtn{display:flex}
 
       <!-- AGENDA -->
       <section class="view" id="v-agenda">
-        <div class="grid-ag">
+        <div class="agbar">
+          <div class="seg" id="agSeg">
+            <button class="on" data-m="mes" onclick="agModo('mes')">MÊS</button>
+            <button data-m="semana" onclick="agModo('semana')">SEMANA</button>
+          </div>
+        </div>
+        <div class="grid-ag" id="agMes">
           <div class="card">
             <div class="ttl"><span class="dot"></span><h2 id="mesTitulo">JULHO 2026</h2><span class="sp"></span>
               <button class="act" onclick="mudaMes(-1)">←</button><button class="act" onclick="mudaMes(1)">→</button></div>
@@ -691,6 +731,7 @@ html.nativo .jbtn{display:flex}
             <div class="addline"><span class="plus">+</span><input id="addEv" placeholder="evento no dia selecionado…"></div>
           </div>
         </div>
+        <div id="agSemana" style="display:none"></div>
       </section>
 
       <!-- LISTAS -->
