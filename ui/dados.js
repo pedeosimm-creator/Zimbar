@@ -154,7 +154,7 @@ const Dados = {
     const plano = [];
     for (const arr of ['big', 'med', 'small'])
       for (const it of (f[arr] || []))
-        plano.push({ id: it.id || novoId(), t: it.text || '', n: nivelDe[arr], f: !!it.done });
+        plano.push({ id: it.id || novoId(), t: it.text || '', n: nivelDe[arr], f: !!it.done, origem: it.origem || null });
 
     return {
       hoje: plano,
@@ -178,7 +178,7 @@ const Dados = {
   gravarFoco(plano, frog) {
     const arrDe = { h: 'big', m: 'med', l: 'small' };
     const f = { date: hojeChave(), frog: frog || { text: '', done: false }, big: [], med: [], small: [] };
-    for (const t of plano) f[arrDe[t.n] || 'small'].push({ id: t.id, text: t.t, done: !!t.f });
+    for (const t of plano) f[arrDe[t.n] || 'small'].push({ id: t.id, text: t.t, done: !!t.f, origem: t.origem || null });
     return kvGravar('me2_foco', JSON.stringify(f));
   },
   gravarCaptura(lista) {

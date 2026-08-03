@@ -354,7 +354,8 @@ function mandarPara(destino,carga,x,y){
 
   if(destino==='hoje'){
     menu(a,'PRO PLANO COMO',NIVEIS.map(n=>({rot:n.un,cor:n.cor,
-      go:()=>{ S.hoje.push({id:Dados.novoId(),t:txt,n:n.k,f:false});
+      go:()=>{ S.hoje.push({id:Dados.novoId(),t:txt,n:n.k,f:false,origem:carga.origem||null});
+               if(carga.origem) sincronizarOrigem(carga.origem,'fazendo');
                feito('foi pro plano de hoje'); }})));
     return;
   }
@@ -384,6 +385,24 @@ function mandarPara(destino,carga,x,y){
     return;
   }
   toast('esse módulo não recebe itens');
+}
+
+/* Sincroniza o card de origem com o plano de hoje:
+   mandou pro plano  → o card vira "fazendo";
+   concluiu no plano → o card vira "feito".
+   Vale pro kanban pessoal (tarefas) e pro ConceWay (trabalho, que grava lá). */
+function sincronizarOrigem(origem, alvo){
+  if(!origem) return;
+  if(origem.tipo==='tarefa'){
+    const it=S.tarefas.find(t=>t.id===origem.id); if(!it) return;
+    const novo = alvo==='feito' ? 'feito' : 'fazendo';
+    if((it.status||'a fazer')!==novo){ it.status=novo; salvar(); renderKanban(); renderProximos(); }
+  }else if(origem.tipo==='trabalho'){
+    const it=S.trabalho.find(t=>t.id===origem.id); if(!it) return;
+    const k = alvo==='feito' ? 'done' : 'doing';
+    const col = Dados.COLUNAS_TRABALHO.find(c=>c.k===k);
+    if(col && (it.status||'todo')!==k) moverTrabalho(it, col);   // grava no ConceWay
+  }
 }
 
 /* ═══ EDITOR DE ITEM ═══ */
@@ -487,7 +506,9 @@ function renderHoje(){
       el.innerHTML=`<div class="bx" title="marcar como feito">✓</div><div class="tx">${esc(t.t)}</div>
         <button class="pin${ehFoco(t)?' on':''}" title="fixar como foco do dia">⌖</button>
         <button class="del" title="apagar">✕</button>`;
-      el.querySelector('.bx').onclick=ev=>{ ev.stopPropagation(); t.f=!t.f; salvar(); renderHoje(); };
+      el.querySelector('.bx').onclick=ev=>{ ev.stopPropagation(); t.f=!t.f;
+        if(t.f && t.origem) sincronizarOrigem(t.origem,'feito');
+        salvar(); renderHoje(); };
       el.querySelector('.pin').onclick=ev=>{ ev.stopPropagation();
         fixarFoco(t); salvar(); renderHoje(); };
       el.querySelector('.del').onclick=ev=>{ ev.stopPropagation();
@@ -759,7 +780,7 @@ function renderKanban(){
       k.innerHTML=esc(it.t)+(it.prazo?`<small>${dLabel(it.prazo)}</small>`:'');
       k.title='arrasta pra mover · solta num módulo do trilho pra mandar pra lá · clica pra abrir';
       arrastavel(k,{zona:'kb'+ci,indice:ii,
-        carga:{texto:it.t},          // o card FICA no kanban; vai uma cópia
+        carga:{texto:it.t, origem:{tipo:'tarefa', id:it.id}},   // o card FICA no kanban; vai uma cópia ligada
         aoSoltar:(zona,idx)=>{
           if(!zona.startsWith('kb')) return;
           const dest=parseInt(zona.slice(2));
@@ -783,7 +804,7 @@ function renderKanban(){
       if(atrasada) k.classList.add('atrasada');
       k.title='do ConceWay — arrasta pra mover lá também';
       arrastavel(k,{zona:'kb'+ci,indice:1000+ti,
-        carga:{texto:it.title||''},
+        carga:{texto:it.title||'', origem:{tipo:'trabalho', id:it.id}},
         aoSoltar:(zona)=>{
           if(!zona.startsWith('kb')) return;
           const dest=parseInt(zona.slice(2));
@@ -822,7 +843,8 @@ function abrirCard(id){
     ],
     acoes:[{rot:'→ plano de hoje',
             go:onde=>menu(onde,'PRO PLANO COMO',NIVEIS.map(n=>({rot:n.un,cor:n.cor,
-              go:()=>{ S.hoje.push({id:Dados.novoId(),t:it.t,n:n.k,f:false});
+              go:()=>{ S.hoje.push({id:Dados.novoId(),t:it.t,n:n.k,f:false,origem:{tipo:'tarefa',id:it.id}});
+                       sincronizarOrigem({tipo:'tarefa',id:it.id},'fazendo');
                        salvar(); renderHoje(); toast('foi pro plano de hoje'); }})))}],
     aoSalvar:v=>{
       it.t=v.t.trim()||it.t;
